@@ -1,0 +1,2 @@
+spring.application.name=f1-pick-em-api
+jwt.secret= # your-secret-key-here
