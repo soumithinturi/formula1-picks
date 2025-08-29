@@ -3,20 +3,30 @@ package com.f1pickem.api.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Entity
-@Table(name="Picks")
+@Table(name="picks")
 public class Pick {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "driver_name", nullable = false)
-  private String name;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private User user;
 
-  @Column(name = "team_name", nullable = false)
-  private String team;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "race_id", nullable = false)
+  private Race race;
 
-  @Column(name = "race_event")
-  private String event;
+  @Embedded
+  private PickSelections selections;
+
+  @Column(name = "total_points")
+  private Integer totalPoints;
+
+  @Column(name = "submitted_at")
+  private LocalDateTime submittedAt;
 }

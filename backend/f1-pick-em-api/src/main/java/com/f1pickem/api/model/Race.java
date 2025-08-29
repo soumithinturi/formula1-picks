@@ -3,7 +3,7 @@ package com.f1pickem.api.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
@@ -17,11 +17,17 @@ public class Race {
   private String name;
 
   @Column(name = "race_date", nullable = false)
-  private LocalDate date;
+  private LocalDateTime date;
 
   @Column(name = "has_sprint")
   private boolean hasSprint;
 
   @Column(name = "status")
   private String status;
+
+  @Column(name = "sprint_deadline")
+  private LocalDateTime sprintDeadline;
+
+  @Column(name = "race_deadline")
+  private LocalDateTime raceDeadline;
 }
