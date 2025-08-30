@@ -12,6 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -56,5 +57,14 @@ public class PickService {
     pick.setSubmittedAt(now);
 
     return pickRepository.save(pick);
+  }
+
+  public Optional<Pick> getPickForRace(Long raceId) {
+    User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+    Race race = raceRepository.findById(raceId)
+        .orElseThrow(() -> new IllegalArgumentException("Race not found with ID: " + raceId));
+
+    return pickRepository.findByUserAndRace(currentUser, race);
   }
 }
