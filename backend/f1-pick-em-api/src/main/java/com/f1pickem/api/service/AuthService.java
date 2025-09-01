@@ -2,6 +2,7 @@ package com.f1pickem.api.service;
 
 import com.f1pickem.api.dto.LoginRequest;
 import com.f1pickem.api.dto.RegisterRequest;
+import com.f1pickem.api.model.Role;
 import com.f1pickem.api.model.User;
 import com.f1pickem.api.repository.UserRepository;
 import com.f1pickem.api.util.JwtUtil;
@@ -26,9 +27,12 @@ public class AuthService {
     if (userRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
       throw new IllegalStateException("Username is already taken");
     }
-    User user = new User();
-    user.setUsername(registerRequest.getUsername());
-    user.setPassword(passwordEncoder.encode(registerRequest.getPassword())); // Hash the password!
+
+    User user = User.builder()
+        .username(registerRequest.getUsername())
+        .password(passwordEncoder.encode(registerRequest.getPassword()))
+        .role(Role.USER)
+        .build();
     return userRepository.save(user);
   }
 
@@ -39,7 +43,7 @@ public class AuthService {
             loginRequest.getPassword()
         )
     );
-    UserDetails user = (UserDetails) userRepository.findByUsername(loginRequest.getUsername())
+    UserDetails user = userRepository.findByUsername(loginRequest.getUsername())
         .orElseThrow(() -> new IllegalArgumentException("Invalid username: " + loginRequest.getUsername()));
   return jwtUtil.generateToken(user);
   }

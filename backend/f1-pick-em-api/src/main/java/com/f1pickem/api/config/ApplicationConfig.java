@@ -1,7 +1,11 @@
 package com.f1pickem.api.config;
 
+import com.f1pickem.api.model.Role;
+import com.f1pickem.api.model.User;
 import com.f1pickem.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +23,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class ApplicationConfig {
 
   private final UserRepository userRepository;
+
+  @Value("${admin.password}")
+  private String adminPassword;
 
   @Bean
   public UserDetailsService userDetailsService() {
@@ -46,5 +53,23 @@ public class ApplicationConfig {
   @Bean
   public WebClient webClient() {
     return WebClient.builder().build();
+  }
+
+  @Bean
+  public CommandLineRunner seedAdminUser() {
+    return args -> {
+      if (userRepository.findByUsername("admin").isEmpty()) {
+        System.out.println("Seeding admin user");
+        User adminUser = User.builder()
+            .username("admin")
+            .password(passwordEncoder().encode(adminPassword))
+            .role(Role.ADMIN)
+            .build();
+        userRepository.save(adminUser);
+        System.out.println("Admin user seeded");
+      } else {
+        System.out.println("Admin user already exists. Skipping seed.");
+      }
+    };
   }
 }
