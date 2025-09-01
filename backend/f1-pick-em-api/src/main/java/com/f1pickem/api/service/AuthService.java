@@ -1,5 +1,6 @@
 package com.f1pickem.api.service;
 
+import com.f1pickem.api.dto.AuthenticationResponse;
 import com.f1pickem.api.dto.LoginRequest;
 import com.f1pickem.api.dto.RegisterRequest;
 import com.f1pickem.api.model.Role;
@@ -22,7 +23,7 @@ public class AuthService {
   private final JwtUtil jwtUtil;
   private final AuthenticationManager authenticationManager;
 
-  public User registerUser(RegisterRequest registerRequest) {
+  public AuthenticationResponse registerUser(RegisterRequest registerRequest) {
     // Check if the username already exists
     if (userRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
       throw new IllegalStateException("Username is already taken");
@@ -33,10 +34,13 @@ public class AuthService {
         .password(passwordEncoder.encode(registerRequest.getPassword()))
         .role(Role.USER)
         .build();
-    return userRepository.save(user);
+    userRepository.save(user);
+
+    var jwtToken = jwtUtil.generateToken(user);
+    return AuthenticationResponse.builder().token(jwtToken).build();
   }
 
-  public String loginUser(LoginRequest loginRequest) {
+  public AuthenticationResponse loginUser(LoginRequest loginRequest) {
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(
             loginRequest.getUsername(),
@@ -45,6 +49,8 @@ public class AuthService {
     );
     UserDetails user = userRepository.findByUsername(loginRequest.getUsername())
         .orElseThrow(() -> new IllegalArgumentException("Invalid username: " + loginRequest.getUsername()));
-  return jwtUtil.generateToken(user);
+
+    var jwtToken = jwtUtil.generateToken(user);
+    return AuthenticationResponse.builder().token(jwtToken).build();
   }
 }
