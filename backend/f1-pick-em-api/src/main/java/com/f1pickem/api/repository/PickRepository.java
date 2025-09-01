@@ -13,4 +13,5 @@ import java.util.Optional;
 public interface PickRepository extends JpaRepository<Pick, Long> {
   Optional<Pick> findByUserAndRace(User user, Race race);
   List<Pick> findAllByRace(Race race);
+  List<Pick> findAllByUser(User user);
 }
