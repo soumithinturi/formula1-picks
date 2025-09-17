@@ -42,7 +42,7 @@ public class ScoringService {
     raceRepository.save(race);
   }
 
-  private int calculatePointsForPick(PickSelections userPick, PickSelections officialResults ) {
+  public int calculatePointsForPick(PickSelections userPick, PickSelections officialResults ) {
     int score = 0;
 
     // Sprint Results

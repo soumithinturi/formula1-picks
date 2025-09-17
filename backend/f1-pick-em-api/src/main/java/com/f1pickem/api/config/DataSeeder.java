@@ -23,13 +23,13 @@ public class DataSeeder implements CommandLineRunner {
     if (raceRepository.count() == 0) {
       Race bahrain = new Race();
       bahrain.setName("Bahrain Grand Prix");
-      bahrain.setDate(LocalDate.of(2024, 3, 2));
+      bahrain.setDate(LocalDate.of(2024, 3, 2).atStartOfDay());
       bahrain.setStatus("COMPLETED");
       raceRepository.save(bahrain);
 
       Race saudi = new Race();
       saudi.setName("Saudi Arabian Grand Prix");
-      saudi.setDate(LocalDate.of(2024, 3, 9));
+      saudi.setDate(LocalDate.of(2024, 3, 9).atStartOfDay());
       saudi.setStatus("COMPLETED");
       raceRepository.save(saudi);
     }
