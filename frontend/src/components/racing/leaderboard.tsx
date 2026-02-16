@@ -1,6 +1,5 @@
 import * as React from "react";
 import { DriverInfo } from "@/components/racing/driver-info";
-import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
@@ -24,46 +23,40 @@ interface LeaderboardProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Leaderboard({ entries, className, ...props }: LeaderboardProps) {
   return (
     <div className={cn("w-full overflow-x-auto", className)} {...props}>
-      <table className="w-full text-sm text-left">
-        <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
+      <table className="w-full text-xs sm:text-sm">
+        <thead className="text-[10px] sm:text-xs text-muted-foreground uppercase border-b border-border/30">
           <tr>
-            <th className="px-6 py-3 font-medium">Rank</th>
-            <th className="px-6 py-3 font-medium">Driver (User)</th>
-            <th className="px-6 py-3 font-medium hidden md:table-cell text-center">Predictions</th>
-            <th className="px-3 md:px-6 py-3 font-medium text-right">Points</th>
+            <th className="px-2 sm:px-3 py-2 font-medium text-left">Rank</th>
+            <th className="px-2 sm:px-3 py-2 font-medium text-left">
+              <span className="hidden sm:inline">Driver (User)</span>
+              <span className="inline sm:hidden">Driver</span>
+            </th>
+            <th className="px-2 sm:px-3 py-2 font-medium text-right">Points</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/50">
+        <tbody className="divide-y divide-border/30">
           {entries.map((entry) => {
             const rankChange = entry.previousRank - entry.rank;
             return (
-              <tr
-                key={entry.id}
-                className={cn(
-                  "hover:bg-muted/30 transition-colors",
-                  entry.isCurrentUser && "bg-primary/5 hover:bg-primary/10",
-                )}>
-                <td className="px-3 md:px-6 py-4 font-medium whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg w-6 text-center">{entry.rank}</span>
+              <tr key={entry.id} className={cn("transition-colors", entry.isCurrentUser && "bg-primary/5")}>
+                <td className="px-2 sm:px-3 py-2.5 sm:py-3 font-medium whitespace-nowrap">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-sm sm:text-base font-semibold w-6 sm:w-8">{entry.rank}</span>
                     {rankChange > 0 ? (
-                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                      <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500" />
                     ) : rankChange < 0 ? (
-                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      <TrendingDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-red-500" />
                     ) : (
-                      <Minus className="h-4 w-4 text-muted-foreground" />
+                      <Minus className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground" />
                     )}
                   </div>
                 </td>
-                <td className="px-3 md:px-6 py-4">
+                <td className="px-2 sm:px-3 py-2.5 sm:py-3">
                   <DriverInfo name={entry.name} team={entry.team} avatarUrl={entry.avatarUrl} />
                 </td>
-                <td className="px-6 py-4 text-center hidden md:table-cell">
-                  <StatusPill variant={entry.predictionsCorrect === entry.totalPredictions ? "success" : "neutral"}>
-                    {entry.predictionsCorrect}/{entry.totalPredictions} Correct
-                  </StatusPill>
+                <td className="px-2 sm:px-3 py-2.5 sm:py-3 text-right font-semibold text-sm sm:text-base">
+                  {entry.points}
                 </td>
-                <td className="px-3 md:px-6 py-4 text-right font-bold text-lg">{entry.points}</td>
               </tr>
             );
           })}

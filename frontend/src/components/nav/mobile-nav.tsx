@@ -2,18 +2,20 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Home, Trophy, Users, Calendar, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { Screen } from "@/App";
 
 interface MobileNavProps extends React.HTMLAttributes<HTMLDivElement> {
-  activeItem?: string;
+  activeItem?: Screen;
+  onNavigate?: (screen: Screen) => void;
 }
 
-export function MobileNav({ activeItem = "Dashboard", className, ...props }: MobileNavProps) {
+export function MobileNav({ activeItem = "Home", onNavigate, className, ...props }: MobileNavProps) {
   const navItems = [
-    { name: "Dashboard", icon: Home },
+    { name: "Home", icon: Home },
     { name: "Leagues", icon: Trophy },
-    { name: "Global Picks", icon: Users },
+    { name: "Picks", icon: Users },
     { name: "Schedule", icon: Calendar },
-    { name: "Menu", icon: Menu },
+    { name: "More", icon: Menu },
   ];
 
   return (
@@ -28,6 +30,7 @@ export function MobileNav({ activeItem = "Dashboard", className, ...props }: Mob
           key={item.name}
           variant="ghost"
           size="icon"
+          onClick={() => onNavigate?.(item.name as Screen)}
           className={cn(
             "flex flex-col items-center justify-center gap-1 h-full w-full rounded-none",
             activeItem === item.name ? "text-primary" : "text-muted-foreground hover:text-foreground",
