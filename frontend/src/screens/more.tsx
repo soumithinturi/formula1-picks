@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Calendar, Settings, User, HelpCircle, ChevronRight } from "lucide-react";
+import { PageContainer } from "@/components/layout/page-container";
 
 interface MenuItem {
   id: string;
@@ -54,14 +55,7 @@ export function MoreScreen() {
   ];
 
   return (
-    <div className="space-y-6 pb-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">More</h1>
-        <p className="text-muted-foreground">Access historical data, manage your account, and explore app features</p>
-      </div>
-
-      {/* Menu Items */}
+    <PageContainer title="More" subtitle="Access historical data, manage your account, and explore app features">
       <div className="space-y-3">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -92,6 +86,6 @@ export function MoreScreen() {
         <p className="text-xs text-muted-foreground">© 2024 F1 Podium Predictor</p>
         <p className="text-xs text-muted-foreground">Unofficial Fan App • Not affiliated with Formula 1</p>
       </div>
-    </div>
+    </PageContainer>
   );
 }
