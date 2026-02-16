@@ -6,6 +6,7 @@ import { HeaderNav } from "@/components/nav/header-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { HomeScreen } from "./screens/home";
 import { LeaguesScreen } from "./screens/leagues";
+import RaceSchedule from "./screens/race-schedule";
 import { MoreScreen } from "./screens/more";
 
 export type Screen = "Home" | "Leagues" | "Picks" | "Schedule" | "More";
@@ -19,6 +20,8 @@ export function App() {
         return <HomeScreen />;
       case "Leagues":
         return <LeaguesScreen />;
+      case "Schedule":
+        return <RaceSchedule />;
       case "More":
         return <MoreScreen />;
       default:
