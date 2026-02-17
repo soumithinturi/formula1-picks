@@ -10,10 +10,22 @@ interface MenuItem {
   onClick: () => void;
 }
 
-export function MoreScreen() {
+import type { Screen } from "@/App";
+
+interface MoreScreenProps {
+  onNavigate?: (screen: Screen) => void;
+}
+
+export function MoreScreen({ onNavigate }: MoreScreenProps) {
   // Placeholder navigation handlers - will be wired up when routing is implemented
   const handleNavigate = (destination: string) => {
-    console.log(`Navigate to: ${destination}`);
+    if (destination === "race-winners-history") {
+      onNavigate?.("RaceWinnersHistory");
+    } else if (destination === "leagues-history") {
+      onNavigate?.("LeaguesHistory");
+    } else {
+      console.log(`Navigate to: ${destination}`);
+    }
   };
 
   const menuItems: MenuItem[] = [

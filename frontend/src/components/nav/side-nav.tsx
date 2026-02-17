@@ -1,17 +1,22 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Home, Trophy, Users, Calendar, Settings, LogOut } from "lucide-react";
+import { Home, Trophy, Users, Calendar, Settings, LogOut, Flag, Archive } from "lucide-react";
+
+import type { Screen } from "@/App";
 
 interface SideNavProps extends React.HTMLAttributes<HTMLDivElement> {
-  activeItem?: string;
+  activeItem?: Screen;
+  onNavigate?: (screen: Screen) => void;
 }
 
-export function SideNav({ activeItem = "Dashboard", className, ...props }: SideNavProps) {
+export function SideNav({ activeItem = "Home", onNavigate, className, ...props }: SideNavProps) {
   const navItems = [
-    { name: "Dashboard", icon: Home },
-    { name: "Leagues", icon: Trophy },
-    { name: "Global Picks", icon: Users },
-    { name: "Schedule", icon: Calendar },
+    { name: "Home", label: "Home", icon: Home },
+    { name: "Leagues", label: "Leagues", icon: Trophy },
+    { name: "Picks", label: "Picks", icon: Users },
+    { name: "Schedule", label: "Schedule", icon: Calendar },
+    { name: "RaceWinnersHistory", label: "Race History", icon: Flag },
+    { name: "LeaguesHistory", label: "League History", icon: Archive },
   ];
 
   return (
@@ -27,6 +32,7 @@ export function SideNav({ activeItem = "Dashboard", className, ...props }: SideN
         {navItems.map((item) => (
           <button
             key={item.name}
+            onClick={() => onNavigate?.(item.name as Screen)}
             className={cn(
               "flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md transition-colors",
               activeItem === item.name
@@ -34,7 +40,7 @@ export function SideNav({ activeItem = "Dashboard", className, ...props }: SideN
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}>
             <item.icon className="mr-3 h-5 w-5" />
-            {item.name}
+            {item.label}
           </button>
         ))}
       </nav>

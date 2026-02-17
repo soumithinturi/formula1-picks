@@ -2,7 +2,7 @@ import * as React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { DriverInfo } from "@/components/racing/driver-info";
-import { MobilePredictionSlot } from "@/components/racing/mobile-prediction-slot";
+import { PredictionSlot } from "@/components/racing/prediction-slot";
 
 interface Driver {
   id: string;
@@ -12,14 +12,21 @@ interface Driver {
   rank?: number;
 }
 
-interface MobileDriverSelectorProps {
+interface DriverSelectorProps {
   position: number;
   selectedDriver?: Driver | null;
   drivers: Driver[];
+  showPosition?: boolean;
   onSelect: (driver: Driver) => void;
 }
 
-export function MobileDriverSelector({ position, selectedDriver, drivers, onSelect }: MobileDriverSelectorProps) {
+export function DriverSelector({
+  position,
+  selectedDriver,
+  drivers,
+  showPosition = true,
+  onSelect,
+}: DriverSelectorProps) {
   const [open, setOpen] = React.useState(false);
 
   const handleSelect = (driver: Driver) => {
@@ -30,7 +37,7 @@ export function MobileDriverSelector({ position, selectedDriver, drivers, onSele
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <MobilePredictionSlot position={position} isEmpty={!selectedDriver} className="sm:hidden">
+        <PredictionSlot position={position} isEmpty={!selectedDriver} showPosition={showPosition}>
           {selectedDriver && (
             <div className="bg-card border border-primary/20 rounded-lg p-3">
               <DriverInfo
@@ -41,7 +48,7 @@ export function MobileDriverSelector({ position, selectedDriver, drivers, onSele
               />
             </div>
           )}
-        </MobilePredictionSlot>
+        </PredictionSlot>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] h-[80vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b">

@@ -2,9 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Countdown } from "@/components/ui/countdown";
 import { Leaderboard } from "@/components/racing/leaderboard";
-import { MobilePredictionSlot } from "@/components/racing/mobile-prediction-slot";
+import { DriverSelector } from "@/components/racing/driver-selector";
 import { ChevronRight, Trophy, Newspaper } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
+import { useState } from "react";
 
 interface NewsItem {
   id: string;
@@ -17,7 +18,30 @@ interface CircuitStat {
   value: string;
 }
 
+interface Driver {
+  id: string;
+  name: string;
+  team: string;
+  avatarUrl?: string;
+  rank?: number;
+}
+
+const mockDrivers: Driver[] = [
+  { id: "ver", name: "Max Verstappen", team: "Red Bull Racing", rank: 1 },
+  { id: "per", name: "Sergio Perez", team: "Red Bull Racing", rank: 2 },
+  { id: "lec", name: "Charles Leclerc", team: "Ferrari", rank: 3 },
+  { id: "sai", name: "Carlos Sainz", team: "Ferrari", rank: 4 },
+  { id: "nor", name: "Lando Norris", team: "McLaren", rank: 5 },
+  { id: "pia", name: "Oscar Piastri", team: "McLaren", rank: 6 },
+  { id: "rus", name: "George Russell", team: "Mercedes", rank: 7 },
+  { id: "ham", name: "Lewis Hamilton", team: "Mercedes", rank: 8 },
+  { id: "alo", name: "Fernando Alonso", team: "Aston Martin", rank: 9 },
+  { id: "str", name: "Lance Stroll", team: "Aston Martin", rank: 10 },
+];
+
 export function HomeScreen() {
+  const [selectedDrivers, setSelectedDrivers] = useState<(Driver | null)[]>([null, null, null]);
+
   // Mock data - will be replaced with real data from backend
   const nextRace = {
     name: "MONACO GP",
@@ -118,17 +142,35 @@ export function HomeScreen() {
             {!currentPrediction.hasPrediction ? (
               <div className="space-y-3">
                 <div className="flex flex-col gap-2">
-                  <MobilePredictionSlot position={1} isEmpty />
-                  <MobilePredictionSlot position={2} isEmpty />
-                  <MobilePredictionSlot position={3} isEmpty />
+                  {[0, 1, 2].map((index) => (
+                    <DriverSelector
+                      key={index}
+                      position={index + 1}
+                      drivers={mockDrivers}
+                      selectedDriver={selectedDrivers[index]}
+                      onSelect={(driver) => {
+                        const newDrivers = [...selectedDrivers];
+                        newDrivers[index] = driver;
+                        setSelectedDrivers(newDrivers);
+                      }}
+                    />
+                  ))}
                 </div>
-                <Button className="w-full" size="lg">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={selectedDrivers.some((d) => d === null)}
+                  onClick={() => {
+                    // Handle submission
+                    console.log("Submitting prediction:", selectedDrivers);
+                  }}>
                   Make Your Prediction
                 </Button>
               </div>
             ) : (
               <div className="space-y-3">
                 {/* Will show filled predictions here */}
+                {/* TODO: Show read-only view of predictions */}
                 <Button variant="outline" className="w-full" size="lg">
                   Edit Prediction
                 </Button>

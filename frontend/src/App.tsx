@@ -8,8 +8,12 @@ import { HomeScreen } from "./screens/home";
 import { LeaguesScreen } from "./screens/leagues";
 import RaceSchedule from "./screens/race-schedule";
 import { MoreScreen } from "./screens/more";
+import { PicksScreen } from "./screens/picks";
 
-export type Screen = "Home" | "Leagues" | "Picks" | "Schedule" | "More";
+import { RaceWinnersHistoryScreen } from "@/screens/race-winners-history";
+import { LeaguesHistoryScreen } from "@/screens/leagues-history";
+
+export type Screen = "Home" | "Leagues" | "Picks" | "Schedule" | "More" | "RaceWinnersHistory" | "LeaguesHistory";
 
 export function App() {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
@@ -22,8 +26,14 @@ export function App() {
         return <LeaguesScreen />;
       case "Schedule":
         return <RaceSchedule />;
+      case "Picks":
+        return <PicksScreen />;
       case "More":
-        return <MoreScreen />;
+        return <MoreScreen onNavigate={setActiveScreen} />;
+      case "RaceWinnersHistory":
+        return <RaceWinnersHistoryScreen />;
+      case "LeaguesHistory":
+        return <LeaguesHistoryScreen />;
       default:
         return <HomeScreen />;
     }
@@ -31,9 +41,9 @@ export function App() {
 
   return (
     <ThemeProvider>
-      <div className="flex min-h-screen bg-background text-foreground font-sans">
+      <div className="flex h-screen overflow-hidden bg-background text-foreground font-sans">
         {/* Desktop Sidebar - Hidden on mobile */}
-        <SideNav className="hidden md:flex shrink-0" />
+        <SideNav activeItem={activeScreen} onNavigate={setActiveScreen} className="hidden md:flex shrink-0" />
 
         <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
           <HeaderNav />
