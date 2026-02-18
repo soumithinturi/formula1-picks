@@ -1,0 +1,29 @@
+# dependencies
+node_modules
+
+# output
+dist
+out
+*.tgz
+
+# dotenv — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# logs
+logs
+*.log
+
+# caches
+.cache
+*.tsbuildinfo
+
+# IntelliJ
+.idea
+
+# Finder (macOS)
+.DS_Store
+
+# Bun lockfile (commit bun.lockb instead of this)
+bun.lock
