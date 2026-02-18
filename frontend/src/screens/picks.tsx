@@ -303,7 +303,7 @@ export function PicksScreen() {
           <Save className="w-5 h-5 mr-2" />
           Draft
         </Button>
-        <Button size="lg" className="flex-[2] shadow-lg text-lg font-bold bg-primary text-primary-foreground">
+        <Button size="lg" className="flex-2 shadow-lg text-lg font-bold bg-primary text-primary-foreground">
           Lock In Picks
         </Button>
       </div>

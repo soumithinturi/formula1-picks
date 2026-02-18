@@ -204,7 +204,7 @@ export function HomeScreen() {
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                     onClick={() => navigate(`/leagues/${league.id}/standings`)}>
                     <div className="flex items-center gap-4">
-                      <div className="flex flex-col items-center min-w-[2rem]">
+                      <div className="flex flex-col items-center min-w-8">
                         <span className="text-lg font-bold font-mono leading-none">{league.rank}</span>
                         <span className="text-[10px] text-muted-foreground uppercase">of {league.total}</span>
                       </div>
