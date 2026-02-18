@@ -1,4 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Calendar, Settings, User, HelpCircle, ChevronRight } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 
@@ -10,19 +11,14 @@ interface MenuItem {
   onClick: () => void;
 }
 
-import type { Screen } from "@/App";
+export function MoreScreen() {
+  const navigate = useNavigate();
 
-interface MoreScreenProps {
-  onNavigate?: (screen: Screen) => void;
-}
-
-export function MoreScreen({ onNavigate }: MoreScreenProps) {
-  // Placeholder navigation handlers - will be wired up when routing is implemented
   const handleNavigate = (destination: string) => {
     if (destination === "race-winners-history") {
-      onNavigate?.("RaceWinnersHistory");
+      navigate("/more/race-winners-history");
     } else if (destination === "leagues-history") {
-      onNavigate?.("LeaguesHistory");
+      navigate("/more/leagues-history");
     } else {
       console.log(`Navigate to: ${destination}`);
     }

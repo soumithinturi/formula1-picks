@@ -5,6 +5,7 @@ import { DriverSelector } from "@/components/racing/driver-selector";
 import { ChevronRight, Trophy, Newspaper } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 
 interface NewsItem {
   id: string;
@@ -38,11 +39,8 @@ const mockDrivers: Driver[] = [
   { id: "str", name: "Lance Stroll", team: "Aston Martin", rank: 10 },
 ];
 
-interface HomeScreenProps {
-  onNavigate?: (screen: string) => void;
-}
-
-export function HomeScreen({ onNavigate }: HomeScreenProps) {
+export function HomeScreen() {
+  const navigate = useNavigate();
   const [selectedDrivers, setSelectedDrivers] = useState<(Driver | null)[]>([null, null, null]);
 
   // Mock data - will be replaced with real data from backend
@@ -204,7 +202,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                   <div
                     key={league.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => onNavigate?.("Leagues")}>
+                    onClick={() => navigate(`/leagues/${league.id}/standings`)}>
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col items-center min-w-[2rem]">
                         <span className="text-lg font-bold font-mono leading-none">{league.rank}</span>

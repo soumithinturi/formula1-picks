@@ -1,24 +1,20 @@
 import * as React from "react";
+import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
 import { Home, Trophy, Users, Calendar, Settings, LogOut, Flag, Archive } from "lucide-react";
 
-import type { Screen } from "@/App";
+interface SideNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-interface SideNavProps extends React.HTMLAttributes<HTMLDivElement> {
-  activeItem?: Screen;
-  onNavigate?: (screen: Screen) => void;
-}
+const navItems = [
+  { to: "/", label: "Home", icon: Home, end: true },
+  { to: "/leagues", label: "Leagues", icon: Trophy },
+  { to: "/picks", label: "Picks", icon: Users },
+  { to: "/schedule", label: "Schedule", icon: Calendar },
+  { to: "/more/race-winners-history", label: "Race History", icon: Flag },
+  { to: "/more/leagues-history", label: "League History", icon: Archive },
+];
 
-export function SideNav({ activeItem = "Home", onNavigate, className, ...props }: SideNavProps) {
-  const navItems = [
-    { name: "Home", label: "Home", icon: Home },
-    { name: "Leagues", label: "Leagues", icon: Trophy },
-    { name: "Picks", label: "Picks", icon: Users },
-    { name: "Schedule", label: "Schedule", icon: Calendar },
-    { name: "RaceWinnersHistory", label: "Race History", icon: Flag },
-    { name: "LeaguesHistory", label: "League History", icon: Archive },
-  ];
-
+export function SideNav({ className, ...props }: SideNavProps) {
   return (
     <div className={cn("flex flex-col h-full w-64 bg-card border-r border-border p-4", className)} {...props}>
       <div className="flex items-center gap-2 mb-8 px-2">
@@ -30,18 +26,21 @@ export function SideNav({ activeItem = "Home", onNavigate, className, ...props }
 
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => (
-          <button
-            key={item.name}
-            onClick={() => onNavigate?.(item.name as Screen)}
-            className={cn(
-              "flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md transition-colors",
-              activeItem === item.name
-                ? "bg-primary text-primary-foreground shadow"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}>
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md transition-colors",
+                isActive
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )
+            }>
             <item.icon className="mr-3 h-5 w-5" />
             {item.label}
-          </button>
+          </NavLink>
         ))}
       </nav>
 

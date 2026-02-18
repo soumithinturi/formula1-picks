@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Routes, Route, Outlet, useLocation } from "react-router";
 import { ThemeProvider } from "@/context/theme-context";
 import { SideNav } from "@/components/nav/side-nav";
 import { MobileNav } from "@/components/nav/mobile-nav";
@@ -9,75 +9,54 @@ import { LeaguesScreen } from "./screens/leagues";
 import RaceSchedule from "./screens/race-schedule";
 import { MoreScreen } from "./screens/more";
 import { PicksScreen } from "./screens/picks";
-
 import { RaceWinnersHistoryScreen } from "@/screens/race-winners-history";
 import { LeaguesHistoryScreen } from "@/screens/leagues-history";
-
 import { CreateLeagueWizard } from "@/screens/create-league/wizard";
 import { StandingsScreen } from "./screens/standings";
 
-export type Screen =
-  | "Home"
-  | "Leagues"
-  | "Standings"
-  | "Picks"
-  | "Schedule"
-  | "More"
-  | "RaceWinnersHistory"
-  | "LeaguesHistory"
-  | "CreateLeague";
-
-export function App() {
-  const [activeScreen, setActiveScreen] = useState<Screen>("Home");
-
-  const renderScreen = () => {
-    switch (activeScreen) {
-      case "Home":
-        return <HomeScreen onNavigate={(screen) => setActiveScreen(screen as Screen)} />;
-      case "Leagues":
-        return <LeaguesScreen onNavigate={(screen) => setActiveScreen(screen as Screen)} />;
-      case "Standings":
-        return <StandingsScreen onNavigate={(screen) => setActiveScreen(screen as Screen)} />;
-      case "Schedule":
-        return <RaceSchedule />;
-      case "Picks":
-        return <PicksScreen />;
-      case "More":
-        return <MoreScreen onNavigate={setActiveScreen} />;
-      case "RaceWinnersHistory":
-        return <RaceWinnersHistoryScreen />;
-      case "LeaguesHistory":
-        return <LeaguesHistoryScreen />;
-      case "CreateLeague":
-        return (
-          <CreateLeagueWizard
-            onComplete={() => setActiveScreen("Leagues")}
-            onCancel={() => setActiveScreen("Leagues")}
-          />
-        );
-      default:
-        return <HomeScreen onNavigate={(screen) => setActiveScreen(screen as Screen)} />;
-    }
-  };
+/** Shell layout — wraps all routes with the nav chrome */
+function AppLayout() {
+  const location = useLocation();
+  const isCreateLeague = location.pathname === "/leagues/create";
 
   return (
     <ThemeProvider>
       <div className="flex h-screen overflow-hidden bg-background text-foreground font-sans">
         {/* Desktop Sidebar - Hidden on mobile */}
-        <SideNav activeItem={activeScreen} onNavigate={setActiveScreen} className="hidden md:flex shrink-0" />
+        <SideNav className="hidden md:flex shrink-0" />
 
         <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
           <HeaderNav />
 
-          <main className={`flex-1 overflow-y-auto ${activeScreen === "CreateLeague" ? "" : "p-4 md:p-8"}`}>
-            {renderScreen()}
+          <main className={`flex-1 overflow-y-auto ${isCreateLeague ? "" : "p-4 md:p-8"}`}>
+            <Outlet />
           </main>
         </div>
 
         {/* Mobile Bottom Navigation */}
-        <MobileNav activeItem={activeScreen} onNavigate={setActiveScreen} />
+        <MobileNav />
         <Toaster />
       </div>
     </ThemeProvider>
+  );
+}
+
+export function App() {
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route index element={<HomeScreen />} />
+        <Route path="leagues" element={<LeaguesScreen />} />
+        <Route path="leagues/create" element={<CreateLeagueWizard />} />
+        <Route path="leagues/:leagueId/standings" element={<StandingsScreen />} />
+        <Route path="picks" element={<PicksScreen />} />
+        <Route path="schedule" element={<RaceSchedule />} />
+        <Route path="more" element={<MoreScreen />} />
+        <Route path="more/race-winners-history" element={<RaceWinnersHistoryScreen />} />
+        <Route path="more/leagues-history" element={<LeaguesHistoryScreen />} />
+        {/* Fallback */}
+        <Route path="*" element={<HomeScreen />} />
+      </Route>
+    </Routes>
   );
 }

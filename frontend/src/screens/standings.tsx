@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router";
 import { PageContainer } from "@/components/layout/page-container";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -97,11 +98,8 @@ const mockStandings: Standing[] = [
   },
 ];
 
-interface StandingsScreenProps {
-  onNavigate: (screen: string) => void;
-}
-
-export function StandingsScreen({ onNavigate }: StandingsScreenProps) {
+export function StandingsScreen() {
+  const navigate = useNavigate();
   return (
     <PageContainer title="Standings" subtitle="League Leaderboard">
       <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -110,7 +108,7 @@ export function StandingsScreen({ onNavigate }: StandingsScreenProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onNavigate("Home")}
+            onClick={() => navigate(-1)}
             className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back
           </Button>

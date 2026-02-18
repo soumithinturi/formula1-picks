@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Leaderboard } from "@/components/racing/leaderboard";
@@ -27,7 +28,8 @@ interface League {
   };
 }
 
-export function LeaguesScreen({ onNavigate }: { onNavigate: (screen: string) => void }) {
+export function LeaguesScreen() {
+  const navigate = useNavigate();
   const [leagues, setLeagues] = useState<League[]>([
     {
       id: "1",
@@ -47,17 +49,6 @@ export function LeaguesScreen({ onNavigate }: { onNavigate: (screen: string) => 
       memberCount: 8,
       yourRank: 2,
       inviteCode: "FAM-456",
-      nextRace: {
-        name: "MONACO",
-        daysUntil: 3,
-      },
-    },
-    {
-      id: "3",
-      name: "Local Karting",
-      memberCount: 15,
-      yourRank: 8,
-      inviteCode: "KART-789",
       nextRace: {
         name: "MONACO",
         daysUntil: 3,
@@ -191,7 +182,7 @@ export function LeaguesScreen({ onNavigate }: { onNavigate: (screen: string) => 
               </p>
               <div className="flex gap-2">
                 <JoinLeagueDialog onLeagueJoined={handleLeagueJoined} />
-                <Button onClick={() => onNavigate("CreateLeague")}>Create League</Button>
+                <Button onClick={() => navigate("/leagues/create")}>Create League</Button>
               </div>
             </CardContent>
           </Card>
@@ -286,7 +277,10 @@ export function LeaguesScreen({ onNavigate }: { onNavigate: (screen: string) => 
           </CardHeader>
           <CardContent className="space-y-4">
             <Leaderboard entries={mockLeaderboardData} />
-            <Button variant="outline" className="w-full" onClick={() => onNavigate("Standings")}>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate(`/leagues/${activeLeagueId}/standings`)}>
               View Full Standings
             </Button>
           </CardContent>
@@ -306,7 +300,7 @@ export function LeaguesScreen({ onNavigate }: { onNavigate: (screen: string) => 
                 <UserPlus className="h-4 w-4" />
                 <span>Join League</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("CreateLeague")} className="gap-2 cursor-pointer py-3">
+              <DropdownMenuItem onClick={() => navigate("/leagues/create")} className="gap-2 cursor-pointer py-3">
                 <Plus className="h-4 w-4" />
                 <span>Create League</span>
               </DropdownMenuItem>

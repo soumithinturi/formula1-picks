@@ -1,16 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Step1 } from "./step-1";
 import { Step2 } from "./step-2";
 import { Step3 } from "./step-3";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
-interface CreateLeagueWizardProps {
-  onComplete: () => void;
-  onCancel: () => void;
-}
-
-export function CreateLeagueWizard({ onComplete, onCancel }: CreateLeagueWizardProps) {
+export function CreateLeagueWizard() {
+  const navigate = useNavigate();
+  const handleDone = () => navigate("/leagues");
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: "",
@@ -52,7 +50,7 @@ export function CreateLeagueWizard({ onComplete, onCancel }: CreateLeagueWizardP
             <Button
               variant="ghost"
               size="icon"
-              onClick={onCancel}
+              onClick={handleDone}
               className="-mr-2 text-muted-foreground hover:text-foreground">
               <X className="h-5 w-5" />
             </Button>
@@ -93,13 +91,13 @@ export function CreateLeagueWizard({ onComplete, onCancel }: CreateLeagueWizardP
           <Step1
             initialData={{ name: formData.name, privacy: formData.privacy }}
             onNext={handleNextStep}
-            onCancel={onCancel}
+            onCancel={handleDone}
           />
         )}
         {step === 2 && (
           <Step2 initialData={{ rules: formData.rules }} onNext={handleNextStep} onBack={handleBackStep} />
         )}
-        {step === 3 && <Step3 data={formData} onFinish={onComplete} onBack={handleBackStep} />}
+        {step === 3 && <Step3 data={formData} onFinish={handleDone} onBack={handleBackStep} />}
       </div>
     </div>
   );

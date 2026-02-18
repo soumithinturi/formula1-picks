@@ -1,23 +1,19 @@
 import * as React from "react";
+import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
 import { Home, Trophy, Users, Calendar, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import type { Screen } from "@/App";
 
-interface MobileNavProps extends React.HTMLAttributes<HTMLDivElement> {
-  activeItem?: Screen;
-  onNavigate?: (screen: Screen) => void;
-}
+interface MobileNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-export function MobileNav({ activeItem = "Home", onNavigate, className, ...props }: MobileNavProps) {
-  const navItems = [
-    { name: "Home", icon: Home },
-    { name: "Leagues", icon: Trophy },
-    { name: "Picks", icon: Users },
-    { name: "Schedule", icon: Calendar },
-    { name: "More", icon: Menu },
-  ];
+const navItems = [
+  { to: "/", label: "Home", icon: Home, end: true },
+  { to: "/leagues", label: "Leagues", icon: Trophy },
+  { to: "/picks", label: "Picks", icon: Users },
+  { to: "/schedule", label: "Schedule", icon: Calendar },
+  { to: "/more", label: "More", icon: Menu },
+];
 
+export function MobileNav({ className, ...props }: MobileNavProps) {
   return (
     <div
       className={cn(
@@ -26,18 +22,23 @@ export function MobileNav({ activeItem = "Home", onNavigate, className, ...props
       )}
       {...props}>
       {navItems.map((item) => (
-        <Button
-          key={item.name}
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate?.(item.name as Screen)}
-          className={cn(
-            "flex flex-col items-center justify-center gap-1 h-full w-full rounded-none",
-            activeItem === item.name ? "text-primary" : "text-muted-foreground hover:text-foreground",
-          )}>
-          <item.icon className={cn("h-5 w-5", activeItem === item.name && "fill-current")} />
-          <span className="text-[10px] font-medium">{item.name}</span>
-        </Button>
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.end}
+          className={({ isActive }) =>
+            cn(
+              "flex flex-col items-center justify-center gap-1 h-full w-full rounded-none transition-colors",
+              isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+            )
+          }>
+          {({ isActive }) => (
+            <>
+              <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </>
+          )}
+        </NavLink>
       ))}
     </div>
   );
