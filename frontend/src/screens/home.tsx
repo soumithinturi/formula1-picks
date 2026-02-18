@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Countdown } from "@/components/ui/countdown";
-import { Leaderboard } from "@/components/racing/leaderboard";
 import { DriverSelector } from "@/components/racing/driver-selector";
 import { ChevronRight, Trophy, Newspaper } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
@@ -39,7 +38,11 @@ const mockDrivers: Driver[] = [
   { id: "str", name: "Lance Stroll", team: "Aston Martin", rank: 10 },
 ];
 
-export function HomeScreen() {
+interface HomeScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const [selectedDrivers, setSelectedDrivers] = useState<(Driver | null)[]>([null, null, null]);
 
   // Mock data - will be replaced with real data from backend
@@ -185,16 +188,40 @@ export function HomeScreen() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg font-semibold">Global League</CardTitle>
+                <CardTitle className="text-lg font-semibold">My Rankings</CardTitle>
               </div>
-              <Button variant="ghost" size="sm" className="gap-1">
-                See Full
-                <ChevronRight className="h-4 w-4" />
-              </Button>
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
-            <Leaderboard entries={leaderboardData.slice(0, 3)} />
+          <CardContent>
+            <div className="space-y-4">
+              {/* League Rankings List */}
+              <div className="space-y-2">
+                {[
+                  { id: "1", name: "Work Crew", rank: 5, total: 12, points: 125, trend: "up" },
+                  { id: "2", name: "Family", rank: 2, total: 8, points: 142, trend: "same" },
+                  { id: "3", name: "Local Karting", rank: 8, total: 15, points: 98, trend: "down" },
+                ].map((league) => (
+                  <div
+                    key={league.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                    onClick={() => onNavigate?.("Leagues")}>
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col items-center min-w-[2rem]">
+                        <span className="text-lg font-bold font-mono leading-none">{league.rank}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase">of {league.total}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{league.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{league.points} pts</span>
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
 

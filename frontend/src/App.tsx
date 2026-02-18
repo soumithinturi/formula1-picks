@@ -13,7 +13,19 @@ import { PicksScreen } from "./screens/picks";
 import { RaceWinnersHistoryScreen } from "@/screens/race-winners-history";
 import { LeaguesHistoryScreen } from "@/screens/leagues-history";
 
-export type Screen = "Home" | "Leagues" | "Picks" | "Schedule" | "More" | "RaceWinnersHistory" | "LeaguesHistory";
+import { CreateLeagueWizard } from "@/screens/create-league/wizard";
+import { StandingsScreen } from "./screens/standings";
+
+export type Screen =
+  | "Home"
+  | "Leagues"
+  | "Standings"
+  | "Picks"
+  | "Schedule"
+  | "More"
+  | "RaceWinnersHistory"
+  | "LeaguesHistory"
+  | "CreateLeague";
 
 export function App() {
   const [activeScreen, setActiveScreen] = useState<Screen>("Home");
@@ -21,9 +33,11 @@ export function App() {
   const renderScreen = () => {
     switch (activeScreen) {
       case "Home":
-        return <HomeScreen />;
+        return <HomeScreen onNavigate={(screen) => setActiveScreen(screen as Screen)} />;
       case "Leagues":
-        return <LeaguesScreen />;
+        return <LeaguesScreen onNavigate={(screen) => setActiveScreen(screen as Screen)} />;
+      case "Standings":
+        return <StandingsScreen onNavigate={(screen) => setActiveScreen(screen as Screen)} />;
       case "Schedule":
         return <RaceSchedule />;
       case "Picks":
@@ -34,8 +48,15 @@ export function App() {
         return <RaceWinnersHistoryScreen />;
       case "LeaguesHistory":
         return <LeaguesHistoryScreen />;
+      case "CreateLeague":
+        return (
+          <CreateLeagueWizard
+            onComplete={() => setActiveScreen("Leagues")}
+            onCancel={() => setActiveScreen("Leagues")}
+          />
+        );
       default:
-        return <HomeScreen />;
+        return <HomeScreen onNavigate={(screen) => setActiveScreen(screen as Screen)} />;
     }
   };
 
@@ -48,7 +69,9 @@ export function App() {
         <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
           <HeaderNav />
 
-          <main className="flex-1 overflow-y-auto p-4 md:p-8">{renderScreen()}</main>
+          <main className={`flex-1 overflow-y-auto ${activeScreen === "CreateLeague" ? "" : "p-4 md:p-8"}`}>
+            {renderScreen()}
+          </main>
         </div>
 
         {/* Mobile Bottom Navigation */}

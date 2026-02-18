@@ -27,7 +27,7 @@ interface League {
   };
 }
 
-export function LeaguesScreen() {
+export function LeaguesScreen({ onNavigate }: { onNavigate: (screen: string) => void }) {
   const [leagues, setLeagues] = useState<League[]>([
     {
       id: "1",
@@ -64,11 +64,11 @@ export function LeaguesScreen() {
       },
     },
     {
-      id: "4",
-      name: "Global Fans",
-      memberCount: 156,
-      yourRank: 42,
-      inviteCode: "GLOB-ABC",
+      id: "3",
+      name: "Local Karting",
+      memberCount: 15,
+      yourRank: 8,
+      inviteCode: "KART-789",
       nextRace: {
         name: "MONACO",
         daysUntil: 3,
@@ -77,7 +77,6 @@ export function LeaguesScreen() {
   ]);
 
   const [activeLeagueId, setActiveLeagueId] = useState<string>(leagues[0]?.id || "");
-  const [isCreateOpen, setCreateOpen] = useState(false);
   const [isJoinOpen, setJoinOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -156,20 +155,11 @@ export function LeaguesScreen() {
   };
 
   const handleLeagueCreated = (newLeague: { name: string; description: string; inviteCode: string }) => {
-    const league: League = {
-      id: Date.now().toString(),
-      name: newLeague.name,
-      description: newLeague.description,
-      memberCount: 1,
-      yourRank: 1,
-      inviteCode: newLeague.inviteCode,
-      nextRace: {
-        name: "MONACO",
-        daysUntil: 3,
-      },
-    };
-    setLeagues([...leagues, league]);
-    setActiveLeagueId(league.id);
+    // This will likely be handled by the backend/wizard completion in the future
+    // For now we just add it purely for demo consistency if needed, but the Wizard handles its own completion logic
+    // We might need to lift state up or pass a callback to the wizard if we want the data back here immediately.
+    // For this step, we'll just log or ignore, as the prompt is about screens.
+    console.log("League created", newLeague);
   };
 
   const handleLeagueJoined = (inviteCode: string) => {
@@ -201,7 +191,7 @@ export function LeaguesScreen() {
               </p>
               <div className="flex gap-2">
                 <JoinLeagueDialog onLeagueJoined={handleLeagueJoined} />
-                <CreateLeagueDialog onLeagueCreated={handleLeagueCreated} />
+                <Button onClick={() => onNavigate("CreateLeague")}>Create League</Button>
               </div>
             </CardContent>
           </Card>
@@ -291,12 +281,12 @@ export function LeaguesScreen() {
                 <Trophy className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg font-semibold">Standings</CardTitle>
               </div>
-              <span className="text-xs font-semibold text-muted-foreground uppercase">Overall</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase">League Standings</span>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <Leaderboard entries={mockLeaderboardData} />
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => onNavigate("Standings")}>
               View Full Standings
             </Button>
           </CardContent>
@@ -316,7 +306,7 @@ export function LeaguesScreen() {
                 <UserPlus className="h-4 w-4" />
                 <span>Join League</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCreateOpen(true)} className="gap-2 cursor-pointer py-3">
+              <DropdownMenuItem onClick={() => onNavigate("CreateLeague")} className="gap-2 cursor-pointer py-3">
                 <Plus className="h-4 w-4" />
                 <span>Create League</span>
               </DropdownMenuItem>
@@ -324,7 +314,6 @@ export function LeaguesScreen() {
           </DropdownMenu>
 
           <JoinLeagueDialog open={isJoinOpen} onOpenChange={setJoinOpen} onLeagueJoined={handleLeagueJoined} />
-          <CreateLeagueDialog open={isCreateOpen} onOpenChange={setCreateOpen} onLeagueCreated={handleLeagueCreated} />
         </div>
       </div>
     </PageContainer>
