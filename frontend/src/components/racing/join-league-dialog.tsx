@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 export interface JoinLeagueDialogProps {
   onLeagueJoined?: (inviteCode: string) => void;
@@ -26,7 +27,7 @@ export function JoinLeagueDialog({
   const [inviteCode, setInviteCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const code = inviteCode.trim().toUpperCase();
@@ -43,16 +44,17 @@ export function JoinLeagueDialog({
 
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-
-      // Mock validation - in real app, this would be an API call
-      onLeagueJoined?.(code);
-
+    try {
+      await api.leagues.join(code);
       toast.success("Successfully joined league!");
+      onLeagueJoined?.(code);
       handleClose();
-    }, 500);
+    } catch (error) {
+      console.error("Failed to join league:", error);
+      toast.error("Failed to join league. Check the code and try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -97,7 +99,7 @@ export function JoinLeagueDialog({
               Cancel
             </Button>
             <Button type="submit" className="flex-1" disabled={isLoading}>
-              {isLoading ? "Joining..." : "Join League"}
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join League"}
             </Button>
           </div>
         </form>

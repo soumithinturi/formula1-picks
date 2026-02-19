@@ -4,12 +4,17 @@ import { Step1 } from "./step-1";
 import { Step2 } from "./step-2";
 import { Step3 } from "./step-3";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
+import { api, type League } from "@/lib/api";
+import { toast } from "sonner";
 
 export function CreateLeagueWizard() {
   const navigate = useNavigate();
   const handleDone = () => navigate("/leagues");
   const [step, setStep] = useState(1);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createdLeague, setCreatedLeague] = useState<League | null>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     privacy: "public" as "public" | "private",
@@ -25,9 +30,30 @@ export function CreateLeagueWizard() {
     },
   });
 
-  const handleNextStep = (data: Partial<typeof formData>) => {
-    setFormData((prev) => ({ ...prev, ...data }));
-    setStep((prev) => prev + 1);
+  const handleNextStep = async (data: Partial<typeof formData>) => {
+    const newData = { ...formData, ...data };
+    setFormData(newData);
+
+    if (step === 2) {
+      // Create League
+      setIsCreating(true);
+      try {
+        const league = await api.leagues.create({
+          name: newData.name,
+          scoringConfig: newData.rules,
+        });
+        setCreatedLeague(league);
+        setStep(3);
+        toast.success("League created successfully!");
+      } catch (error) {
+        console.error("Failed to create league:", error);
+        toast.error("Failed to create league. Please try again.");
+      } finally {
+        setIsCreating(false);
+      }
+    } else {
+      setStep((prev) => prev + 1);
+    }
   };
 
   const handleBackStep = () => {
@@ -60,7 +86,7 @@ export function CreateLeagueWizard() {
             {steps.map((s) => {
               const isActive = step === s.id;
               const isCompleted = step > s.id;
-              const canNavigate = isCompleted;
+              const canNavigate = isCompleted && !isCreating;
 
               return (
                 <div
@@ -86,7 +112,14 @@ export function CreateLeagueWizard() {
       </div>
 
       {/* Wizard Content */}
-      <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-8 pb-24">
+      <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-8 pb-24 relative">
+        {isCreating && (
+          <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center flex-col gap-4">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="font-bold text-lg animate-pulse">Creating your league...</p>
+          </div>
+        )}
+
         {step === 1 && (
           <Step1
             initialData={{ name: formData.name, privacy: formData.privacy }}
@@ -97,7 +130,9 @@ export function CreateLeagueWizard() {
         {step === 2 && (
           <Step2 initialData={{ rules: formData.rules }} onNext={handleNextStep} onBack={handleBackStep} />
         )}
-        {step === 3 && <Step3 data={formData} onFinish={handleDone} onBack={handleBackStep} />}
+        {step === 3 && createdLeague && (
+          <Step3 league={createdLeague} rules={formData.rules} onFinish={handleDone} onBack={handleBackStep} />
+        )}
       </div>
     </div>
   );

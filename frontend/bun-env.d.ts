@@ -40,3 +40,11 @@ declare module "*.gif" {
   const path: string;
   export = path;
 }
+
+interface ImportMetaEnv {
+  readonly BUN_PUBLIC_API_URL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

@@ -11,12 +11,16 @@ import { BrowserRouter } from "react-router";
 import { App } from "./App";
 import "../styles/globals.css";
 
+import { ThemeProvider } from "@/context/theme-context";
+
 const elem = document.getElementById("root")!;
 const app = (
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </ThemeProvider>
   </StrictMode>
 );
 

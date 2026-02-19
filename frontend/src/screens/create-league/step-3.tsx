@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Copy, Share2, ArrowRight } from "lucide-react";
+import type { League } from "@/lib/api";
+import { toast } from "sonner";
 
 interface Rule {
   enabled: boolean;
@@ -8,27 +10,28 @@ interface Rule {
 }
 
 interface Step3Props {
-  data: {
-    name: string;
-    privacy: "public" | "private";
-    rules: {
-      p1: Rule;
-      p2: Rule;
-      p3: Rule;
-      quali: Rule;
-      podium: Rule;
-      perfectOrder: Rule;
-      fastestLap: Rule;
-      firstDNF: Rule;
-    };
+  league: League;
+  rules: {
+    p1: Rule;
+    p2: Rule;
+    p3: Rule;
+    quali: Rule;
+    podium: Rule;
+    perfectOrder: Rule;
+    fastestLap: Rule;
+    firstDNF: Rule;
   };
   onFinish: () => void;
   onBack: () => void;
 }
 
-export function Step3({ data, onFinish, onBack }: Step3Props) {
-  // Simulate an invite code
-  const inviteCode = "XYZ-789";
+export function Step3({ league, rules, onFinish, onBack }: Step3Props) {
+  const inviteCode = league.invite_code;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(inviteCode);
+    toast.success("Invite code copied!");
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 max-w-5xl mx-auto">
@@ -38,7 +41,7 @@ export function Step3({ data, onFinish, onBack }: Step3Props) {
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight">League Ready!</h1>
         <p className="text-muted-foreground text-lg max-w-md mx-auto">
-          Your league <span className="font-bold text-foreground">"{data.name}"</span> has been created successfully.
+          Your league <span className="font-bold text-foreground">"{league.name}"</span> has been created successfully.
         </p>
       </div>
 
@@ -52,14 +55,14 @@ export function Step3({ data, onFinish, onBack }: Step3Props) {
           <CardContent className="space-y-6">
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">Type</p>
-              <p className="font-bold text-xl capitalize">{data.privacy} League</p>
+              <p className="font-bold text-xl capitalize">Private League</p>
             </div>
 
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">Max Points Per Race</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold">
-                  {Object.values(data.rules).reduce((acc, r) => acc + (r.enabled ? r.points : 0), 0)}
+                  {Object.values(rules).reduce((acc, r) => acc + (r.enabled ? r.points : 0), 0)}
                 </span>
                 <span className="text-sm font-medium text-muted-foreground">PTS</span>
               </div>
@@ -67,10 +70,10 @@ export function Step3({ data, onFinish, onBack }: Step3Props) {
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">Scoring Rules</p>
               <div className="space-y-1 mt-2 border border-white/10 rounded-lg overflow-hidden">
-                {(Object.keys(data.rules) as Array<keyof typeof data.rules>)
-                  .filter((key) => data.rules[key].enabled)
+                {(Object.keys(rules) as Array<keyof typeof rules>)
+                  .filter((key) => rules[key].enabled)
                   .map((key) => {
-                    const rule = data.rules[key];
+                    const rule = rules[key];
                     const labels: Record<string, string> = {
                       p1: "Race Winner",
                       p2: "P2 Finish",
@@ -107,11 +110,22 @@ export function Step3({ data, onFinish, onBack }: Step3Props) {
           <CardContent className="space-y-6 flex-1 flex flex-col">
             <p className="text-muted-foreground">Share this unique code to let others join your grid immediately.</p>
 
-            <div className="flex items-center gap-2 p-4 bg-background/50 rounded-xl border border-white/10">
-              <code className="flex-1 text-center font-mono text-2xl font-bold tracking-widest text-primary">
+            <div
+              className="flex items-center gap-2 p-4 bg-background/50 rounded-xl border border-white/10"
+              onClick={handleCopy}>
+              <code
+                className="flex-1 text-center font-mono text-2xl font-bold tracking-widest text-primary cursor-pointer hover:bg-background/80 rounded transition-colors"
+                title="Click to copy">
                 {inviteCode}
               </code>
-              <Button variant="ghost" size="icon" className="hover:bg-background">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-background"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopy();
+                }}>
                 <Copy className="h-5 w-5" />
               </Button>
             </div>

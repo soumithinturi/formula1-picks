@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Leaderboard } from "@/components/racing/leaderboard";
-import { CreateLeagueDialog } from "../components/racing/create-league-dialog";
 import { JoinLeagueDialog } from "../components/racing/join-league-dialog";
-import { Trophy, Users, Copy, Check, Share2, Plus, UserPlus } from "lucide-react";
+import { Trophy, Users, Copy, Check, Share2, Plus, UserPlus, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,14 +13,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/page-container";
+import { api, type League } from "@/lib/api";
 
-interface League {
-  id: string;
-  name: string;
-  description?: string;
-  memberCount: number;
-  yourRank: number;
-  inviteCode: string;
+// Extended interface for UI logic
+interface UILeague extends League {
+  yourRank?: number;
   nextRace?: {
     name: string;
     daysUntil: number;
@@ -30,97 +26,75 @@ interface League {
 
 export function LeaguesScreen() {
   const navigate = useNavigate();
-  const [leagues, setLeagues] = useState<League[]>([
-    {
-      id: "1",
-      name: "Work Crew",
-      description: "Office racing league",
-      memberCount: 12,
-      yourRank: 5,
-      inviteCode: "RACE-99X",
-      nextRace: {
-        name: "MONACO",
-        daysUntil: 3,
-      },
-    },
-    {
-      id: "2",
-      name: "Family",
-      memberCount: 8,
-      yourRank: 2,
-      inviteCode: "FAM-456",
-      nextRace: {
-        name: "MONACO",
-        daysUntil: 3,
-      },
-    },
-    {
-      id: "3",
-      name: "Local Karting",
-      memberCount: 15,
-      yourRank: 8,
-      inviteCode: "KART-789",
-      nextRace: {
-        name: "MONACO",
-        daysUntil: 3,
-      },
-    },
-  ]);
-
-  const [activeLeagueId, setActiveLeagueId] = useState<string>(leagues[0]?.id || "");
+  const [loading, setLoading] = useState(true);
+  const [leagues, setLeagues] = useState<UILeague[]>([]);
+  const [activeLeagueId, setActiveLeagueId] = useState<string>("");
   const [isJoinOpen, setJoinOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchLeagues();
+  }, []);
+
+  useEffect(() => {
+    if (activeLeagueId) {
+      fetchLeaderboard(activeLeagueId);
+    }
+  }, [activeLeagueId]);
+
+  async function fetchLeagues() {
+    try {
+      const data = await api.leagues.list();
+      // Map API data to UI data
+      const uiLeagues: UILeague[] = data.map((l) => ({
+        ...l,
+        yourRank: 0, // Placeholder
+        nextRace: undefined, // Placeholder
+      }));
+
+      setLeagues(uiLeagues);
+
+      const firstLeague = uiLeagues[0];
+      if (firstLeague && !activeLeagueId) {
+        setActiveLeagueId(firstLeague.id);
+      }
+    } catch (error) {
+      console.error("Failed to fetch leagues:", error);
+      toast.error("Failed to load leagues");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchLeaderboard(leagueId: string) {
+    try {
+      const data = await api.leaderboard.get(leagueId);
+      // Map to Leaderboard component format
+      const mapped = data.slice(0, 5).map((entry, index) => ({
+        id: entry.userId,
+        rank: index + 1,
+        previousRank: index + 1, // Mock
+        name: entry.displayName || "Unknown",
+        team: "Racer", // Mock
+        predictionsCorrect: 0,
+        totalPredictions: 0,
+        points: entry.totalPoints,
+        avatarUrl: undefined,
+      }));
+      setLeaderboard(mapped);
+    } catch (error) {
+      console.error("Failed to fetch leaderboard:", error);
+      // Don't toast here to avoid spamming if switching leagues fast or on init
+    }
+  }
+
   const activeLeague = leagues.find((l) => l.id === activeLeagueId);
 
-  // Mock leaderboard data
-  const mockLeaderboardData = [
-    {
-      id: "1",
-      rank: 1,
-      previousRank: 2,
-      name: "SpeedDemon",
-      team: "Red Bull Racing",
-      predictionsCorrect: 5,
-      totalPredictions: 5,
-      points: 150,
-      avatarUrl: "",
-    },
-    {
-      id: "2",
-      rank: 2,
-      previousRank: 1,
-      name: "BoxBoxBox",
-      team: "Ferrari",
-      predictionsCorrect: 4,
-      totalPredictions: 5,
-      points: 142,
-    },
-    {
-      id: "3",
-      rank: 3,
-      previousRank: 4,
-      name: "Tifosi4Life",
-      team: "Ferrari",
-      predictionsCorrect: 4,
-      totalPredictions: 5,
-      points: 138,
-    },
-    {
-      id: "4",
-      rank: 4,
-      previousRank: 3,
-      name: "LateBraker",
-      team: "Mercedes",
-      predictionsCorrect: 3,
-      totalPredictions: 5,
-      points: 112,
-    },
-  ];
-
   const handleCopyInviteCode = () => {
-    if (activeLeague?.inviteCode) {
-      navigator.clipboard.writeText(activeLeague.inviteCode);
+    if (activeLeague?.invite_code) {
+      navigator.clipboard.writeText(activeLeague.invite_code);
       setCopiedCode(true);
       toast.success("Invite code copied!");
       setTimeout(() => setCopiedCode(false), 2000);
@@ -133,7 +107,7 @@ export function LeaguesScreen() {
         navigator
           .share({
             title: `Join ${activeLeague.name} on F1 Picks`,
-            text: `Use code ${activeLeague.inviteCode} to join my league!`,
+            text: `Use code ${activeLeague.invite_code} to join my league!`,
           })
           .catch(() => {
             // If share fails, just copy
@@ -145,29 +119,21 @@ export function LeaguesScreen() {
     }
   };
 
-  const handleLeagueCreated = (newLeague: { name: string; description: string; inviteCode: string }) => {
-    // This will likely be handled by the backend/wizard completion in the future
-    // For now we just add it purely for demo consistency if needed, but the Wizard handles its own completion logic
-    // We might need to lift state up or pass a callback to the wizard if we want the data back here immediately.
-    // For this step, we'll just log or ignore, as the prompt is about screens.
-    console.log("League created", newLeague);
+  const handleLeagueJoined = (inviteCode: string) => {
+    // Refresh list after joining
+    fetchLeagues();
+    setJoinOpen(false);
   };
 
-  const handleLeagueJoined = (inviteCode: string) => {
-    const newLeague: League = {
-      id: Date.now().toString(),
-      name: `League ${inviteCode}`,
-      memberCount: Math.floor(Math.random() * 20) + 5,
-      yourRank: Math.floor(Math.random() * 15) + 1,
-      inviteCode,
-      nextRace: {
-        name: "MONACO",
-        daysUntil: 3,
-      },
-    };
-    setLeagues([...leagues, newLeague]);
-    setActiveLeagueId(newLeague.id);
-  };
+  if (loading) {
+    return (
+      <PageContainer title="Leagues" subtitle="Compete with friends">
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </PageContainer>
+    );
+  }
 
   if (!activeLeague) {
     return (
@@ -223,7 +189,7 @@ export function LeaguesScreen() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
                   <Users className="h-4 w-4" />
-                  <span>{activeLeague.memberCount} Racers</span>
+                  <span>{activeLeague.members_count || 1} Racers</span>
                   <span>•</span>
                   <span>Season 2024</span>
                 </div>
@@ -254,7 +220,9 @@ export function LeaguesScreen() {
             <button
               onClick={handleCopyInviteCode}
               className="w-full flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors group">
-              <code className="text-lg font-mono font-bold tracking-wider text-primary">{activeLeague.inviteCode}</code>
+              <code className="text-lg font-mono font-bold tracking-wider text-primary">
+                {activeLeague.invite_code}
+              </code>
               {copiedCode ? (
                 <Check className="h-4 w-4 text-green-500" />
               ) : (
@@ -276,7 +244,7 @@ export function LeaguesScreen() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Leaderboard entries={mockLeaderboardData} />
+            <Leaderboard entries={leaderboard} />
             <Button
               variant="outline"
               className="w-full"
