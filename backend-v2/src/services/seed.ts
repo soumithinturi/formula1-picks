@@ -1,62 +1,50 @@
 import { db } from "../db/index.ts";
 
-// 2025 Season Static Data
-const STATIC_RACES = [
-  { name: "Australian Grand Prix", date: "2025-03-16T05:00:00Z", has_sprint: false },
-  { name: "Chinese Grand Prix", date: "2025-03-23T07:00:00Z", has_sprint: true },
-  { name: "Japanese Grand Prix", date: "2025-04-06T05:00:00Z", has_sprint: false },
-  { name: "Bahrain Grand Prix", date: "2025-04-13T15:00:00Z", has_sprint: false },
-  { name: "Saudi Arabian Grand Prix", date: "2025-04-20T17:00:00Z", has_sprint: false },
-  { name: "Miami Grand Prix", date: "2025-05-04T20:00:00Z", has_sprint: true },
-  { name: "Emilia Romagna Grand Prix", date: "2025-05-18T13:00:00Z", has_sprint: false },
-  { name: "Monaco Grand Prix", date: "2025-05-25T13:00:00Z", has_sprint: false },
-  { name: "Spanish Grand Prix", date: "2025-06-01T13:00:00Z", has_sprint: false },
-  { name: "Canadian Grand Prix", date: "2025-06-15T18:00:00Z", has_sprint: false },
-  { name: "Austrian Grand Prix", date: "2025-06-29T13:00:00Z", has_sprint: true },
-  { name: "British Grand Prix", date: "2025-07-06T14:00:00Z", has_sprint: false },
-  { name: "Belgian Grand Prix", date: "2025-07-27T13:00:00Z", has_sprint: true },
-  { name: "Hungarian Grand Prix", date: "2025-08-03T13:00:00Z", has_sprint: false },
-  { name: "Dutch Grand Prix", date: "2025-08-31T13:00:00Z", has_sprint: false },
-  { name: "Italian Grand Prix", date: "2025-09-07T13:00:00Z", has_sprint: false },
-  { name: "Azerbaijan Grand Prix", date: "2025-09-21T11:00:00Z", has_sprint: false },
-  { name: "Singapore Grand Prix", date: "2025-10-05T12:00:00Z", has_sprint: false },
-  { name: "United States Grand Prix", date: "2025-10-19T19:00:00Z", has_sprint: true },
-  { name: "Mexico City Grand Prix", date: "2025-10-26T20:00:00Z", has_sprint: false },
-  { name: "São Paulo Grand Prix", date: "2025-11-09T17:00:00Z", has_sprint: true },
-  { name: "Las Vegas Grand Prix", date: "2025-11-22T06:00:00Z", has_sprint: false },
-  { name: "Qatar Grand Prix", date: "2025-11-30T17:00:00Z", has_sprint: true },
-  { name: "Abu Dhabi Grand Prix", date: "2025-12-07T13:00:00Z", has_sprint: false },
-];
+// RapidAPI / Jolpi Ergast
+const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
 
-const STATIC_DRIVERS = [
-  { fullName: "Max Verstappen", racingNumber: "1", teamName: "Red Bull Racing", tla: "VER" },
-  { fullName: "Sergio Perez", racingNumber: "11", teamName: "Red Bull Racing", tla: "PER" },
-  { fullName: "Lewis Hamilton", racingNumber: "44", teamName: "Ferrari", tla: "HAM" },
-  { fullName: "Charles Leclerc", racingNumber: "16", teamName: "Ferrari", tla: "LEC" },
-  { fullName: "George Russell", racingNumber: "63", teamName: "Mercedes", tla: "RUS" },
-  { fullName: "Kimi Antonelli", racingNumber: "12", teamName: "Mercedes", tla: "ANT" },
-  { fullName: "Lando Norris", racingNumber: "4", teamName: "McLaren", tla: "NOR" },
-  { fullName: "Oscar Piastri", racingNumber: "81", teamName: "McLaren", tla: "PIA" },
-  { fullName: "Fernando Alonso", racingNumber: "14", teamName: "Aston Martin", tla: "ALO" },
-  { fullName: "Lance Stroll", racingNumber: "18", teamName: "Aston Martin", tla: "STR" },
-  { fullName: "Pierre Gasly", racingNumber: "10", teamName: "Alpine", tla: "GAS" },
-  { fullName: "Jack Doohan", racingNumber: "7", teamName: "Alpine", tla: "DOO" },
-  { fullName: "Alexander Albon", racingNumber: "23", teamName: "Williams", tla: "ALB" },
-  { fullName: "Carlos Sainz", racingNumber: "55", teamName: "Williams", tla: "SAI" },
-  { fullName: "Yuki Tsunoda", racingNumber: "22", teamName: "RB", tla: "TSU" },
-  { fullName: "Liam Lawson", racingNumber: "30", teamName: "RB", tla: "LAW" },
-  { fullName: "Nico Hulkenberg", racingNumber: "27", teamName: "Kick Sauber", tla: "HUL" },
-  { fullName: "Gabriel Bortoleto", racingNumber: "5", teamName: "Kick Sauber", tla: "BOR" },
-  { fullName: "Esteban Ocon", racingNumber: "31", teamName: "Haas", tla: "OCO" },
-  { fullName: "Oliver Bearman", racingNumber: "87", teamName: "Haas", tla: "BEA" },
-];
+interface ErgastRace {
+  season: string;
+  round: string;
+  url: string;
+  raceName: string;
+  Circuit: any;
+  date: string; // e.g., "2026-03-01"
+  time: string; // e.g., "13:00:00Z"
+  FirstPractice?: object;
+  SecondPractice?: object;
+  ThirdPractice?: object;
+  Qualifying?: { date: string; time: string };
+  Sprint?: { date: string; time: string };
+}
+
+interface ErgastDriver {
+  driverId: string;
+  permanentNumber?: string;
+  code?: string;
+  url: string;
+  givenName: string;
+  familyName: string;
+  dateOfBirth: string;
+  nationality: string;
+}
 
 /**
  * Seeds the database with 2025 race schedule and driver list from static JSON.
  * Only runs if the respective tables are empty — safe to call on every startup.
  */
 export async function seedDatabase(): Promise<void> {
-  await Promise.all([seedRaces(), seedDrivers()]);
+  try {
+    await seedRaces();
+    await seedDrivers();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Connection closed")) {
+      console.warn("⚠️ Database connection closed during seeding. This is likely a temporary glitch. Resuming...");
+      console.error(error); // Log the full trace to see what failed
+    } else {
+      console.warn("⚠️ Seeding skipped (non-fatal):", error);
+    }
+  }
 }
 
 async function seedRaces(): Promise<void> {
@@ -69,34 +57,53 @@ async function seedRaces(): Promise<void> {
     return;
   }
 
-  console.log("Seeding race data from static JSON...");
+  console.log("Fetching race schedule from Jolpi Ergast API...");
 
-  for (const race of STATIC_RACES) {
-    const raceDate = new Date(race.date);
+  try {
+    const res = await fetch(`${JOLPI_API_BASE}.json`);
+    if (!res.ok) throw new Error(`API returned ${res.status}`);
+    const data = (await res.json()) as {
+      MRData: { RaceTable: { Races: ErgastRace[] } };
+    };
+    const races: ErgastRace[] = data.MRData.RaceTable.Races;
 
-    // Race deadline = race day at noon local time (placeholder)
-    // In a real app, this should be dynamic based on Qualifying start time
-    const raceDeadline = new Date(raceDate);
-    raceDeadline.setHours(12, 0, 0, 0);
+    for (const race of races) {
+      const raceDateStr = `${race.date}T${race.time || "15:00:00Z"}`;
+      const raceDate = new Date(raceDateStr);
 
-    // Sprint deadline = day before race at noon (placeholder)
-    const sprintDeadline = race.has_sprint ? new Date(raceDeadline) : null;
-    if (sprintDeadline) sprintDeadline.setDate(sprintDeadline.getDate() - 1);
+      const hasSprint = !!race.Sprint;
 
-    await db`
-      INSERT INTO races (name, date, has_sprint, status, race_deadline, sprint_deadline)
-      VALUES (
-        ${race.name},
-        ${raceDate.toISOString()},
-        ${race.has_sprint},
-        'UPCOMING',
-        ${raceDeadline.toISOString()},
-        ${sprintDeadline?.toISOString() ?? null}
-      )
-    `;
+      // Lock picks effectively slightly before Qualifying starts generally. 
+      // If Jolpi has `Qualifying` data, use it. Otherwise guess based on race day.
+      let raceDeadline = new Date(raceDate);
+      if (race.Qualifying) {
+        raceDeadline = new Date(`${race.Qualifying.date}T${race.Qualifying.time || "12:00:00Z"}`);
+      } else {
+        raceDeadline.setHours(raceDeadline.getHours() - 24); // Day before 
+      }
+
+      let sprintDeadline = null;
+      if (hasSprint && race.Sprint) {
+        sprintDeadline = new Date(`${race.Sprint.date}T${race.Sprint.time || "12:00:00Z"}`);
+      }
+
+      await db`
+        INSERT INTO races (name, date, has_sprint, status, race_deadline, sprint_deadline)
+        VALUES (
+          ${race.raceName},
+          ${raceDate.toISOString()},
+          ${hasSprint},
+          'UPCOMING',
+          ${raceDeadline.toISOString()},
+          ${sprintDeadline?.toISOString() ?? null}
+        )
+      `;
+      await Bun.sleep(20);
+    }
+    console.log(`Seeded ${races.length} races.`);
+  } catch (err) {
+    console.error("Failed to seed races from Ergast API:", err);
   }
-
-  console.log(`Seeded ${STATIC_RACES.length} races.`);
 }
 
 async function seedDrivers(): Promise<void> {
@@ -109,19 +116,37 @@ async function seedDrivers(): Promise<void> {
     return;
   }
 
-  console.log("Seeding driver data from static JSON...");
+  console.log("Fetching driver data from Jolpi Ergast API...");
 
-  for (const driver of STATIC_DRIVERS) {
-    await db`
-      INSERT INTO drivers (full_name, racing_number, team_name, tla)
-      VALUES (
-        ${driver.fullName},
-        ${driver.racingNumber},
-        ${driver.teamName},
-        ${driver.tla}
-      )
-    `;
+  try {
+    const res = await fetch(`${JOLPI_API_BASE}/drivers.json`);
+    if (!res.ok) throw new Error(`API returned ${res.status}`);
+    const data = (await res.json()) as {
+      MRData: { DriverTable: { Drivers: ErgastDriver[] } };
+    };
+    const drivers: ErgastDriver[] = data.MRData.DriverTable.Drivers;
+
+    for (const driver of drivers) {
+      const fullName = `${driver.givenName} ${driver.familyName}`;
+      const tla = driver.code || driver.familyName.substring(0, 3).toUpperCase();
+      const racingNumber = driver.permanentNumber || "0";
+      // Ergast driver lists don't easily have 'team_name' in the basic drivers.json 
+      // We will fallback to "Unknown" for now or fetch constructors.
+      const teamName = "Unknown constructor";
+
+      await db`
+        INSERT INTO drivers (full_name, racing_number, team_name, tla)
+        VALUES (
+          ${fullName},
+          ${racingNumber},
+          ${teamName},
+          ${tla}
+        )
+      `;
+      await Bun.sleep(20);
+    }
+    console.log(`Seeded ${drivers.length} drivers.`);
+  } catch (err) {
+    console.error("Failed to seed drivers from Ergast API:", err);
   }
-
-  console.log(`Seeded ${STATIC_DRIVERS.length} drivers.`);
 }

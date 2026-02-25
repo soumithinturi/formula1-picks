@@ -53,7 +53,8 @@ async function verifyToken(req: Request): Promise<AuthedUser | null> {
     if (!user) return null;
 
     return { id: user.id, contact: user.contact, role: user.role };
-  } catch {
+  } catch (err) {
+    console.error("JWT Verification failed:", err);
     return null;
   }
 }

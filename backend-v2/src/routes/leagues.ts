@@ -16,29 +16,34 @@ export const createLeague = withAuth(async (req) => {
   const { data, error } = await parseBody(req, CreateLeagueSchema);
   if (error) return error;
 
-  const scoringConfig = data.scoringConfig ?? DEFAULT_SCORING_CONFIG;
-  // Generate a short, human-readable invite code
-  const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+  try {
+    const scoringConfig = data.scoringConfig ?? DEFAULT_SCORING_CONFIG;
+    // Generate a short, human-readable invite code
+    const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase();
 
-  const [league] = await db<LeagueRow[]>`
-    INSERT INTO leagues (name, created_by, invite_code, scoring_config, created_at)
-    VALUES (
-      ${data.name},
-      ${req.user.id},
-      ${inviteCode},
-      ${JSON.stringify(scoringConfig)},
-      NOW()
-    )
-    RETURNING *
-  `;
+    const [league] = await db<LeagueRow[]>`
+      INSERT INTO leagues (name, created_by, invite_code, scoring_config, created_at)
+      VALUES (
+        ${data.name},
+        ${req.user.id},
+        ${inviteCode},
+        ${JSON.stringify(scoringConfig)}::jsonb,
+        NOW()
+      )
+      RETURNING *
+    `;
 
-  // Auto-join the creator as a member
-  await db`
-    INSERT INTO league_members (league_id, user_id, joined_at)
-    VALUES (${league.id}, ${req.user.id}, NOW())
-  `;
+    // Auto-join the creator as a member
+    await db`
+      INSERT INTO league_members (league_id, user_id, joined_at)
+      VALUES (${league.id}, ${req.user.id}, NOW())
+    `;
 
-  return Response.json(league, { status: 201 });
+    return Response.json(league, { status: 201 });
+  } catch (err: any) {
+    console.error("League creation error:", err);
+    return Response.json({ error: err.message || String(err) }, { status: 500 });
+  }
 });
 
 /**

@@ -14,29 +14,52 @@ export function calculatePoints(
 ): number {
   let score = 0;
 
-  // Sprint picks
-  if (userPick.sprintQualifyingP1 && userPick.sprintQualifyingP1 === officialResults.sprintQualifyingP1)
-    score += config.sprintQualifyingP1;
-  if (userPick.sprintP1 && userPick.sprintP1 === officialResults.sprintP1)
-    score += config.sprintP1;
-  if (userPick.sprintP2 && userPick.sprintP2 === officialResults.sprintP2)
-    score += config.sprintP2;
-  if (userPick.sprintP3 && userPick.sprintP3 === officialResults.sprintP3)
-    score += config.sprintP3;
-
   // Race picks
-  if (userPick.raceQualifyingP1 && userPick.raceQualifyingP1 === officialResults.raceQualifyingP1)
-    score += config.raceQualifyingP1;
-  if (userPick.raceP1 && userPick.raceP1 === officialResults.raceP1)
-    score += config.raceP1;
-  if (userPick.raceP2 && userPick.raceP2 === officialResults.raceP2)
-    score += config.raceP2;
-  if (userPick.raceP3 && userPick.raceP3 === officialResults.raceP3)
-    score += config.raceP3;
-  if (userPick.fastestLap && userPick.fastestLap === officialResults.fastestLap)
-    score += config.fastestLap;
-  if (userPick.firstDnf && userPick.firstDnf === officialResults.firstDnf)
-    score += config.firstDnf;
+  if (config.quali.enabled && userPick.raceQualifyingP1 && userPick.raceQualifyingP1 === officialResults.raceQualifyingP1)
+    score += config.quali.points;
+
+  if (config.p1.enabled && userPick.raceP1 && userPick.raceP1 === officialResults.raceP1)
+    score += config.p1.points;
+
+  if (config.p2.enabled && userPick.raceP2 && userPick.raceP2 === officialResults.raceP2)
+    score += config.p2.points;
+
+  if (config.p3.enabled && userPick.raceP3 && userPick.raceP3 === officialResults.raceP3)
+    score += config.p3.points;
+
+  if (config.fastestLap.enabled && userPick.fastestLap && userPick.fastestLap === officialResults.fastestLap)
+    score += config.fastestLap.points;
+
+  if (config.firstDNF.enabled && userPick.firstDnf && userPick.firstDnf === officialResults.firstDnf)
+    score += config.firstDNF.points;
+
+  // Bonus: Perfect Order
+  const hasPerfectOrder =
+    userPick.raceP1 &&
+    userPick.raceP2 &&
+    userPick.raceP3 &&
+    userPick.raceP1 === officialResults.raceP1 &&
+    userPick.raceP2 === officialResults.raceP2 &&
+    userPick.raceP3 === officialResults.raceP3;
+
+  if (config.perfectOrder.enabled && hasPerfectOrder) {
+    score += config.perfectOrder.points;
+  }
+
+  // Bonus: Podium (Any driver in top 3 predicted in any top 3 position)
+  if (config.podium.enabled) {
+    const officialTop3 = [officialResults.raceP1, officialResults.raceP2, officialResults.raceP3].filter(Boolean);
+    const userTop3 = [userPick.raceP1, userPick.raceP2, userPick.raceP3].filter(Boolean);
+
+    let podiumMatches = 0;
+    for (const driver of userTop3) {
+      if (driver && officialTop3.includes(driver)) {
+        podiumMatches++;
+      }
+    }
+    // E.g. 1 point for each correct podium driver, or flat bonus? The UI implies points per driver since it's "Points awarded for any driver who finishes in the top 3"
+    score += podiumMatches * config.podium.points;
+  }
 
   return score;
 }

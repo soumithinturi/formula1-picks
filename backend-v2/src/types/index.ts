@@ -16,34 +16,40 @@ export const AuthVerifySchema = z.object({
 export type AuthRequest = z.infer<typeof AuthRequestSchema>;
 export type AuthVerify = z.infer<typeof AuthVerifySchema>;
 
+export const UpdateProfileSchema = z.object({
+  display_name: z.string().min(1).max(50),
+});
+export type UpdateProfile = z.infer<typeof UpdateProfileSchema>;
+
 // ─── Scoring Config ──────────────────────────────────────────────────────────
 
+export const RuleSchema = z.object({
+  enabled: z.boolean(),
+  points: z.number().int().min(0),
+});
+
 export const ScoringConfigSchema = z.object({
-  sprintQualifyingP1: z.number().int().min(0).default(1),
-  sprintP1: z.number().int().min(0).default(5),
-  sprintP2: z.number().int().min(0).default(3),
-  sprintP3: z.number().int().min(0).default(1),
-  raceQualifyingP1: z.number().int().min(0).default(1),
-  raceP1: z.number().int().min(0).default(5),
-  raceP2: z.number().int().min(0).default(3),
-  raceP3: z.number().int().min(0).default(1),
-  fastestLap: z.number().int().min(0).default(1),
-  firstDnf: z.number().int().min(0).default(2),
+  p1: RuleSchema.default({ enabled: true, points: 5 }),
+  p2: RuleSchema.default({ enabled: true, points: 3 }),
+  p3: RuleSchema.default({ enabled: true, points: 1 }),
+  quali: RuleSchema.default({ enabled: true, points: 1 }),
+  podium: RuleSchema.default({ enabled: true, points: 10 }),
+  perfectOrder: RuleSchema.default({ enabled: true, points: 15 }),
+  fastestLap: RuleSchema.default({ enabled: true, points: 5 }),
+  firstDNF: RuleSchema.default({ enabled: false, points: 5 }),
 });
 
 export type ScoringConfig = z.infer<typeof ScoringConfigSchema>;
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
-  sprintQualifyingP1: 1,
-  sprintP1: 5,
-  sprintP2: 3,
-  sprintP3: 1,
-  raceQualifyingP1: 1,
-  raceP1: 5,
-  raceP2: 3,
-  raceP3: 1,
-  fastestLap: 1,
-  firstDnf: 2,
+  p1: { enabled: true, points: 5 },
+  p2: { enabled: true, points: 3 },
+  p3: { enabled: true, points: 1 },
+  quali: { enabled: true, points: 1 },
+  podium: { enabled: true, points: 10 },
+  perfectOrder: { enabled: true, points: 15 },
+  fastestLap: { enabled: true, points: 5 },
+  firstDNF: { enabled: false, points: 5 },
 };
 
 // ─── Pick Selections ─────────────────────────────────────────────────────────

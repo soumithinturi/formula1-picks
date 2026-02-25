@@ -45,9 +45,9 @@ export function CreateLeagueWizard() {
         setCreatedLeague(league);
         setStep(3);
         toast.success("League created successfully!");
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to create league:", error);
-        toast.error("Failed to create league. Please try again.");
+        toast.error(error.message || "Failed to create league. Please try again.");
       } finally {
         setIsCreating(false);
       }
