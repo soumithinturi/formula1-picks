@@ -1,6 +1,6 @@
 import { auth } from "./auth";
 
-const BASE_URL = (import.meta.env && import.meta.env.BUN_PUBLIC_API_URL) || "http://localhost:8080/api/v1";
+const BASE_URL = (import.meta.env && import.meta.env.BUN_PUBLIC_API_URL) || "https://formula1-picks-production.up.railway.app/api/v1" || "http://localhost:8080/api/v1";
 
 export interface ApiResponse<T> {
   data?: T;

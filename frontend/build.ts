@@ -33,7 +33,7 @@ Example:
   process.exit(0);
 }
 
-const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, g => g[1].toUpperCase());
+const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, g => (g[1] ? g[1].toUpperCase() : ""));
 
 const parseValue = (value: string): any => {
   if (value === "true") return true;
@@ -48,7 +48,7 @@ const parseValue = (value: string): any => {
 };
 
 function parseArgs(): Partial<Bun.BuildConfig> {
-  const config: Partial<Bun.BuildConfig> = {};
+  const config: Record<string, any> = {};
   const args = process.argv.slice(2);
 
   for (let i = 0; i < args.length; i++) {
@@ -81,7 +81,9 @@ function parseArgs(): Partial<Bun.BuildConfig> {
     key = toCamelCase(key);
 
     if (key.includes(".")) {
-      const [parentKey, childKey] = key.split(".");
+      const parts = key.split(".");
+      const parentKey = parts[0]!;
+      const childKey = parts[1]!;
       config[parentKey] = config[parentKey] || {};
       config[parentKey][childKey] = parseValue(value);
     } else {
@@ -137,11 +139,20 @@ const result = await Bun.build({
 
 const end = performance.now();
 
+const redirectsPath = path.join(outdir, "_redirects");
+await Bun.write(redirectsPath, "/* /index.html 200\n");
+
 const outputTable = result.outputs.map(output => ({
   File: path.relative(process.cwd(), output.path),
   Type: output.kind,
   Size: formatFileSize(output.size),
 }));
+
+outputTable.push({
+  File: path.relative(process.cwd(), redirectsPath),
+  Type: "asset",
+  Size: formatFileSize(19),
+});
 
 console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
