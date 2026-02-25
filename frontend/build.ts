@@ -139,20 +139,11 @@ const result = await Bun.build({
 
 const end = performance.now();
 
-const redirectsPath = path.join(outdir, "_redirects");
-await Bun.write(redirectsPath, "/* /index.html 200\n");
-
 const outputTable = result.outputs.map(output => ({
   File: path.relative(process.cwd(), output.path),
   Type: output.kind,
   Size: formatFileSize(output.size),
 }));
-
-outputTable.push({
-  File: path.relative(process.cwd(), redirectsPath),
-  Type: "asset",
-  Size: formatFileSize(19),
-});
 
 console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
