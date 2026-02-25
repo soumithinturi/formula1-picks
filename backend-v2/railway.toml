@@ -2,6 +2,9 @@
 builder = "NIXPACKS"
 buildCommand = "bun install"
 
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["bun"]
+
 [deploy]
 startCommand = "bun run src/index.ts"
 restartPolicyType = "ON_FAILURE"
