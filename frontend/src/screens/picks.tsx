@@ -68,7 +68,7 @@ export function PicksScreen() {
           setSelectedLeagueId(firstLeague.id);
         } else {
           toast.info("Join or create a league to make picks!");
-          navigate("/leagues/create");
+          navigate("/leagues");
         }
       } catch (error) {
         console.error("Failed to load picks data:", error);
@@ -161,26 +161,6 @@ export function PicksScreen() {
 
   return (
     <div className="space-y-6 pb-20 relative">
-      {/* Desktop Buttons */}
-      <div className="hidden md:flex absolute top-0 right-0 z-10 gap-3">
-        <Button
-          variant="outline"
-          size="lg"
-          className="text-lg font-bold min-w-[140px]"
-          onClick={handleSave}
-          disabled={saving || !nextRace}>
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
-          Save Draft
-        </Button>
-        <Button
-          size="lg"
-          className="shadow-lg text-lg font-bold bg-primary text-primary-foreground min-w-[200px]"
-          onClick={handleSave}
-          disabled={saving || !nextRace}>
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Lock In Picks"}
-        </Button>
-      </div>
-
       {/* Header */}
       <div className="flex flex-col items-center justify-center space-y-4 pt-4">
         <StatusPill variant={nextRace?.status === "OPEN" ? "success" : "neutral"} className="uppercase tracking-wider">
@@ -196,9 +176,9 @@ export function PicksScreen() {
 
         {/* League Selector */}
         {leagues.length > 0 && (
-          <div className="w-full max-w-xs mt-4">
+          <div className="w-full max-w-[340px] mx-auto mt-4">
             <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select League" />
               </SelectTrigger>
               <SelectContent>
@@ -220,16 +200,36 @@ export function PicksScreen() {
           </div>
           <Progress value={progress} className="h-2" />
         </div>
+        <div className="hidden md:flex w-full max-w-md mx-auto justify-center gap-3 pt-4">
+          <Button
+            variant="outline"
+            size="lg"
+            className="text-lg font-bold flex-1"
+            onClick={handleSave}
+            disabled={saving || !nextRace}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+            Save Draft
+          </Button>
+          <Button
+            size="lg"
+            className="shadow-lg text-lg font-bold bg-primary text-primary-foreground flex-1"
+            onClick={handleSave}
+            disabled={saving || !nextRace}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Lock In Picks"}
+          </Button>
+        </div>
       </div>
 
       {!nextRace ? (
         <div className="text-center py-10 opacity-50">No upcoming races found.</div>
       ) : (
         <Tabs defaultValue="race" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            {nextRace.has_sprint && <TabsTrigger value="sprint">Sprint</TabsTrigger>}
-            <TabsTrigger value="race">Race</TabsTrigger>
-          </TabsList>
+          {nextRace.has_sprint && (
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="sprint">Sprint</TabsTrigger>
+              <TabsTrigger value="race">Race</TabsTrigger>
+            </TabsList>
+          )}
 
           {/* SPRINT TAB */}
           {nextRace.has_sprint && (

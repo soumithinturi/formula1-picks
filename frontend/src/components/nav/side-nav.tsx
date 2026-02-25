@@ -2,6 +2,7 @@ import * as React from "react";
 import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
 import { Home, Trophy, Users, Calendar, Settings, LogOut, Flag, Archive } from "lucide-react";
+import { auth } from "@/lib/auth";
 
 interface SideNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -49,7 +50,9 @@ export function SideNav({ className, ...props }: SideNavProps) {
           <Settings className="mr-3 h-5 w-5" />
           Settings
         </button>
-        <button className="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md text-destructive hover:bg-destructive/10 transition-colors">
+        <button
+          onClick={() => auth.logout()}
+          className="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md text-destructive hover:bg-destructive/10 transition-colors">
           <LogOut className="mr-3 h-5 w-5" />
           Log Out
         </button>

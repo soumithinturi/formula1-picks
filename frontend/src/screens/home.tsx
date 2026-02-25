@@ -6,6 +6,7 @@ import { ChevronRight, Trophy, Newspaper } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { auth } from "@/lib/auth";
 
 interface NewsItem {
   id: string;
@@ -42,6 +43,9 @@ const mockDrivers: Driver[] = [
 export function HomeScreen() {
   const navigate = useNavigate();
   const [selectedDrivers, setSelectedDrivers] = useState<(Driver | null)[]>([null, null, null]);
+
+  const user = auth.getUser();
+  const displayName = user?.display_name || user?.contact || "User";
 
   // Mock data - will be replaced with real data from backend
   const nextRace = {
@@ -82,7 +86,7 @@ export function HomeScreen() {
       id: "3",
       rank: 24,
       previousRank: 25,
-      name: "MyUsername",
+      name: displayName,
       team: "Alpine",
       predictionsCorrect: 3,
       totalPredictions: 5,
@@ -118,7 +122,7 @@ export function HomeScreen() {
   ];
 
   return (
-    <PageContainer title="Home" subtitle="Welcome back, Soumith">
+    <PageContainer title="Home" subtitle={`Welcome back, ${displayName}`}>
       <div className="space-y-6">
         {/* Race Header with Countdown */}
         <Card className="border-primary/20">

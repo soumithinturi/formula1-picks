@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, Share2, ArrowRight } from "lucide-react";
+import { Check, Copy, Share2, ArrowRight, Info } from "lucide-react";
 import type { League } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -96,6 +96,13 @@ export function Step3({ league, rules, onFinish, onBack }: Step3Props) {
                       </div>
                     );
                   })}
+              </div>
+              <div className="mt-4 bg-primary/10 border border-primary/20 rounded-lg p-3 flex gap-3 items-start">
+                <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <p className="text-xs text-foreground/80 leading-relaxed">
+                  <span className="font-bold text-foreground">Sprint Races:</span> P1, P2, P3, Qualifying, and Fastest
+                  Lap rules will also apply to Sprints.
+                </p>
               </div>
             </div>
           </CardContent>

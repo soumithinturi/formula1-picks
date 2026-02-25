@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Calendar, Settings, User, HelpCircle, ChevronRight } from "lucide-react";
+import { Trophy, Calendar, Settings, User, HelpCircle, ChevronRight, LogOut } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
+import { auth } from "@/lib/auth";
 
 interface MenuItem {
   id: string;
@@ -87,6 +88,23 @@ export function MoreScreen() {
             </Card>
           );
         })}
+
+        {/* Logout Button */}
+        <Card
+          className="cursor-pointer transition-all hover:bg-destructive/10 active:scale-[0.98] border-destructive/20 mt-4"
+          onClick={() => auth.logout()}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+                <LogOut className="h-6 w-6 text-destructive" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base leading-none mb-1.5 text-destructive">Log Out</h3>
+                <p className="text-sm text-destructive/80 leading-snug">Sign out of your account</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Footer Info */}

@@ -9,8 +9,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 interface HeaderNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 import { TeamSwitcher } from "@/components/user/team-switcher";
+import { auth } from "@/lib/auth";
 
 export function HeaderNav({ className, ...props }: HeaderNavProps) {
+  const user = auth.getUser();
+  const displayName = user?.display_name || user?.contact || "User";
+  const avatarChar = displayName.charAt(0).toUpperCase();
+
   return (
     <header
       className={cn(
@@ -34,11 +39,11 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
         <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
 
         {/* Desktop Profile Header */}
-        <ProfileHeader name="MyUsername" team="Alpine" className="hidden sm:flex" />
+        <ProfileHeader name={displayName} team="Alpine" className="hidden sm:flex" />
 
         {/* Mobile Profile Badge (Avatar Only) */}
         <Avatar className="h-8 w-8 sm:hidden">
-          <AvatarFallback>M</AvatarFallback>
+          <AvatarFallback>{avatarChar}</AvatarFallback>
         </Avatar>
       </div>
     </header>

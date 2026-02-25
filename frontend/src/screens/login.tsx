@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,47 @@ import { auth } from "@/lib/auth";
 
 export function LoginScreen() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<"request" | "verify">("request");
+  const [step, setStep] = useState<"request" | "verify" | "profile">("request");
   const [authType, setAuthType] = useState<"email" | "phone">("email");
   const [contact, setContact] = useState("");
   const [code, setCode] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Check for Magic Link URL hash on load
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token")) {
+      const params = new URLSearchParams(hash.replace("#", "?"));
+      const accessToken = params.get("access_token");
+
+      if (accessToken) {
+        setLoading(true);
+        // Sync token to our backend to ensure user profile exists in `users` table
+        api.auth
+          .sync({ access_token: accessToken })
+          .then(({ user }) => {
+            auth.setToken(accessToken);
+            auth.setUser(user);
+            window.location.hash = ""; // clean URL
+
+            if (!user.display_name) {
+              setStep("profile");
+              setLoading(false);
+            } else {
+              toast.success("Welcome back!", {
+                description: `Signed in as ${user.display_name || user.contact}`,
+              });
+              navigate("/");
+            }
+          })
+          .catch((err) => {
+            toast.error("Invalid or expired magic link", { description: String(err) });
+            setLoading(false);
+          });
+      }
+    }
+  }, [navigate]);
 
   const formatPhoneNumber = (value: string) => {
     const cleaned = ("" + value).replace(/\D/g, "");
@@ -76,14 +112,42 @@ export function LoginScreen() {
       });
       auth.setToken(token);
       auth.setUser(user);
-      toast.success("Welcome back!", {
-        description: `Signed in as ${user.display_name || user.contact}`,
-      });
-      navigate("/"); // Redirect to home
+
+      if (!user.display_name) {
+        setStep("profile");
+      } else {
+        toast.success("Welcome back!", {
+          description: `Signed in as ${user.display_name || user.contact}`,
+        });
+        navigate("/"); // Redirect to home
+      }
     } catch (error) {
       toast.error("Invalid code", { description: "Please try again." });
     } finally {
-      setLoading(false);
+      if (step !== "profile") {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleSetupProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!displayName.trim()) return;
+
+    setLoading(true);
+    try {
+      const { user } = await api.users.updateProfile({ display_name: displayName.trim() });
+      auth.setUser(user);
+      toast.success("Profile saved!", {
+        description: `Welcome, ${user.display_name}!`,
+      });
+      navigate("/");
+    } catch (error) {
+      toast.error("Failed to save profile", { description: String(error) });
+    } finally {
+      if (step !== "profile") {
+        setLoading(false);
+      }
     }
   };
 
@@ -92,18 +156,20 @@ export function LoginScreen() {
       <Card className="w-full max-w-md shadow-xl border-primary/10">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold tracking-tight">
-            {step === "request" ? "Sign in" : "Enter code"}
+            {step === "request" && "Sign in"}
+            {step === "verify" && "Enter code"}
+            {step === "profile" && "Complete your profile"}
           </CardTitle>
           <CardDescription>
-            {step === "request"
-              ? "Choose your preferred sign in method below."
-              : `We sent a code to ${contact}. Enter it below.`}
+            {step === "request" && "Choose your preferred sign in method below."}
+            {step === "verify" && `We sent a code to ${contact}. Enter it below.`}
+            {step === "profile" && "Please enter a display name to continue."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {step === "request" ? (
             <Tabs
-              defaultValue="email"
+              value={authType}
               onValueChange={(v) => {
                 setAuthType(v as "email" | "phone");
                 setContact("");
@@ -125,7 +191,7 @@ export function LoginScreen() {
                     <Input
                       id="contact"
                       type={authType === "email" ? "email" : "tel"}
-                      placeholder={authType === "email" ? "m@example.com" : "+1 (555) 000-0000"}
+                      placeholder={authType === "email" ? "me@example.com" : "+1 (555) 000-0000"}
                       value={contact}
                       onChange={handleContactChange}
                       required
@@ -140,7 +206,7 @@ export function LoginScreen() {
                 </div>
               </form>
             </Tabs>
-          ) : (
+          ) : step === "verify" ? (
             <form onSubmit={handleVerifyOtp}>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -172,6 +238,35 @@ export function LoginScreen() {
                   onClick={() => setStep("request")}
                   disabled={loading}>
                   Back
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSetupProfile}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input
+                    id="displayName"
+                    type="text"
+                    placeholder="e.g. VerstappenFan33"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    required
+                    autoFocus
+                    maxLength={50}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    This is how you'll appear on leaderboards and to other players.
+                  </p>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading || !displayName.trim()}>
+                  {loading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                  )}
+                  Save & Continue
                 </Button>
               </div>
             </form>

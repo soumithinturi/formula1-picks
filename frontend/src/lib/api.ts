@@ -55,6 +55,12 @@ async function request<T>(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      // Token is invalid/expired/from old project. Force logout.
+      auth.logout();
+      throw new Error("Session expired. Please log in again.");
+    }
+
     let errorMessage = "An unexpected error occurred";
     try {
       const errorBody = await response.json();
@@ -103,6 +109,14 @@ export const api = {
 
     verifyOtp: (payload: { type: "email" | "phone"; contact: string; code: string }) =>
       api.post<{ token: string; user: any }>("/auth/verify", payload),
+
+    sync: (payload: { access_token: string }) =>
+      api.post<{ user: any }>("/auth/sync", payload),
+  },
+
+  users: {
+    updateProfile: (payload: { display_name: string }) =>
+      api.put<{ user: any }>("/users/me", payload),
   },
 
   races: {

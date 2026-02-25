@@ -72,13 +72,21 @@ export function Step2({ initialData, onNext, onBack }: Step2Props) {
             </div>
           </div>
 
-          <p className="text-muted-foreground shrink-0 mt-4 mb-4">
+          <p className="text-muted-foreground shrink-0 mt-4 mb-4 pr-4">
             Customize how points are awarded in your private league. Enable or disable specific rules and set their
             point values.
           </p>
 
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-6 shrink-0 flex gap-3 items-start mr-4">
+            <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <p className="text-sm text-foreground/80 leading-relaxed">
+              <span className="font-bold text-foreground">Sprint Races:</span> The points configured below for P1, P2,
+              P3, Qualifying Winner (Sprint Shootout P1), and Fastest Lap will also apply to Sprint races.
+            </p>
+          </div>
+
           <Tabs defaultValue="standard" className="w-full flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-2 mb-4 shrink-0">
+            <TabsList className="grid grid-cols-2 mb-4 shrink-0 mr-4 w-[calc(100%-1rem)]">
               <TabsTrigger value="standard">Standard Rules</TabsTrigger>
               <TabsTrigger value="bonus">Bonus Rules</TabsTrigger>
             </TabsList>
@@ -159,18 +167,26 @@ export function Step2({ initialData, onNext, onBack }: Step2Props) {
           </Tabs>
 
           {/* Navigation for Mobile (hidden on LG) */}
-          <div className="lg:hidden flex items-center justify-between pt-6 border-t border-white/5 shrink-0">
-            <Button variant="ghost" onClick={onBack}>
-              Back
-            </Button>
-            <Button onClick={() => onNext({ rules })}>
-              Next: Finalize <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
+          <div className="flex lg:hidden items-center justify-between pt-4 pb-2 border-t border-white/5 shrink-0 mt-2">
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Max Points</span>
+              <span className="text-xl font-bold leading-none">
+                {maxPoints} <span className="text-sm font-normal text-muted-foreground">PTS</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={onBack}>
+                Back
+              </Button>
+              <Button onClick={() => onNext({ rules })}>
+                Next <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Right Column: Summary & Preview — single sticky block */}
-        <div className="lg:w-80 xl:w-96 shrink-0 flex flex-col gap-4">
+        <div className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col gap-4">
           <Card className="border border-white/10 bg-card/30 backdrop-blur-sm">
             <CardContent className="p-6 space-y-6">
               <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-4">Summary Preview</h3>

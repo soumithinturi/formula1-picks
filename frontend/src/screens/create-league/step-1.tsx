@@ -123,7 +123,7 @@ export function Step1({ initialData, onNext, onCancel }: Step1Props) {
               </Button>
               <div className="flex justify-end">
                 <Button type="submit" disabled={!name.trim()} className="w-full md:w-auto px-8 py-6 text-lg">
-                  Continue to Invite <ChevronRight className="ml-2 h-5 w-5" />
+                  Continue <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
               </div>
             </div>

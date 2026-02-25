@@ -11,22 +11,32 @@ export interface UserProfile {
 
 export const auth = {
   setToken(token: string) {
-    localStorage.setItem(TOKEN_KEY, token);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
   },
 
   getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(TOKEN_KEY);
+    }
+    return null;
   },
 
   removeToken() {
-    localStorage.removeItem(TOKEN_KEY);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(TOKEN_KEY);
+    }
   },
 
   setUser(user: UserProfile) {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    if (typeof window !== "undefined") {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
   },
 
   getUser(): UserProfile | null {
+    if (typeof window === "undefined") return null;
     const data = localStorage.getItem(USER_KEY);
     if (!data) return null;
     try {
@@ -37,9 +47,11 @@ export const auth = {
   },
 
   logout() {
-    this.removeToken();
-    localStorage.removeItem(USER_KEY);
-    window.location.href = "/login";
+    if (typeof window !== "undefined") {
+      this.removeToken();
+      localStorage.removeItem(USER_KEY);
+      window.location.href = "/login";
+    }
   },
 
   isAuthenticated(): boolean {
