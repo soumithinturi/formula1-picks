@@ -124,7 +124,7 @@ export function PicksScreen() {
     // Construct payload
     // We need to map driver objects back to just names or IDs?
     // Backend likely expects names or IDs.
-    // Check backend-v2/src/routes/picks.ts: Zod schema expects strings for driver logic? Or IDs?
+    // Check backend/src/routes/picks.ts: Zod schema expects strings for driver logic? Or IDs?
     // Actually backend stores JSONB. Logic is inside scoring service.
 
     // Quick save implementation
