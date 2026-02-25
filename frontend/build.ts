@@ -139,13 +139,8 @@ const result = await Bun.build({
 
 const end = performance.now();
 
-const routesPath = path.join(outdir, "_routes.json");
-const routesConfig = {
-  version: 1,
-  include: ["/*"],
-  exclude: ["/chunk-*", "/*.svg", "/*.png", "/*.ico"]
-};
-await Bun.write(routesPath, JSON.stringify(routesConfig, null, 2));
+const redirectsPath = path.join(outdir, "_redirects");
+await Bun.write(redirectsPath, "/* /index.html 200\n");
 
 const outputTable = result.outputs.map(output => ({
   File: path.relative(process.cwd(), output.path),
@@ -154,9 +149,9 @@ const outputTable = result.outputs.map(output => ({
 }));
 
 outputTable.push({
-  File: path.relative(process.cwd(), routesPath),
+  File: path.relative(process.cwd(), redirectsPath),
   Type: "asset",
-  Size: formatFileSize(JSON.stringify(routesConfig).length),
+  Size: formatFileSize(19),
 });
 
 console.table(outputTable);
