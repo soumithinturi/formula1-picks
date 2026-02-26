@@ -26,15 +26,33 @@ export interface AuthedRequest extends Request {
 type RouteHandler = (req: Request) => Response | Promise<Response>;
 type AuthedHandler = (req: AuthedRequest) => Response | Promise<Response>;
 
+function parseCookies(cookieHeader: string | null): Record<string, string> {
+  if (!cookieHeader) return {};
+  return Object.fromEntries(
+    cookieHeader.split("; ").map(c => {
+      const [key, ...v] = c.split("=");
+      return [key, decodeURIComponent(v.join("="))];
+    })
+  );
+}
+
 /**
- * Extracts and verifies the Supabase JWT from the Authorization header.
+ * Extracts and verifies the Supabase JWT from the Authorization header or Cookie.
  * Returns the authenticated user or null if invalid.
  */
 async function verifyToken(req: Request): Promise<AuthedUser | null> {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
+  let token = "";
 
-  const token = authHeader.slice(7);
+  const authHeader = req.headers.get("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    token = authHeader.slice(7);
+  } else {
+    // Fallback to cookie
+    const cookies = parseCookies(req.headers.get("Cookie"));
+    token = cookies["f1_auth_token"] || "";
+  }
+
+  if (!token) return null;
 
   try {
     const { payload } = await jwtVerify(token, JWKS, {

@@ -14,6 +14,19 @@ export const getLeaderboard = withAuth(async (req) => {
     return Response.json({ error: "leagueId is required" }, { status: 400 });
   }
 
+  // --- Security Fix: Prevent IDOR ---
+  // Ensure the requesting user is actually a member of this league
+  const [membership] = await db`
+    SELECT 1 FROM league_members
+    WHERE league_id = ${leagueId} AND user_id = ${req.user.id}
+    LIMIT 1
+  `;
+
+  if (!membership) {
+    return Response.json({ error: "Forbidden: You are not a member of this league." }, { status: 403 });
+  }
+  // ----------------------------------
+
   // Aggregate total points per user for this league
   const standings = await db<LeaderboardEntry[]>`
     SELECT

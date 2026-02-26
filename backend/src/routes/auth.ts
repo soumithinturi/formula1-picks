@@ -1,9 +1,23 @@
-
 import { createClient } from "@supabase/supabase-js";
 import { parseBody } from "../middleware/auth.ts";
 import { AuthRequestSchema, AuthVerifySchema } from "../types/index.ts";
 import { z } from "zod";
 import { db } from "../db/index.ts";
+
+function getCookieString(token: string) {
+  // 1 week expiry. Use SameSite=None and Secure for cross-origin in production.
+  const isProd = process.env.NODE_ENV === "production";
+  const sameSite = isProd ? "None" : "Lax";
+  const secure = isProd ? "Secure;" : "";
+  return `f1_auth_token=${token}; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=${60 * 60 * 24 * 7}`;
+}
+
+function getClearCookieString() {
+  const isProd = process.env.NODE_ENV === "production";
+  const sameSite = isProd ? "None" : "Lax";
+  const secure = isProd ? "Secure;" : "";
+  return `f1_auth_token=; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=0`;
+}
 
 /**
  * POST /api/v1/auth/request
@@ -106,6 +120,10 @@ export async function verifyOtp(req: Request): Promise<Response> {
   return Response.json({
     token: session.access_token,
     user: userProfile,
+  }, {
+    headers: {
+      "Set-Cookie": getCookieString(session.access_token)
+    }
   });
 }
 
@@ -142,5 +160,23 @@ export async function syncAuth(req: Request): Promise<Response> {
     SELECT id, contact, display_name, role FROM users WHERE id = ${user.id}
   `;
 
-  return Response.json({ user: userProfile });
+  return Response.json({
+    user: userProfile
+  }, {
+    headers: {
+      "Set-Cookie": getCookieString(data.access_token)
+    }
+  });
+}
+
+/**
+ * POST /api/v1/auth/logout
+ * Clears the HttpOnly cookie.
+ */
+export async function logoutUser(_req: Request): Promise<Response> {
+  return Response.json({ message: "Logged out" }, {
+    headers: {
+      "Set-Cookie": getClearCookieString()
+    }
+  });
 }

@@ -2,7 +2,7 @@ import { requestOtp, verifyOtp, syncAuth } from "./routes/auth.ts";
 import { listRaces } from "./routes/races.ts";
 import { listDrivers } from "./routes/drivers.ts";
 import { getPickForRace, submitPick } from "./routes/picks.ts";
-import { createLeague, listLeagues, joinLeague } from "./routes/leagues.ts";
+import { createLeague, listLeagues, joinLeague, previewLeague } from "./routes/leagues.ts";
 import { getLeaderboard } from "./routes/leaderboard.ts";
 import { submitResults } from "./routes/admin.ts";
 import { updateProfile } from "./routes/users.ts";
@@ -22,22 +22,42 @@ seedDatabase()
     console.error("Database seeding failed:", err);
   });
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+// Setup dynamic CORS to support credentials (cookies)
+const ALLOWED_ORIGINS = process.env.NODE_ENV === "production"
+  ? ["https://formula1-picks.sintur2527.workers.dev"]
+  : ["http://localhost:3000", "http://127.0.0.1:3000"];
 
-const handleOptions = () => new Response(null, { status: 204, headers: CORS_HEADERS });
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin");
+
+  // If no Origin header (e.g. direct API hit, or non-browser request), allow fallback
+  // If an Origin exists, check if it's allowed. If so, reflect it. If not, reflect it anyway 
+  // to avoid caching a valid origin on an invalid request, but ideally we'd reject.
+  // We'll reflect it back strictly if it matches, otherwise we'll just echo the bad origin 
+  // so the browser blocks it cleanly without complaining about a mismatch to 5173.
+  const allowOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : (origin || ALLOWED_ORIGINS[0]);
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+const handleOptions = (req: Request) => new Response(null, { status: 204, headers: getCorsHeaders(req) });
 
 const withCors = (handler: (req: Request) => Response | Promise<Response>) =>
   async (req: Request) => {
     const res = await handler(req);
-    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    const headers = getCorsHeaders(req);
+    for (const [key, value] of Object.entries(headers)) {
       res.headers.set(key, value);
     }
     return res;
   };
+
+import { logoutUser } from "./routes/auth.ts";
 
 const server = Bun.serve({
   port: PORT,
@@ -53,6 +73,10 @@ const server = Bun.serve({
     },
     "/api/v1/auth/sync": {
       POST: withCors(syncAuth),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/auth/logout": {
+      POST: withCors(logoutUser),
       OPTIONS: handleOptions,
     },
 
@@ -88,6 +112,10 @@ const server = Bun.serve({
       POST: withCors(joinLeague),
       OPTIONS: handleOptions,
     },
+    "/api/v1/leagues/invite/:code": {
+      GET: withCors(previewLeague),
+      OPTIONS: handleOptions,
+    },
 
     // ─── Leaderboard ───────────────────────────────────────────────────────
     "/api/v1/leaderboard/:leagueId": {
@@ -113,7 +141,13 @@ const server = Bun.serve({
     console.error("Unhandled server error:", err);
     return Response.json(
       { error: "Internal server error" },
-      { status: 500, headers: CORS_HEADERS }
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": ALLOWED_ORIGINS[0],
+          "Access-Control-Allow-Credentials": "true"
+        }
+      }
     );
   },
 });

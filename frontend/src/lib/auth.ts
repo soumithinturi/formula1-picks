@@ -10,14 +10,18 @@ export interface UserProfile {
 }
 
 export const auth = {
+  // We keep setToken empty to prevent storing new JWTs in localStorage.
+  // The server handles setting the HttpOnly cookie for us.
   setToken(token: string) {
     if (typeof window !== "undefined") {
-      localStorage.setItem(TOKEN_KEY, token);
+      // Intentionally avoiding localStorage.setItem(TOKEN_KEY, token);
+      // to mitigate XSS risks on the token.
     }
   },
 
   getToken(): string | null {
     if (typeof window !== "undefined") {
+      // Returns any residual token if they haven't logged out yet
       return localStorage.getItem(TOKEN_KEY);
     }
     return null;
@@ -50,11 +54,24 @@ export const auth = {
     if (typeof window !== "undefined") {
       this.removeToken();
       localStorage.removeItem(USER_KEY);
-      window.location.href = "/login";
+
+      // Fire-and-forget call to backend to clear HttpOnly cookie
+      const BASE_URL = import.meta.env?.BUN_PUBLIC_API_URL || (process.env.NODE_ENV !== 'production'
+        ? "http://localhost:8080/api/v1"
+        : "https://formula1-picks-production.up.railway.app/api/v1");
+
+      fetch(`${BASE_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include"
+      }).catch(console.error);
+
+      window.location.hash = "/login";
     }
   },
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    // Rely on the presence of user data since we can't read the HttpOnly cookie.
+    // If the cookie is expired, the next API call will return 401 and force a logout.
+    return !!this.getUser();
   }
 };

@@ -39,6 +39,18 @@ export const submitPick = withAuth(async (req) => {
   const { data, error } = await parseBody(req, PickSubmissionSchema);
   if (error) return error;
 
+  // --- Security Fix: Prevent Submission for Non-Members ---
+  const [membership] = await db`
+    SELECT 1 FROM league_members
+    WHERE league_id = ${data.leagueId} AND user_id = ${req.user.id}
+    LIMIT 1
+  `;
+
+  if (!membership) {
+    return Response.json({ error: "Forbidden: You are not a member of this league." }, { status: 403 });
+  }
+  // --------------------------------------------------------
+
   // Fetch the race to check deadlines and sprint status
   const [race] = await db<RaceRow[]>`
     SELECT * FROM races WHERE id = ${data.raceId} LIMIT 1
@@ -52,7 +64,7 @@ export const submitPick = withAuth(async (req) => {
   const sel = data.selections;
 
   // Enforce sprint deadline if any sprint picks are being submitted
-  const hasSprintPicks = sel.sprintQualifyingP1 || sel.sprintP1 || sel.sprintP2 || sel.sprintP3;
+  const hasSprintPicks = sel.sprintQualifyingP1 || sel.sprintP1 || sel.sprintP2 || sel.sprintP3 || sel.sprintFastestLap;
   if (hasSprintPicks && race.sprint_deadline) {
     if (now > new Date(race.sprint_deadline)) {
       return Response.json({ error: "The deadline for sprint picks has passed." }, { status: 422 });
@@ -72,13 +84,13 @@ export const submitPick = withAuth(async (req) => {
   const [savedPick] = await db<PickRow[]>`
     INSERT INTO picks (
       user_id, race_id, league_id, total_points, submitted_at,
-      sprint_qualifying_p1, sprint_p1, sprint_p2, sprint_p3,
+      sprint_qualifying_p1, sprint_p1, sprint_p2, sprint_p3, sprint_fastest_lap,
       race_qualifying_p1, race_p1, race_p2, race_p3,
       fastest_lap, first_dnf
     ) VALUES (
       ${req.user.id}, ${data.raceId}, ${data.leagueId}, 0, NOW(),
       ${sel.sprintQualifyingP1 ?? null}, ${sel.sprintP1 ?? null},
-      ${sel.sprintP2 ?? null}, ${sel.sprintP3 ?? null},
+      ${sel.sprintP2 ?? null}, ${sel.sprintP3 ?? null}, ${sel.sprintFastestLap ?? null},
       ${sel.raceQualifyingP1 ?? null}, ${sel.raceP1 ?? null},
       ${sel.raceP2 ?? null}, ${sel.raceP3 ?? null},
       ${sel.fastestLap ?? null}, ${sel.firstDnf ?? null}
@@ -88,6 +100,7 @@ export const submitPick = withAuth(async (req) => {
       sprint_p1 = EXCLUDED.sprint_p1,
       sprint_p2 = EXCLUDED.sprint_p2,
       sprint_p3 = EXCLUDED.sprint_p3,
+      sprint_fastest_lap = EXCLUDED.sprint_fastest_lap,
       race_qualifying_p1 = EXCLUDED.race_qualifying_p1,
       race_p1 = EXCLUDED.race_p1,
       race_p2 = EXCLUDED.race_p2,

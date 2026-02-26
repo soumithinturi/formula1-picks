@@ -39,7 +39,10 @@ export const createLeague = withAuth(async (req) => {
       VALUES (${league.id}, ${req.user.id}, NOW())
     `;
 
-    return Response.json(league, { status: 201 });
+    return Response.json({
+      ...league,
+      scoring_config: typeof league.scoring_config === "string" ? JSON.parse(league.scoring_config) : league.scoring_config
+    }, { status: 201 });
   } catch (err: any) {
     console.error("League creation error:", err);
     return Response.json({ error: err.message || String(err) }, { status: 500 });
@@ -58,7 +61,10 @@ export const listLeagues = withAuth(async (req) => {
     WHERE lm.user_id = ${req.user.id}
     ORDER BY l.created_at DESC
   `;
-  return Response.json(leagues);
+  return Response.json(leagues.map(l => ({
+    ...l,
+    scoring_config: typeof l.scoring_config === "string" ? JSON.parse(l.scoring_config) : l.scoring_config
+  })));
 });
 
 /**
@@ -93,5 +99,49 @@ export const joinLeague = withAuth(async (req) => {
     VALUES (${league.id}, ${req.user.id}, NOW())
   `;
 
-  return Response.json(league);
+  return Response.json({
+    ...league,
+    scoring_config: typeof league.scoring_config === "string" ? JSON.parse(league.scoring_config) : league.scoring_config
+  });
 });
+
+/**
+ * GET /api/v1/leagues/invite/:code
+ * Returns basic public info for a league from an invite code (used for previewing).
+ * Does not require auth.
+ */
+export const previewLeague = async (req: Request) => {
+  const url = new URL(req.url);
+  const code = url.pathname.split("/").pop();
+
+  if (!code) {
+    return Response.json({ error: "Missing invite code" }, { status: 400 });
+  }
+
+  try {
+    const [league] = await db`
+      SELECT id, name, created_by, invite_code
+      FROM leagues 
+      WHERE invite_code = ${code} 
+      LIMIT 1
+    `;
+
+    if (!league) {
+      return Response.json({ error: "Invalid invite code" }, { status: 404 });
+    }
+
+    // Get the creator's name
+    const [creator] = await db`
+      SELECT display_name FROM users WHERE id = ${league.created_by} LIMIT 1
+    `;
+
+    return Response.json({
+      id: league.id,
+      name: league.name,
+      creatorName: creator?.display_name || "Unknown Driver"
+    });
+  } catch (err: any) {
+    console.error("League preview error:", err);
+    return Response.json({ error: "Failed to load league info" }, { status: 500 });
+  }
+};
