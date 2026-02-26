@@ -21,7 +21,15 @@ export function LoginScreen() {
 
   // Check for Magic Link URL hash on load
   useEffect(() => {
-    const hash = window.location.hash;
+    let hash = window.location.hash;
+    const storedHash = sessionStorage.getItem("magic_link_hash");
+
+    // If the hash in the URL doesn't have an access_token but we stored one, use the stored one
+    if ((!hash || !hash.includes("access_token")) && storedHash && storedHash.includes("access_token")) {
+      hash = storedHash;
+      sessionStorage.removeItem("magic_link_hash");
+    }
+
     if (hash && hash.includes("access_token")) {
       const params = new URLSearchParams(hash.replace("#", "?"));
       const accessToken = params.get("access_token");
@@ -43,7 +51,14 @@ export function LoginScreen() {
               toast.success("Welcome back!", {
                 description: `Signed in as ${user.display_name || user.contact}`,
               });
-              navigate("/");
+
+              const redirect = sessionStorage.getItem("post_login_redirect");
+              if (redirect) {
+                sessionStorage.removeItem("post_login_redirect");
+                navigate(redirect);
+              } else {
+                navigate("/");
+              }
             }
           })
           .catch((err) => {
@@ -119,7 +134,13 @@ export function LoginScreen() {
         toast.success("Welcome back!", {
           description: `Signed in as ${user.display_name || user.contact}`,
         });
-        navigate("/"); // Redirect to home
+        const redirect = sessionStorage.getItem("post_login_redirect");
+        if (redirect) {
+          sessionStorage.removeItem("post_login_redirect");
+          navigate(redirect);
+        } else {
+          navigate("/");
+        }
       }
     } catch (error) {
       toast.error("Invalid code", { description: "Please try again." });
@@ -141,7 +162,13 @@ export function LoginScreen() {
       toast.success("Profile saved!", {
         description: `Welcome, ${user.display_name}!`,
       });
-      navigate("/");
+      const redirect = sessionStorage.getItem("post_login_redirect");
+      if (redirect) {
+        sessionStorage.removeItem("post_login_redirect");
+        navigate(redirect);
+      } else {
+        navigate("/");
+      }
     } catch (error) {
       toast.error("Failed to save profile", { description: String(error) });
     } finally {

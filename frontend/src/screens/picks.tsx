@@ -7,11 +7,13 @@ import { Countdown } from "@/components/ui/countdown";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DriverSelector } from "@/components/racing/driver-selector";
 import { Progress } from "@/components/ui/progress";
-import { Timer, AlertTriangle, Car, Save, Loader2 } from "lucide-react";
+import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock } from "lucide-react";
 import { api, type Driver, type Race, type League } from "@/lib/api";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getTeamColor } from "@/components/racing/driver-info";
 
 export function PicksScreen() {
   const navigate = useNavigate();
@@ -25,23 +27,46 @@ export function PicksScreen() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
   const [nextRace, setNextRace] = useState<Race | null>(null);
 
+  type DriverSelection = { id: string; name: string; team: string; rank: number; avatarUrl?: string } | null;
+
+  // Render variables mapped from drivers array for selectors
+  const mapDriverToSelector = (d: Driver) => ({
+    id: d.driverId,
+    name: `${d.givenName} ${d.familyName}`,
+    team: d.constructorName || "Unknown constructor",
+    rank: parseInt(d.permanentNumber || "0") || 0, // Mock rank using car number for now
+  });
+  const availableDrivers = useMemo(() => drivers.map(mapDriverToSelector), [drivers]);
+
   // Predictions State
-  const [sprintPredictions, setSprintPredictions] = useState({
-    p1: null,
-    p2: null,
-    p3: null,
-    fastestLap: null,
-    pole: null,
+  const [sprintPredictions, setSprintPredictions] = useState<{
+    sprintP1: DriverSelection;
+    sprintP2: DriverSelection;
+    sprintP3: DriverSelection;
+    sprintFastestLap: DriverSelection;
+    sprintQualifyingP1: DriverSelection;
+  }>({
+    sprintP1: null,
+    sprintP2: null,
+    sprintP3: null,
+    sprintFastestLap: null,
+    sprintQualifyingP1: null,
   });
 
-  const [racePredictions, setRacePredictions] = useState({
-    p1: null,
-    p2: null,
-    p3: null,
+  const [racePredictions, setRacePredictions] = useState<{
+    raceP1: DriverSelection;
+    raceP2: DriverSelection;
+    raceP3: DriverSelection;
+    fastestLap: DriverSelection;
+    raceQualifyingP1: DriverSelection;
+    firstDnf: DriverSelection;
+  }>({
+    raceP1: null,
+    raceP2: null,
+    raceP3: null,
     fastestLap: null,
-    pole: null,
-    dnf: null,
-    safetyCar: null as boolean | null,
+    raceQualifyingP1: null,
+    firstDnf: null,
   });
 
   // Fetch Initial Data
@@ -86,28 +111,54 @@ export function PicksScreen() {
 
     async function fetchPicks() {
       try {
-        const { data } = await api.picks.get(nextRace!.id, selectedLeagueId);
-        if (data && data.selections) {
-          // TODO: Map selections back to state
-          // This requires mapping driver IDs to objects
-          // For now, we start generic
+        const data = await api.picks.get(nextRace!.id, selectedLeagueId);
+        if (data) {
+          // Map backend driver IDs to driver selector objects
+          const findDriver = (id: string | null) => availableDrivers.find((d) => d.id === id) || null;
+
+          setSprintPredictions({
+            sprintQualifyingP1: findDriver(data.sprint_qualifying_p1),
+            sprintP1: findDriver(data.sprint_p1),
+            sprintP2: findDriver(data.sprint_p2),
+            sprintP3: findDriver(data.sprint_p3),
+            sprintFastestLap: findDriver(data.sprint_fastest_lap),
+          });
+
+          setRacePredictions({
+            raceQualifyingP1: findDriver(data.race_qualifying_p1),
+            raceP1: findDriver(data.race_p1),
+            raceP2: findDriver(data.race_p2),
+            raceP3: findDriver(data.race_p3),
+            fastestLap: findDriver(data.fastest_lap),
+            firstDnf: findDriver(data.first_dnf),
+          });
         }
       } catch (error) {
         // likely 404 if no picks yet, which is fine
+        // reset state if empty
+        setSprintPredictions({
+          sprintP1: null,
+          sprintP2: null,
+          sprintP3: null,
+          sprintFastestLap: null,
+          sprintQualifyingP1: null,
+        });
+        setRacePredictions({
+          raceP1: null,
+          raceP2: null,
+          raceP3: null,
+          fastestLap: null,
+          raceQualifyingP1: null,
+          firstDnf: null,
+        });
       }
     }
     fetchPicks();
-  }, [selectedLeagueId, nextRace]);
+  }, [selectedLeagueId, nextRace, availableDrivers]);
 
-  // Helper to map API driver to Selector format
-  const mapDriverToSelector = (d: Driver) => ({
-    id: d.id,
-    name: d.full_name,
-    team: d.team_name,
-    rank: parseInt(d.racing_number) || 0, // Mock rank using car number for now
-  });
-
-  const availableDrivers = useMemo(() => drivers.map(mapDriverToSelector), [drivers]);
+  // Compute current league scoring config
+  const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
+  const scoringConfig = selectedLeague?.scoring_config;
 
   const handleSprintSelect = (key: keyof typeof sprintPredictions, driver: any) => {
     setSprintPredictions((prev) => ({ ...prev, [key]: driver }));
@@ -132,8 +183,17 @@ export function PicksScreen() {
       raceId: nextRace.id,
       leagueId: selectedLeagueId,
       selections: {
-        ...sprintPredictions,
-        ...racePredictions,
+        sprintQualifyingP1: sprintPredictions.sprintQualifyingP1?.id || null,
+        sprintP1: sprintPredictions.sprintP1?.id || null,
+        sprintP2: sprintPredictions.sprintP2?.id || null,
+        sprintP3: sprintPredictions.sprintP3?.id || null,
+        sprintFastestLap: sprintPredictions.sprintFastestLap?.id || null,
+        raceQualifyingP1: racePredictions.raceQualifyingP1?.id || null,
+        raceP1: racePredictions.raceP1?.id || null,
+        raceP2: racePredictions.raceP2?.id || null,
+        raceP3: racePredictions.raceP3?.id || null,
+        fastestLap: racePredictions.fastestLap?.id || null,
+        firstDnf: racePredictions.firstDnf?.id || null,
       },
     };
 
@@ -148,16 +208,95 @@ export function PicksScreen() {
   };
 
   const progress = useMemo(() => {
-    const sprintTotal = Object.keys(sprintPredictions).length;
-    const raceTotal = Object.keys(racePredictions).length;
-    const totalPicks = sprintTotal + raceTotal;
+    let requiredPicks = 0;
+    let completedPicks = 0;
 
-    const sprintCompleted = Object.values(sprintPredictions).filter((v) => v !== null).length;
-    const raceCompleted = Object.values(racePredictions).filter((v) => v !== null).length;
-    const totalCompleted = sprintCompleted + raceCompleted;
+    if (!scoringConfig) return 0;
 
-    return (totalCompleted / totalPicks) * 100;
-  }, [sprintPredictions, racePredictions]);
+    // Helper to check if a pick is made
+    const checkPick = (val: DriverSelection) => {
+      requiredPicks++;
+      if (val !== null && val !== undefined) completedPicks++;
+    };
+
+    // Race Picks
+    if (scoringConfig.quali?.enabled) checkPick(racePredictions.raceQualifyingP1);
+    if (scoringConfig.p1?.enabled) checkPick(racePredictions.raceP1);
+    if (scoringConfig.p2?.enabled) checkPick(racePredictions.raceP2);
+    if (scoringConfig.p3?.enabled) checkPick(racePredictions.raceP3);
+    if (scoringConfig.fastestLap?.enabled) checkPick(racePredictions.fastestLap);
+    if (scoringConfig.firstDNF?.enabled) checkPick(racePredictions.firstDnf);
+
+    // Sprint Picks (Only if race has sprint)
+    if (nextRace?.has_sprint) {
+      if (scoringConfig.quali?.enabled) checkPick(sprintPredictions.sprintQualifyingP1);
+      if (scoringConfig.p1?.enabled) checkPick(sprintPredictions.sprintP1);
+      if (scoringConfig.p2?.enabled) checkPick(sprintPredictions.sprintP2);
+      if (scoringConfig.p3?.enabled) checkPick(sprintPredictions.sprintP3);
+      if (scoringConfig.sprintFastestLap?.enabled) checkPick(sprintPredictions.sprintFastestLap);
+    }
+
+    if (requiredPicks === 0) return 0;
+    return (completedPicks / requiredPicks) * 100;
+  }, [sprintPredictions, racePredictions, scoringConfig, nextRace?.has_sprint]);
+
+  const renderPodiumGroup = (type: "sprint" | "race") => {
+    const predictions = type === "sprint" ? sprintPredictions : racePredictions;
+
+    const renderStep = (pos: 1 | 2 | 3, heightCls: string, bgCls: string) => {
+      const pKey = type === "sprint" ? `sprintP${pos}` : `raceP${pos}`;
+      const selectedDriver = predictions[pKey as keyof typeof predictions] as DriverSelection;
+
+      const isEnabled = scoringConfig?.[`p${pos}` as keyof typeof scoringConfig]?.enabled;
+      if (!isEnabled) return null;
+
+      return (
+        <DriverSelector
+          position={pos}
+          drivers={availableDrivers}
+          selectedDriver={selectedDriver as any}
+          onSelect={(d) => (type === "sprint" ? handleSprintSelect(pKey as any, d) : handleRaceSelect(pKey as any, d))}>
+          <div
+            className={`flex flex-col items-center justify-end ${heightCls} w-1/3 p-2 rounded-t-xl bg-card border-x border-t relative overflow-visible cursor-pointer hover:bg-muted/50 transition-colors`}>
+            <div className={`absolute inset-0 opacity-10 rounded-t-xl ${bgCls}`} />
+            <span className="absolute -top-3 bg-background border px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm z-20">
+              P{pos}
+            </span>
+            {selectedDriver ? (
+              <div className="flex flex-col items-center text-center gap-1.5 z-10 w-full">
+                <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                  <AvatarImage src={selectedDriver.avatarUrl} alt={selectedDriver.name} />
+                  <AvatarFallback
+                    style={{ backgroundColor: getTeamColor(selectedDriver.team), color: "#fff" }}
+                    className="text-xs">
+                    {selectedDriver.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="font-bold text-[11px] truncate w-full px-1">
+                  {selectedDriver.name.split(" ").pop()}
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center text-center gap-1.5 z-10 opacity-50 w-full mb-1">
+                <div className="h-10 w-10 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center bg-muted/20">
+                  <Plus className="h-4 w-4" />
+                </div>
+                <span className="text-[10px] text-muted-foreground italic truncate w-full">Select Pick</span>
+              </div>
+            )}
+          </div>
+        </DriverSelector>
+      );
+    };
+
+    return (
+      <div className="flex items-end justify-center gap-1.5 h-36 mb-6 mt-4 w-full px-2 max-w-[320px] mx-auto pt-4 relative isolate">
+        {renderStep(2, "h-24", "bg-zinc-400")}
+        {renderStep(1, "h-32 shadow-md z-10", "bg-amber-400")}
+        {renderStep(3, "h-20", "bg-amber-700")}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 pb-20 relative">
@@ -200,22 +339,14 @@ export function PicksScreen() {
           </div>
           <Progress value={progress} className="h-2" />
         </div>
-        <div className="hidden md:flex w-full max-w-md mx-auto justify-center gap-3 pt-4">
-          <Button
-            variant="outline"
-            size="lg"
-            className="text-lg font-bold flex-1"
-            onClick={handleSave}
-            disabled={saving || !nextRace}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
-            Save Draft
-          </Button>
+        <div className="hidden md:flex w-full max-w-md mx-auto justify-center pt-4">
           <Button
             size="lg"
-            className="shadow-lg text-lg font-bold bg-primary text-primary-foreground flex-1"
+            className="shadow-lg text-lg font-bold bg-primary text-primary-foreground w-full"
             onClick={handleSave}
             disabled={saving || !nextRace}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Lock In Picks"}
+            {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+            Save Picks
           </Button>
         </div>
       </div>
@@ -251,9 +382,9 @@ export function PicksScreen() {
                     <DriverSelector
                       position={1}
                       drivers={availableDrivers}
-                      selectedDriver={sprintPredictions.pole}
+                      selectedDriver={sprintPredictions.sprintQualifyingP1}
                       showPosition={false}
-                      onSelect={(d) => handleSprintSelect("pole", d)}
+                      onSelect={(d) => handleSprintSelect("sprintQualifyingP1", d)}
                     />
                   </CardContent>
                 </Card>
@@ -265,40 +396,29 @@ export function PicksScreen() {
                   <div className="h-4 w-1 bg-primary rounded-full" />
                   <h2 className="text-lg font-bold uppercase">Sprint Podium</h2>
                 </div>
-                <div className="grid gap-3">
-                  {[1, 2, 3].map((pos) => (
-                    <div key={pos} className="relative">
-                      <div>
-                        <DriverSelector
-                          position={pos}
-                          drivers={availableDrivers}
-                          selectedDriver={sprintPredictions[`p${pos}` as keyof typeof sprintPredictions] as any}
-                          onSelect={(d) => handleSprintSelect(`p${pos}` as keyof typeof sprintPredictions, d)}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {renderPodiumGroup("sprint")}
               </section>
 
-              {/* Sprint Fastest Lap */}
-              <section className="space-y-3">
-                <div className="flex items-center gap-2 px-1">
-                  <div className="h-4 w-1 bg-primary rounded-full" />
-                  <h2 className="text-lg font-bold uppercase">Fastest Lap</h2>
-                </div>
-                <Card className="bg-card/50 border-white/5">
-                  <CardContent className="pt-6">
-                    <DriverSelector
-                      position={0}
-                      drivers={availableDrivers}
-                      selectedDriver={sprintPredictions.fastestLap}
-                      showPosition={false}
-                      onSelect={(d) => handleSprintSelect("fastestLap", d)}
-                    />
-                  </CardContent>
-                </Card>
-              </section>
+              {/* Sprint Fastest Lap - Conditionally Rendered */}
+              {scoringConfig?.sprintFastestLap?.enabled && (
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2 px-1">
+                    <div className="h-4 w-1 bg-primary rounded-full" />
+                    <h2 className="text-lg font-bold uppercase">Fastest Lap</h2>
+                  </div>
+                  <Card className="bg-card/50 border-white/5">
+                    <CardContent className="pt-6">
+                      <DriverSelector
+                        position={0}
+                        drivers={availableDrivers}
+                        selectedDriver={sprintPredictions.sprintFastestLap}
+                        showPosition={false}
+                        onSelect={(d) => handleSprintSelect("sprintFastestLap", d)}
+                      />
+                    </CardContent>
+                  </Card>
+                </section>
+              )}
             </TabsContent>
           )}
 
@@ -321,127 +441,88 @@ export function PicksScreen() {
                   <DriverSelector
                     position={1}
                     drivers={availableDrivers}
-                    selectedDriver={racePredictions.pole}
+                    selectedDriver={racePredictions.raceQualifyingP1}
                     showPosition={false}
-                    onSelect={(d) => handleRaceSelect("pole", d)}
+                    onSelect={(d) => handleRaceSelect("raceQualifyingP1", d)}
                   />
                 </CardContent>
               </Card>
             </section>
 
-            {/* The Podium */}
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <div className="h-4 w-1 bg-primary rounded-full" />
-                <h2 className="text-lg font-bold uppercase">The Podium</h2>
-              </div>
-              <div className="grid gap-3">
-                {[1, 2, 3].map((pos) => (
-                  <div key={pos} className="relative">
-                    <div>
-                      <DriverSelector
-                        position={pos}
-                        drivers={availableDrivers}
-                        selectedDriver={racePredictions[`p${pos}` as keyof typeof racePredictions] as any}
-                        onSelect={(d) => handleRaceSelect(`p${pos}` as keyof typeof racePredictions, d)}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            {/* The Podium - Only render enabled positions */}
+            {(scoringConfig?.p1?.enabled || scoringConfig?.p2?.enabled || scoringConfig?.p3?.enabled) && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 px-1">
+                  <div className="h-4 w-1 bg-primary rounded-full" />
+                  <h2 className="text-lg font-bold uppercase">The Podium</h2>
+                </div>
+                {renderPodiumGroup("race")}
+              </section>
+            )}
 
-            {/* Fastest Lap */}
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <div className="h-4 w-1 bg-primary rounded-full" />
-                <h2 className="text-lg font-bold uppercase">Fastest Lap</h2>
-              </div>
-              <Card className="bg-card/50 border-white/5">
-                <CardContent className="pt-6">
-                  <DriverSelector
-                    position={0}
-                    drivers={availableDrivers}
-                    selectedDriver={racePredictions.fastestLap}
-                    showPosition={false}
-                    onSelect={(d) => handleRaceSelect("fastestLap", d)}
-                  />
-                </CardContent>
-              </Card>
-            </section>
-
-            {/* Reliability & Chaos */}
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <div className="h-4 w-1 bg-primary rounded-full" />
-                <h2 className="text-lg font-bold uppercase">Reliability & Chaos</h2>
-              </div>
-
-              <div className="grid gap-4">
-                {/* First DNF */}
+            {/* Fastest Lap - Conditionally rendered */}
+            {scoringConfig?.fastestLap?.enabled && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 px-1">
+                  <div className="h-4 w-1 bg-primary rounded-full" />
+                  <h2 className="text-lg font-bold uppercase">Fastest Lap</h2>
+                </div>
                 <Card className="bg-card/50 border-white/5">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4" />
-                      First DNF
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-6">
                     <DriverSelector
                       position={0}
                       drivers={availableDrivers}
-                      selectedDriver={racePredictions.dnf}
+                      selectedDriver={racePredictions.fastestLap}
                       showPosition={false}
-                      onSelect={(d) => handleRaceSelect("dnf", d)}
+                      onSelect={(d) => handleRaceSelect("fastestLap", d)}
                     />
                   </CardContent>
                 </Card>
+              </section>
+            )}
 
-                {/* Safety Car */}
-                <Card className="bg-card/50 border-white/5">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Car className="w-4 h-4" />
-                      Safety Car?
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex gap-4">
-                    <Button
-                      variant={racePredictions.safetyCar === true ? "default" : "outline"}
-                      className="flex-1"
-                      onClick={() => handleRaceSelect("safetyCar", true)}>
-                      YES
-                    </Button>
-                    <Button
-                      variant={racePredictions.safetyCar === false ? "default" : "outline"}
-                      className="flex-1"
-                      onClick={() => handleRaceSelect("safetyCar", false)}>
-                      NO
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
+            {/* Reliability & Chaos / First DNF - Conditionally rendered */}
+            {scoringConfig?.firstDNF?.enabled && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 px-1">
+                  <div className="h-4 w-1 bg-primary rounded-full" />
+                  <h2 className="text-lg font-bold uppercase">Reliability & Chaos</h2>
+                </div>
+
+                <div className="grid gap-4">
+                  {/* First DNF */}
+                  <Card className="bg-card/50 border-white/5">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        First DNF
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <DriverSelector
+                        position={0}
+                        drivers={availableDrivers}
+                        selectedDriver={racePredictions.firstDnf}
+                        showPosition={false}
+                        onSelect={(d) => handleRaceSelect("firstDnf", d)}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </section>
+            )}
           </TabsContent>
         </Tabs>
       )}
 
-      <div className="fixed bottom-20 left-4 right-4 z-50 md:hidden flex gap-3">
-        <Button
-          variant="outline"
-          size="lg"
-          className="flex-1 text-lg font-bold"
-          onClick={handleSave}
-          disabled={saving || !nextRace}>
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
-          Save Draft
-        </Button>
+      <div className="fixed bottom-20 left-4 right-4 z-50 md:hidden flex justify-center">
         <Button
           size="lg"
-          className="flex-2 shadow-lg text-lg font-bold bg-primary text-primary-foreground"
+          className="w-full shadow-lg text-lg font-bold bg-primary text-primary-foreground"
           onClick={handleSave}
           disabled={saving || !nextRace}>
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Lock In Picks"}
+          {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+          Save Picks
         </Button>
       </div>
     </div>

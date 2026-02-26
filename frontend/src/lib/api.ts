@@ -1,6 +1,13 @@
 import { auth } from "./auth";
 
-const BASE_URL = (import.meta.env && import.meta.env.BUN_PUBLIC_API_URL) || "https://formula1-picks-production.up.railway.app/api/v1" || "http://localhost:8080/api/v1";
+// In Bun frontend setups, `import.meta.env` corresponds to server/build environment variables.
+// If not explicitly provided via a `.env` file or export, `NODE_ENV` is implicitly 'development' when running `bun dev`.
+const isDev = process.env.NODE_ENV !== 'production';
+
+// Use the explicit env variable first, fallback to context-aware defaults
+const BASE_URL = import.meta.env?.BUN_PUBLIC_API_URL || (isDev
+  ? "http://localhost:8080/api/v1"
+  : "https://formula1-picks-production.up.railway.app/api/v1");
 
 export interface ApiResponse<T> {
   data?: T;
@@ -18,11 +25,56 @@ export interface Race {
 }
 
 export interface Driver {
-  id: string;
-  full_name: string;
-  racing_number: string;
-  team_name: string;
-  tla: string;
+  driverId: string;
+  permanentNumber?: string;
+  code?: string;
+  url: string;
+  givenName: string;
+  familyName: string;
+  dateOfBirth: string;
+  nationality: string;
+  constructorId?: string;
+  constructorName?: string;
+}
+
+export interface ScoringConfig {
+  p1?: { enabled: boolean; points: number };
+  p2?: { enabled: boolean; points: number };
+  p3?: { enabled: boolean; points: number };
+  quali?: { enabled: boolean; points: number };
+  podium?: { enabled: boolean; points: number };
+  perfectOrder?: { enabled: boolean; points: number };
+  fastestLap?: { enabled: boolean; points: number };
+  sprintFastestLap?: { enabled: boolean; points: number };
+  firstDNF?: { enabled: boolean; points: number };
+}
+
+export interface PickSelections {
+  sprintQualifyingP1?: string | null;
+  sprintP1?: string | null;
+  sprintP2?: string | null;
+  sprintP3?: string | null;
+  sprintFastestLap?: string | null;
+  raceQualifyingP1?: string | null;
+  raceP1?: string | null;
+  raceP2?: string | null;
+  raceP3?: string | null;
+  fastestLap?: string | null;
+  firstDnf?: string | null;
+}
+
+export interface PickRow {
+  sprint_qualifying_p1: string | null;
+  sprint_p1: string | null;
+  sprint_p2: string | null;
+  sprint_p3: string | null;
+  sprint_fastest_lap: string | null;
+  race_qualifying_p1: string | null;
+  race_p1: string | null;
+  race_p2: string | null;
+  race_p3: string | null;
+  fastest_lap: string | null;
+  first_dnf: string | null;
 }
 
 export interface League {
@@ -31,6 +83,7 @@ export interface League {
   invite_code: string;
   created_by: string; // user id
   members_count?: number;
+  scoring_config?: ScoringConfig;
 }
 
 async function request<T>(
@@ -40,6 +93,8 @@ async function request<T>(
   const token = auth.getToken();
   const headers = new Headers(options.headers);
 
+  // We still attach the Bearer token if it exists (for backward compatibility),
+  // but the backend will rely primarily on the HttpOnly cookie.
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
@@ -48,6 +103,9 @@ async function request<T>(
   if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
+
+  // Explicitly tell fetch to send cookies cross-origin
+  options.credentials = "include";
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
@@ -133,13 +191,16 @@ export const api = {
 
     list: () => api.get<League[]>("/leagues"),
 
+    preview: (inviteCode: string) =>
+      api.get<{ id: string; name: string; creatorName: string }>(`/leagues/invite/${inviteCode}`),
+
     join: (inviteCode: string) =>
-      api.post<League>(`/leagues/${inviteCode}/join`, {}),
+      api.post<League>(`/leagues/join`, { inviteCode }),
   },
 
   picks: {
     get: (raceId: string, leagueId: string) =>
-      api.get<any>(`/picks/race/${raceId}?leagueId=${leagueId}`),
+      api.get<PickRow>(`/picks/race/${raceId}?leagueId=${leagueId}`),
 
     submit: (payload: { raceId: string; leagueId: string; selections: any }) =>
       api.post("/picks", payload),

@@ -92,11 +92,15 @@ export function LeaguesScreen() {
 
   const activeLeague = leagues.find((l) => l.id === activeLeagueId);
 
+  const getInviteLink = (code: string) => {
+    return `${window.location.origin}/#/invite/${code}`;
+  };
+
   const handleCopyInviteCode = () => {
     if (activeLeague?.invite_code) {
-      navigator.clipboard.writeText(activeLeague.invite_code);
+      navigator.clipboard.writeText(getInviteLink(activeLeague.invite_code));
       setCopiedCode(true);
-      toast.success("Invite code copied!");
+      toast.success("Invite link copied!");
       setTimeout(() => setCopiedCode(false), 2000);
     }
   };
@@ -107,7 +111,8 @@ export function LeaguesScreen() {
         navigator
           .share({
             title: `Join ${activeLeague.name} on F1 Picks`,
-            text: `Use code ${activeLeague.invite_code} to join my league!`,
+            text: `Join my F1 Picks league: ${activeLeague.name}`,
+            url: getInviteLink(activeLeague.invite_code),
           })
           .catch(() => {
             // If share fails, just copy
@@ -211,7 +216,7 @@ export function LeaguesScreen() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">Invite Rivals</h3>
-                <p className="text-xs text-muted-foreground">Tap code to copy and share</p>
+                <p className="text-xs text-muted-foreground">Tap link to copy and share</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleShareCode}>
                 <Share2 className="h-4 w-4 text-primary" />
@@ -219,14 +224,14 @@ export function LeaguesScreen() {
             </div>
             <button
               onClick={handleCopyInviteCode}
-              className="w-full flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors group">
-              <code className="text-lg font-mono font-bold tracking-wider text-primary">
-                {activeLeague.invite_code}
-              </code>
+              className="w-full flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors group overflow-hidden">
+              <span className="text-sm font-mono font-medium tracking-tight text-primary truncate mr-3">
+                {getInviteLink(activeLeague.invite_code)}
+              </span>
               {copiedCode ? (
-                <Check className="h-4 w-4 text-green-500" />
+                <Check className="h-4 w-4 text-green-500 shrink-0" />
               ) : (
-                <Copy className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                <Copy className="h-4 w-4 text-muted-foreground group-hover:text-foreground shrink-0" />
               )}
             </button>
           </CardContent>

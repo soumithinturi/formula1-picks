@@ -14,6 +14,12 @@ import "../styles/globals.css";
 import { ThemeProvider } from "@/context/theme-context";
 
 const elem = document.getElementById("root")!;
+
+const hash = window.location.hash;
+if (hash && hash.includes("access_token")) {
+  sessionStorage.setItem("magic_link_hash", hash);
+}
+
 const app = (
   <StrictMode>
     <ThemeProvider>
