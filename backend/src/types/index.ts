@@ -36,6 +36,7 @@ export const ScoringConfigSchema = z.object({
   podium: RuleSchema.default({ enabled: true, points: 10 }),
   perfectOrder: RuleSchema.default({ enabled: true, points: 15 }),
   fastestLap: RuleSchema.default({ enabled: true, points: 5 }),
+  sprintFastestLap: RuleSchema.default({ enabled: true, points: 5 }),
   firstDNF: RuleSchema.default({ enabled: false, points: 5 }),
 });
 
@@ -49,6 +50,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   podium: { enabled: true, points: 10 },
   perfectOrder: { enabled: true, points: 15 },
   fastestLap: { enabled: true, points: 5 },
+  sprintFastestLap: { enabled: true, points: 5 },
   firstDNF: { enabled: false, points: 5 },
 };
 
@@ -60,6 +62,7 @@ export const PickSelectionsSchema = z.object({
   sprintP1: z.string().nullable().optional(),
   sprintP2: z.string().nullable().optional(),
   sprintP3: z.string().nullable().optional(),
+  sprintFastestLap: z.string().nullable().optional(),
   // Race picks
   raceQualifyingP1: z.string().nullable().optional(),
   raceP1: z.string().nullable().optional(),
@@ -126,10 +129,16 @@ export interface RaceRow {
 
 export interface DriverRow {
   id: number;
-  full_name: string;
-  racing_number: string;
-  team_name: string;
-  tla: string;
+  driver_id: string;
+  permanent_number: string | null;
+  code: string | null;
+  url: string | null;
+  given_name: string;
+  family_name: string;
+  date_of_birth: string | null;
+  nationality: string | null;
+  constructor_id: string | null;
+  constructor_name: string | null;
 }
 
 export interface PickRow {
@@ -143,6 +152,7 @@ export interface PickRow {
   sprint_p1: string | null;
   sprint_p2: string | null;
   sprint_p3: string | null;
+  sprint_fastest_lap: string | null;
   race_qualifying_p1: string | null;
   race_p1: string | null;
   race_p2: string | null;

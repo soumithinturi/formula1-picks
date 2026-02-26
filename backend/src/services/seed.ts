@@ -1,5 +1,31 @@
 import { db } from "../db/index.ts";
 
+// Manual 2026 driver to constructor mapping since Jolpi API doesn't provide it pre-season
+const DRIVER_CONSTRUCTOR_MAP: Record<string, { id: string; name: string }> = {
+  max_verstappen: { id: "red_bull", name: "Red Bull Racing" },
+  hadjar: { id: "red_bull", name: "Red Bull Racing" },
+  hamilton: { id: "ferrari", name: "Ferrari" },
+  leclerc: { id: "ferrari", name: "Ferrari" },
+  norris: { id: "mclaren", name: "McLaren" },
+  piastri: { id: "mclaren", name: "McLaren" },
+  russell: { id: "mercedes", name: "Mercedes" },
+  antonelli: { id: "mercedes", name: "Mercedes" },
+  alonso: { id: "aston_martin", name: "Aston Martin" },
+  stroll: { id: "aston_martin", name: "Aston Martin" },
+  gasly: { id: "alpine", name: "Alpine F1 Team" },
+  colapinto: { id: "alpine", name: "Alpine F1 Team" },
+  albon: { id: "williams", name: "Williams" },
+  sainz: { id: "williams", name: "Williams" },
+  lawson: { id: "rb", name: "RB F1 Team" },
+  lindblad: { id: "rb", name: "RB F1 Team" },
+  hulkenberg: { id: "audi", name: "Audi" },
+  bortoleto: { id: "audi", name: "Audi" },
+  ocon: { id: "haas", name: "Haas F1 Team" },
+  bearman: { id: "haas", name: "Haas F1 Team" },
+  perez: { id: "cadillac", name: "Cadillac F1 Team" },
+  bottas: { id: "cadillac", name: "Cadillac F1 Team" }
+};
+
 // RapidAPI / Jolpi Ergast
 const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
 
@@ -127,20 +153,30 @@ async function seedDrivers(): Promise<void> {
     const drivers: ErgastDriver[] = data.MRData.DriverTable.Drivers;
 
     for (const driver of drivers) {
-      const fullName = `${driver.givenName} ${driver.familyName}`;
-      const tla = driver.code || driver.familyName.substring(0, 3).toUpperCase();
-      const racingNumber = driver.permanentNumber || "0";
-      // Ergast driver lists don't easily have 'team_name' in the basic drivers.json 
-      // We will fallback to "Unknown" for now or fetch constructors.
-      const teamName = "Unknown constructor";
-
       await db`
-        INSERT INTO drivers (full_name, racing_number, team_name, tla)
+        INSERT INTO drivers (
+          driver_id,
+          permanent_number,
+          code,
+          url,
+          given_name,
+          family_name,
+          date_of_birth,
+          nationality,
+          constructor_id,
+          constructor_name
+        )
         VALUES (
-          ${fullName},
-          ${racingNumber},
-          ${teamName},
-          ${tla}
+          ${driver.driverId},
+          ${driver.permanentNumber || null},
+          ${driver.code || null},
+          ${driver.url || null},
+          ${driver.givenName},
+          ${driver.familyName},
+          ${driver.dateOfBirth || null},
+          ${driver.nationality || null},
+          ${DRIVER_CONSTRUCTOR_MAP[driver.driverId]?.id || null},
+          ${DRIVER_CONSTRUCTOR_MAP[driver.driverId]?.name || null}
         )
       `;
       await Bun.sleep(20);
