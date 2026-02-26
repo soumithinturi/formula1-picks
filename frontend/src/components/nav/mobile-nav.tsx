@@ -1,7 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
-import { Home, Trophy, Users, Calendar, Menu } from "lucide-react";
+import { Home, Trophy, Users, Calendar, Settings } from "lucide-react";
 
 interface MobileNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -10,7 +10,7 @@ const navItems = [
   { to: "/leagues", label: "Leagues", icon: Trophy },
   { to: "/picks", label: "Picks", icon: Users },
   { to: "/schedule", label: "Schedule", icon: Calendar },
-  { to: "/more", label: "More", icon: Menu },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function MobileNav({ className, ...props }: MobileNavProps) {

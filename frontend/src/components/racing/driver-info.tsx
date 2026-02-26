@@ -6,7 +6,7 @@ interface DriverInfoProps extends React.HTMLAttributes<HTMLDivElement> {
   name: string;
   team?: string;
   avatarUrl?: string;
-  rank?: number;
+  driverNumber?: number;
 }
 
 export function getTeamColor(teamName?: string): string | undefined {
@@ -26,20 +26,20 @@ export function getTeamColor(teamName?: string): string | undefined {
   return undefined;
 }
 
-export function DriverInfo({ name, team, avatarUrl, rank, className, ...props }: DriverInfoProps) {
+export function DriverInfo({ name, team, avatarUrl, driverNumber, className, ...props }: DriverInfoProps) {
   return (
-    <div className={cn("flex items-center gap-3", className)} {...props}>
-      {typeof rank === "number" && (
-        <span className="w-8 text-center text-sm font-bold text-muted-foreground mr-1">#{rank}</span>
-      )}
-      <Avatar className="h-8 w-8">
+    <div className={cn("flex items-center gap-3 w-full", className)} {...props}>
+      <Avatar className="h-8 w-8 shrink-0">
         <AvatarImage src={avatarUrl} alt={name} />
         <AvatarFallback style={{ backgroundColor: getTeamColor(team), color: "#fff" }}>{name.charAt(0)}</AvatarFallback>
       </Avatar>
-      <div className="flex flex-col text-left">
-        <span className="text-sm font-medium leading-none">{name}</span>
-        {team && <span className="text-xs text-muted-foreground">{team}</span>}
+      <div className="flex flex-col text-left flex-1 min-w-0">
+        <span className="text-sm font-medium leading-none truncate">{name}</span>
+        {team && <span className="text-xs text-muted-foreground truncate">{team}</span>}
       </div>
+      {typeof driverNumber === "number" && (
+        <span className="text-sm font-black text-muted-foreground/50 ml-auto pr-1">#{driverNumber}</span>
+      )}
     </div>
   );
 }

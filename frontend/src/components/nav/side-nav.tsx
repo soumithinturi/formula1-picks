@@ -11,8 +11,8 @@ const navItems = [
   { to: "/leagues", label: "Leagues", icon: Trophy },
   { to: "/picks", label: "Picks", icon: Users },
   { to: "/schedule", label: "Schedule", icon: Calendar },
-  { to: "/more/race-winners-history", label: "Race History", icon: Flag },
-  { to: "/more/leagues-history", label: "League History", icon: Archive },
+  // { to: "/more/race-winners-history", label: "Race History", icon: Flag },
+  // { to: "/more/leagues-history", label: "League History", icon: Archive },
 ];
 
 export function SideNav({ className, ...props }: SideNavProps) {
@@ -46,10 +46,19 @@ export function SideNav({ className, ...props }: SideNavProps) {
       </nav>
 
       <div className="mt-auto pt-4 border-t border-border space-y-1">
-        <button className="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            cn(
+              "flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md transition-colors",
+              isActive
+                ? "bg-primary text-primary-foreground shadow"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )
+          }>
           <Settings className="mr-3 h-5 w-5" />
           Settings
-        </button>
+        </NavLink>
         <button
           onClick={() => auth.logout()}
           className="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md text-destructive hover:bg-destructive/10 transition-colors">

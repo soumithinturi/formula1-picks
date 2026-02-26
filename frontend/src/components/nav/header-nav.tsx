@@ -29,13 +29,13 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
 
       <div className="flex items-center gap-2 md:gap-4 shrink-0">
         <TeamSwitcher />
-        <Button
+        {/* <Button
           variant="ghost"
           size="icon"
           className="relative text-muted-foreground hover:text-foreground h-8 w-8 md:h-9 md:w-9">
           <Bell className="h-4 w-4 md:h-5 md:w-5" />
           <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full border border-background" />
-        </Button>
+        </Button> */}
         <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
 
         {/* Desktop Profile Header */}

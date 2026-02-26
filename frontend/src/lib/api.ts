@@ -35,6 +35,7 @@ export interface Driver {
   nationality: string;
   constructorId?: string;
   constructorName?: string;
+  rank?: number;
 }
 
 export interface ScoringConfig {
@@ -141,6 +142,15 @@ async function request<T>(
   }
 }
 
+let cachedRaces: Race[] | null = null;
+
+// Derived from 2025 Standings to act as default/initial sort order.
+// Any driver not in this list gets pushed to the bottom (rank 999).
+const driverStandings2025 = [
+  "NOR", "VER", "PIA", "RUS", "LEC", "HAM", "ANT", "ALB", "SAI", "ALO",
+  "HUL", "HAD", "BEA", "LAW", "OCO", "STR", "TSU", "GAS", "BOR", "COL", "DOO"
+];
+
 export const api = {
   get: <T>(endpoint: string) => request<T>(endpoint, { method: "GET" }),
 
@@ -160,6 +170,9 @@ export const api = {
 
   // Specific API methods (can be moved to services later if gets too big)
   // ------------------------------------------------------------------
+  // --- Feedback ---
+  submitFeedback: (data: { type: 'bug' | 'feature_request' | 'general'; message: string; appVersion?: string; metadata?: any }) =>
+    api.post("/feedback", data),
 
   auth: {
     requestOtp: (payload: { type: "email" | "phone"; contact: string }) =>
@@ -178,11 +191,27 @@ export const api = {
   },
 
   races: {
-    list: () => api.get<Race[]>("/races"),
+    list: async () => {
+      if (cachedRaces) return cachedRaces;
+      const data = await api.get<Race[]>("/races");
+      cachedRaces = data;
+      return data;
+    },
   },
 
   drivers: {
-    list: () => api.get<Driver[]>("/drivers"),
+    list: async () => {
+      const data = await api.get<Driver[]>("/drivers");
+      return data.map(driver => {
+        // Find their rank based on the hardcoded 2025 standings list
+        const rankIndex = driverStandings2025.indexOf(driver.code || "");
+        return {
+          ...driver,
+          // If found, index + 1 is their rank. If not found, give them 999 so they go to the bottom.
+          rank: rankIndex !== -1 ? rankIndex + 1 : 999
+        };
+      });
+    },
   },
 
   leagues: {

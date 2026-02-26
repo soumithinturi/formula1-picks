@@ -34,7 +34,8 @@ export function PicksScreen() {
     id: d.driverId,
     name: `${d.givenName} ${d.familyName}`,
     team: d.constructorName || "Unknown constructor",
-    rank: parseInt(d.permanentNumber || "0") || 0, // Mock rank using car number for now
+    rank: d.rank || 999,
+    driverNumber: parseInt(d.permanentNumber || "0") || 0,
   });
   const availableDrivers = useMemo(() => drivers.map(mapDriverToSelector), [drivers]);
 

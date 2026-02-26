@@ -8,7 +8,7 @@ interface Driver {
   id: string;
   name: string;
   team: string;
-  rank: number;
+  driverNumber?: number;
 }
 
 interface ReorderablePredictionListProps {
@@ -28,8 +28,8 @@ export function ReorderablePredictionList({ items, onReorder }: ReorderablePredi
 
             <Card className="flex-1 p-3 bg-card border-primary/20 flex items-center gap-3 cursor-grab active:cursor-grabbing hover:border-primary/50 transition-colors">
               <GripVertical className="h-5 w-5 text-muted-foreground/50" />
-              <div className="flex-1">
-                <DriverInfo name={item.name} team={item.team} rank={item.rank} />
+              <div className="flex-1 min-w-0 pr-2">
+                <DriverInfo name={item.name} team={item.team} driverNumber={item.driverNumber} />
               </div>
             </Card>
           </div>

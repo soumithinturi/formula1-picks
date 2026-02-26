@@ -6,6 +6,7 @@ import { createLeague, listLeagues, joinLeague, previewLeague } from "./routes/l
 import { getLeaderboard } from "./routes/leaderboard.ts";
 import { submitResults } from "./routes/admin.ts";
 import { updateProfile } from "./routes/users.ts";
+import { submitFeedback } from "./routes/feedback.ts";
 import { seedDatabase } from "./services/seed.ts";
 import { startCronJobs } from "./services/cron.ts";
 import { withAuth } from "./middleware/auth.ts";
@@ -126,6 +127,12 @@ const server = Bun.serve({
     // ─── Users ─────────────────────────────────────────────────────────────
     "/api/v1/users/me": {
       PUT: withCors(withAuth(updateProfile)),
+      OPTIONS: handleOptions,
+    },
+
+    // ─── Feedback ──────────────────────────────────────────────────────────
+    "/api/v1/feedback": {
+      POST: withCors(withAuth(submitFeedback)),
       OPTIONS: handleOptions,
     },
 

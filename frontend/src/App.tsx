@@ -7,13 +7,13 @@ import { Toaster } from "@/components/ui/sonner";
 import { HomeScreen } from "./screens/home";
 import { LeaguesScreen } from "./screens/leagues";
 import RaceSchedule from "./screens/race-schedule";
-import { MoreScreen } from "./screens/more";
 import { PicksScreen } from "./screens/picks";
 import { RaceWinnersHistoryScreen } from "@/screens/race-winners-history";
 import { LeaguesHistoryScreen } from "@/screens/leagues-history";
 import { CreateLeagueWizard } from "@/screens/create-league/wizard";
 import { StandingsScreen } from "./screens/standings";
 import { InviteScreen } from "./screens/invite";
+import { SettingsScreen } from "@/screens/settings";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
@@ -57,9 +57,9 @@ export function App() {
           <Route path="invite/:code" element={<InviteScreen />} />
           <Route path="picks" element={<PicksScreen />} />
           <Route path="schedule" element={<RaceSchedule />} />
-          <Route path="more" element={<MoreScreen />} />
-          <Route path="more/race-winners-history" element={<RaceWinnersHistoryScreen />} />
-          <Route path="more/leagues-history" element={<LeaguesHistoryScreen />} />
+          <Route path="settings" element={<SettingsScreen />} />
+          {/* <Route path="more/race-winners-history" element={<RaceWinnersHistoryScreen />} /> */}
+          {/* <Route path="more/leagues-history" element={<LeaguesHistoryScreen />} /> */}
           {/* Fallback */}
           <Route path="*" element={<HomeScreen />} />
         </Route>
