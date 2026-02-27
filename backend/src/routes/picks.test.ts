@@ -107,6 +107,51 @@ describe("Picks Integration Tests", () => {
     expect(data.sprint_p1).toBe("LEC");
   });
 
+  test("submitPick rejects duplicate podium picks", async () => {
+    mockUserContext = member;
+    const req = new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: openRaceId,
+        leagueId,
+        selections: {
+          raceP1: "VER",
+          raceP2: "VER" // Duplicate podium
+        }
+      })
+    });
+
+    const res = await submitPick(req);
+    expect(res.status).toBe(400); // Zod validation failure
+    const data: any = await res.json();
+    expect(data.error).toBe("Invalid body");
+  });
+
+  test("submitPick allows same driver for pole, podium, fastest lap, and dnf", async () => {
+    mockUserContext = member;
+    const req = new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: openRaceId,
+        leagueId,
+        selections: {
+          raceQualifyingP1: "VER",
+          raceP1: "VER",
+          fastestLap: "VER",
+          firstDnf: "VER"
+        }
+      })
+    });
+
+    const res = await submitPick(req);
+    expect(res.status).toBe(201);
+    const data: any = await res.json();
+    expect(data.race_qualifying_p1).toBe("VER");
+    expect(data.race_p1).toBe("VER");
+    expect(data.fastest_lap).toBe("VER");
+    expect(data.first_dnf).toBe("VER");
+  });
+
   test("submitPick rejects submission from non-member", async () => {
     mockUserContext = nonMember;
     const req = new Request("http://localhost/api/v1/picks", {

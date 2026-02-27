@@ -194,9 +194,16 @@ export function PicksScreen() {
 
   const handleSprintSelect = (key: keyof typeof sprintPredictions, driver: any) => {
     setSprintPredictions((prev) => {
-      // Clear any other slot that already holds this driver
+      // Only clear if selecting a podium slot, and only clear other podium slots
+      const podiumKeys = ["sprintP1", "sprintP2", "sprintP3"];
+      if (!podiumKeys.includes(key as string)) {
+        return { ...prev, [key]: driver };
+      }
+
       const cleared = Object.fromEntries(
-        Object.entries(prev).map(([k, v]) => (k !== key && v?.id === driver?.id ? [k, null] : [k, v])),
+        Object.entries(prev).map(([k, v]) =>
+          podiumKeys.includes(k) && k !== key && v?.id === driver?.id ? [k, null] : [k, v],
+        ),
       ) as typeof prev;
       return { ...cleared, [key]: driver };
     });
@@ -204,9 +211,16 @@ export function PicksScreen() {
 
   const handleRaceSelect = (key: keyof typeof racePredictions, driver: any) => {
     setRacePredictions((prev) => {
-      // Clear any other slot that already holds this driver
+      // Only clear if selecting a podium slot, and only clear other podium slots
+      const podiumKeys = ["raceP1", "raceP2", "raceP3"];
+      if (!podiumKeys.includes(key as string)) {
+        return { ...prev, [key]: driver };
+      }
+
       const cleared = Object.fromEntries(
-        Object.entries(prev).map(([k, v]) => (k !== key && v?.id === driver?.id ? [k, null] : [k, v])),
+        Object.entries(prev).map(([k, v]) =>
+          podiumKeys.includes(k) && k !== key && v?.id === driver?.id ? [k, null] : [k, v],
+        ),
       ) as typeof prev;
       return { ...cleared, [key]: driver };
     });

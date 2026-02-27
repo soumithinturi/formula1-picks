@@ -68,21 +68,43 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
 
 // ─── Pick Selections ─────────────────────────────────────────────────────────
 
-export const PickSelectionsSchema = z.object({
-  // Sprint picks (optional — only for sprint weekends)
-  sprintQualifyingP1: z.string().nullable().optional(),
-  sprintP1: z.string().nullable().optional(),
-  sprintP2: z.string().nullable().optional(),
-  sprintP3: z.string().nullable().optional(),
-  sprintFastestLap: z.string().nullable().optional(),
-  // Race picks
-  raceQualifyingP1: z.string().nullable().optional(),
-  raceP1: z.string().nullable().optional(),
-  raceP2: z.string().nullable().optional(),
-  raceP3: z.string().nullable().optional(),
-  fastestLap: z.string().nullable().optional(),
-  firstDnf: z.string().nullable().optional(),
-});
+export const PickSelectionsSchema = z
+  .object({
+    // Sprint picks (optional — only for sprint weekends)
+    sprintQualifyingP1: z.string().nullable().optional(),
+    sprintP1: z.string().nullable().optional(),
+    sprintP2: z.string().nullable().optional(),
+    sprintP3: z.string().nullable().optional(),
+    sprintFastestLap: z.string().nullable().optional(),
+    // Race picks
+    raceQualifyingP1: z.string().nullable().optional(),
+    raceP1: z.string().nullable().optional(),
+    raceP2: z.string().nullable().optional(),
+    raceP3: z.string().nullable().optional(),
+    fastestLap: z.string().nullable().optional(),
+    firstDnf: z.string().nullable().optional(),
+  })
+  .superRefine((val, ctx) => {
+    // Check Sprint Podium Uniqueness
+    const sprintPodium = [val.sprintP1, val.sprintP2, val.sprintP3].filter(Boolean);
+    if (new Set(sprintPodium).size !== sprintPodium.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Sprint podium picks must be unique",
+        path: ["sprintP1"], // General error path for the group
+      });
+    }
+
+    // Check Race Podium Uniqueness
+    const racePodium = [val.raceP1, val.raceP2, val.raceP3].filter(Boolean);
+    if (new Set(racePodium).size !== racePodium.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Race podium picks must be unique",
+        path: ["raceP1"],
+      });
+    }
+  });
 
 export type PickSelections = z.infer<typeof PickSelectionsSchema>;
 
