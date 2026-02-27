@@ -22,6 +22,9 @@ export interface Race {
   status: "UPCOMING" | "OPEN" | "CLOSED" | "COMPLETED";
   race_deadline: string;
   sprint_deadline?: string;
+  sprint_date: string | null;
+  sprint_quali_date: string | null;
+  race_quali_date: string | null;
 }
 
 export interface Driver {

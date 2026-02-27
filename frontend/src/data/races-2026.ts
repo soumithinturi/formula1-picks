@@ -98,6 +98,7 @@ export const races2026 = [
     location: "Melbourne, Australia",
     date: "Mar 06 - Mar 08",
     circuitId: "melbourne",
+    timezone: "Australia/Melbourne",
     trackMap: {
       white: melbourneWhite,
       black: melbourneBlack,
@@ -110,6 +111,7 @@ export const races2026 = [
     location: "Shanghai, China",
     date: "Mar 13 - Mar 15",
     circuitId: "shanghai",
+    timezone: "Asia/Shanghai",
     trackMap: {
       white: shanghaiWhite,
       black: shanghaiBlack,
@@ -122,6 +124,7 @@ export const races2026 = [
     location: "Suzuka, Japan",
     date: "Mar 27 - Mar 29",
     circuitId: "suzuka",
+    timezone: "Asia/Tokyo",
     trackMap: {
       white: suzukaWhite,
       black: suzukaBlack,
@@ -134,6 +137,7 @@ export const races2026 = [
     location: "Sakhir, Bahrain",
     date: "Apr 10 - Apr 12",
     circuitId: "bahrain",
+    timezone: "Asia/Bahrain",
     trackMap: {
       white: bahrainWhite,
       black: bahrainBlack,
@@ -146,6 +150,7 @@ export const races2026 = [
     location: "Jeddah, Saudi Arabia",
     date: "Apr 17 - Apr 19",
     circuitId: "jeddah",
+    timezone: "Asia/Riyadh",
     trackMap: {
       white: jeddahWhite,
       black: jeddahBlack,
@@ -158,6 +163,7 @@ export const races2026 = [
     location: "Miami, USA",
     date: "May 01 - May 03",
     circuitId: "miami",
+    timezone: "America/New_York",
     trackMap: {
       white: miamiWhite,
       black: miamiBlack,
@@ -170,6 +176,7 @@ export const races2026 = [
     location: "Monte Carlo, Monaco",
     date: "May 22 - May 24", // Approximate slot swap with Canada/Europe leg
     circuitId: "monaco",
+    timezone: "Europe/Monaco",
     trackMap: {
       white: monacoWhite,
       black: monacoBlack,
@@ -182,6 +189,7 @@ export const races2026 = [
     location: "Montreal, Canada",
     date: "Jun 05 - Jun 07",
     circuitId: "montreal",
+    timezone: "America/Toronto",
     trackMap: {
       white: montrealWhite,
       black: montrealBlack,
@@ -194,6 +202,7 @@ export const races2026 = [
     location: "Spielberg, Austria",
     date: "Jun 26 - Jun 28", // Probable slot
     circuitId: "spielberg",
+    timezone: "Europe/Vienna",
     trackMap: {
       white: spielbergWhite,
       black: spielbergBlack,
@@ -206,6 +215,7 @@ export const races2026 = [
     location: "Silverstone, UK",
     date: "Jul 03 - Jul 05",
     circuitId: "silverstone",
+    timezone: "Europe/London",
     trackMap: {
       white: silverstoneWhite,
       black: silverstoneBlack,
@@ -218,6 +228,7 @@ export const races2026 = [
     location: "Budapest, Hungary",
     date: "Jul 17 - Jul 19",
     circuitId: "hungaroring",
+    timezone: "Europe/Budapest",
     trackMap: {
       white: hungaroringWhite,
       black: hungaroringBlack,
@@ -230,6 +241,7 @@ export const races2026 = [
     location: "Spa-Francorchamps, Belgium",
     date: "Jul 24 - Jul 26",
     circuitId: "spa-francorchamps",
+    timezone: "Europe/Brussels",
     trackMap: {
       white: spaWhite,
       black: spaBlack,
@@ -242,6 +254,7 @@ export const races2026 = [
     location: "Zandvoort, Netherlands",
     date: "Aug 21 - Aug 23",
     circuitId: "zandvoort",
+    timezone: "Europe/Amsterdam",
     trackMap: {
       white: zandvoortWhite,
       black: zandvoortBlack,
@@ -254,6 +267,7 @@ export const races2026 = [
     location: "Monza, Italy",
     date: "Sep 04 - Sep 06",
     circuitId: "monza",
+    timezone: "Europe/Rome",
     trackMap: {
       white: monzaWhite,
       black: monzaBlack,
@@ -266,6 +280,7 @@ export const races2026 = [
     location: "Madrid, Spain",
     date: "Sep 11 - Sep 13",
     circuitId: "madring",
+    timezone: "Europe/Madrid",
     trackMap: {
       white: madridWhite,
       black: madridBlack,
@@ -278,6 +293,7 @@ export const races2026 = [
     location: "Baku, Azerbaijan",
     date: "Sep 25 - Sep 27",
     circuitId: "baku",
+    timezone: "Asia/Baku",
     trackMap: {
       white: bakuWhite,
       black: bakuBlack,
@@ -290,6 +306,7 @@ export const races2026 = [
     location: "Marina Bay, Singapore",
     date: "Oct 02 - Oct 04",
     circuitId: "marina-bay",
+    timezone: "Asia/Singapore",
     trackMap: {
       white: singaporeWhite,
       black: singaporeBlack,
@@ -302,6 +319,7 @@ export const races2026 = [
     location: "Austin, USA",
     date: "Oct 16 - Oct 18",
     circuitId: "austin",
+    timezone: "America/Chicago",
     trackMap: {
       white: austinWhite,
       black: austinBlack,
@@ -314,6 +332,7 @@ export const races2026 = [
     location: "Mexico City, Mexico",
     date: "Oct 30 - Nov 01",
     circuitId: "mexico-city",
+    timezone: "America/Mexico_City",
     trackMap: {
       white: mexicoWhite,
       black: mexicoBlack,
@@ -326,6 +345,7 @@ export const races2026 = [
     location: "São Paulo, Brazil",
     date: "Nov 13 - Nov 15",
     circuitId: "interlagos",
+    timezone: "America/Sao_Paulo",
     trackMap: {
       white: brazilWhite,
       black: brazilBlack,
@@ -338,6 +358,7 @@ export const races2026 = [
     location: "Las Vegas, USA",
     date: "Nov 26 - Nov 28",
     circuitId: "las-vegas",
+    timezone: "America/Los_Angeles",
     trackMap: {
       white: vegasWhite,
       black: vegasBlack,
@@ -350,6 +371,7 @@ export const races2026 = [
     location: "Lusail, Qatar",
     date: "Dec 04 - Dec 06", // Sequence end is tight
     circuitId: "lusail",
+    timezone: "Asia/Qatar",
     trackMap: {
       white: qatarWhite,
       black: qatarBlack,
@@ -362,6 +384,7 @@ export const races2026 = [
     location: "Yas Island, Abu Dhabi",
     date: "Dec 11 - Dec 13",
     circuitId: "yas-marina",
+    timezone: "Asia/Dubai",
     trackMap: {
       white: abudhabiWhite,
       black: abudhabiBlack,

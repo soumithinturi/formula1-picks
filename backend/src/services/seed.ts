@@ -42,6 +42,7 @@ interface ErgastRace {
   ThirdPractice?: object;
   Qualifying?: { date: string; time: string };
   Sprint?: { date: string; time: string };
+  SprintQualifying?: { date: string; time: string };
 }
 
 interface ErgastDriver {
@@ -109,21 +110,37 @@ async function seedRaces(): Promise<void> {
       }
 
       let sprintDeadline = null;
-      if (hasSprint && race.Sprint) {
-        sprintDeadline = new Date(`${race.Sprint.date}T${race.Sprint.time || "12:00:00Z"}`);
+      let sprintDate = null;
+      let sprintQualiDate = null;
+      if (hasSprint) {
+        if (race.Sprint) {
+          sprintDeadline = new Date(`${race.Sprint.date}T${race.Sprint.time || "12:00:00Z"}`);
+          sprintDate = new Date(`${race.Sprint.date}T${race.Sprint.time || "12:00:00Z"}`);
+        }
+        if (race.SprintQualifying) {
+          sprintQualiDate = new Date(`${race.SprintQualifying.date}T${race.SprintQualifying.time || "12:00:00Z"}`);
+        }
+      }
+
+      let qualiDate = null;
+      if (race.Qualifying) {
+        qualiDate = new Date(`${race.Qualifying.date}T${race.Qualifying.time || "12:00:00Z"}`);
       }
 
       await db`
-        INSERT INTO races (name, date, has_sprint, status, race_deadline, sprint_deadline)
-        VALUES (
-          ${race.raceName},
-          ${raceDate.toISOString()},
-          ${hasSprint},
-          'UPCOMING',
-          ${raceDeadline.toISOString()},
-          ${sprintDeadline?.toISOString() ?? null}
+        INSERT INTO races(name, date, has_sprint, status, race_deadline, sprint_deadline, sprint_date, sprint_quali_date, race_quali_date)
+      VALUES(
+        ${race.raceName},
+        ${raceDate.toISOString()},
+        ${hasSprint},
+        'UPCOMING',
+        ${raceDeadline.toISOString()},
+        ${sprintDeadline?.toISOString() ?? null},
+          ${sprintDate?.toISOString() ?? null},
+          ${sprintQualiDate?.toISOString() ?? null},
+          ${qualiDate?.toISOString() ?? null}
         )
-      `;
+    `;
       await Bun.sleep(20);
     }
     console.log(`Seeded ${races.length} races.`);

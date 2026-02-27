@@ -129,6 +129,9 @@ export interface RaceRow {
   status: "UPCOMING" | "COMPLETED";
   sprint_deadline: string | null;
   race_deadline: string | null;
+  sprint_date: string | null;
+  sprint_quali_date: string | null;
+  race_quali_date: string | null;
 }
 
 export interface DriverRow {

@@ -7,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Bell, Globe, Bug, Trash2, LogOut } from "lucide-react";
 import { useTheme, TEAMS } from "@/context/theme-context";
 import { auth } from "@/lib/auth";
+import { usePreferences } from "@/context/preferences-context";
 import { FeedbackModal } from "@/components/user/feedback-modal";
 
 export function SettingsScreen() {
   const navigate = useNavigate();
   const { currentTeam, setTeam } = useTheme();
+  const { timezoneDisplay, setTimezoneDisplay } = usePreferences();
 
   return (
     <PageContainer title="Settings" subtitle="Manage your app preferences and account">
@@ -26,7 +28,7 @@ export function SettingsScreen() {
             <CardContent className="p-4 space-y-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="timezone">Timezone Display</Label>
-                <Select defaultValue="track">
+                <Select value={timezoneDisplay} onValueChange={(val: "local" | "track") => setTimezoneDisplay(val)}>
                   <SelectTrigger id="timezone">
                     <SelectValue placeholder="Select timezone" />
                   </SelectTrigger>

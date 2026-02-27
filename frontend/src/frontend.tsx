@@ -12,6 +12,7 @@ import { App } from "./App";
 import "../styles/globals.css";
 
 import { ThemeProvider } from "@/context/theme-context";
+import { PreferencesProvider } from "@/context/preferences-context";
 
 const elem = document.getElementById("root")!;
 
@@ -22,11 +23,13 @@ if (hash && hash.includes("access_token")) {
 
 const app = (
   <StrictMode>
-    <ThemeProvider>
-      <HashRouter>
-        <App />
-      </HashRouter>
-    </ThemeProvider>
+    <PreferencesProvider>
+      <ThemeProvider>
+        <HashRouter>
+          <App />
+        </HashRouter>
+      </ThemeProvider>
+    </PreferencesProvider>
   </StrictMode>
 );
 
