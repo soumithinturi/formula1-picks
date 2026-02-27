@@ -443,7 +443,11 @@ export function HomeScreen() {
                         <div key={i}>{renderReadonlyPick(item.label, item.value)}</div>
                       ))}
 
-                    <Button variant="default" className="w-full mt-2" size="lg" onClick={() => navigate("/picks")}>
+                    <Button
+                      variant="default"
+                      className="w-full mt-2"
+                      size="lg"
+                      onClick={() => navigate(`/picks${selectedLeagueId ? `?leagueId=${selectedLeagueId}` : ``}`)}>
                       {userPickRow ? "Edit Prediction" : "Make Your Prediction"}
                     </Button>
                   </motion.div>

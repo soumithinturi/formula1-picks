@@ -11,7 +11,7 @@ import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock } from "lucide-rea
 import { api, type Driver, type Race, type League } from "@/lib/api";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getTeamColor } from "@/components/racing/driver-info";
 import { usePreferences } from "@/context/preferences-context";
@@ -19,9 +19,11 @@ import { races2026 } from "@/data/races-2026";
 
 export function PicksScreen() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { timezoneDisplay } = usePreferences();
+  const initialLeagueId = searchParams.get("leagueId");
 
   // Data
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -91,8 +93,9 @@ export function PicksScreen() {
         const next = racesData.find((r) => r.status === "UPCOMING" || r.status === "OPEN");
         setNextRace(next || null);
 
-        // Select first league
-        const firstLeague = leaguesData[0];
+        // Pre-select the league from the URL param, falling back to the first league
+        const targetLeague = initialLeagueId ? leaguesData.find((l) => l.id === initialLeagueId) : undefined;
+        const firstLeague = targetLeague || leaguesData[0];
         if (firstLeague) {
           setSelectedLeagueId(firstLeague.id);
         } else {
@@ -190,11 +193,23 @@ export function PicksScreen() {
   };
 
   const handleSprintSelect = (key: keyof typeof sprintPredictions, driver: any) => {
-    setSprintPredictions((prev) => ({ ...prev, [key]: driver }));
+    setSprintPredictions((prev) => {
+      // Clear any other slot that already holds this driver
+      const cleared = Object.fromEntries(
+        Object.entries(prev).map(([k, v]) => (k !== key && v?.id === driver?.id ? [k, null] : [k, v])),
+      ) as typeof prev;
+      return { ...cleared, [key]: driver };
+    });
   };
 
   const handleRaceSelect = (key: keyof typeof racePredictions, driver: any) => {
-    setRacePredictions((prev) => ({ ...prev, [key]: driver }));
+    setRacePredictions((prev) => {
+      // Clear any other slot that already holds this driver
+      const cleared = Object.fromEntries(
+        Object.entries(prev).map(([k, v]) => (k !== key && v?.id === driver?.id ? [k, null] : [k, v])),
+      ) as typeof prev;
+      return { ...cleared, [key]: driver };
+    });
   };
 
   const handleSave = async () => {
