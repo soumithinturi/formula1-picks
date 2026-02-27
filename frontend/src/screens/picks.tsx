@@ -14,11 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useNavigate } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getTeamColor } from "@/components/racing/driver-info";
+import { usePreferences } from "@/context/preferences-context";
+import { races2026 } from "@/data/races-2026";
 
 export function PicksScreen() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { timezoneDisplay } = usePreferences();
 
   // Data
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -160,6 +163,31 @@ export function PicksScreen() {
   // Compute current league scoring config
   const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
   const scoringConfig = selectedLeague?.scoring_config;
+
+  const staticRaceData = useMemo(() => {
+    if (!nextRace) return null;
+    return races2026.find(
+      (r) =>
+        nextRace.name.includes(r.circuitId) ||
+        nextRace.name.toLowerCase().includes(r.name.split(" ")[0]?.toLowerCase() ?? "") ||
+        r.name.includes(nextRace.name),
+    );
+  }, [nextRace]);
+
+  const formatSessionTime = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    const timezone = staticRaceData?.timezone;
+    const inTrackTime = timezoneDisplay === "track" && timezone;
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: inTrackTime ? timezone : undefined,
+      timeZoneName: "short",
+    });
+  };
 
   const handleSprintSelect = (key: keyof typeof sprintPredictions, driver: any) => {
     setSprintPredictions((prev) => ({ ...prev, [key]: driver }));
@@ -368,9 +396,16 @@ export function PicksScreen() {
             <TabsContent value="sprint" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Sprint Qualifying */}
               <section className="space-y-3">
-                <div className="flex items-center gap-2 px-1">
-                  <div className="h-4 w-1 bg-primary rounded-full" />
-                  <h2 className="text-lg font-bold uppercase">Sprint Qualifying</h2>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-1 bg-primary rounded-full" />
+                    <h2 className="text-lg font-bold uppercase">Sprint Qualifying</h2>
+                  </div>
+                  {nextRace.sprint_quali_date && (
+                    <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
+                      {formatSessionTime(nextRace.sprint_quali_date)}
+                    </span>
+                  )}
                 </div>
                 <Card className="bg-card/50 border-white/5">
                   <CardHeader className="pb-2">
@@ -393,9 +428,16 @@ export function PicksScreen() {
 
               {/* Sprint Podium */}
               <section className="space-y-3">
-                <div className="flex items-center gap-2 px-1">
-                  <div className="h-4 w-1 bg-primary rounded-full" />
-                  <h2 className="text-lg font-bold uppercase">Sprint Podium</h2>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-1 bg-primary rounded-full" />
+                    <h2 className="text-lg font-bold uppercase">Sprint Podium</h2>
+                  </div>
+                  {nextRace.sprint_date && (
+                    <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
+                      {formatSessionTime(nextRace.sprint_date)}
+                    </span>
+                  )}
                 </div>
                 {renderPodiumGroup("sprint")}
               </section>
@@ -427,9 +469,16 @@ export function PicksScreen() {
           <TabsContent value="race" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Qualifying */}
             <section className="space-y-3">
-              <div className="flex items-center gap-2 px-1">
-                <div className="h-4 w-1 bg-primary rounded-full" />
-                <h2 className="text-lg font-bold uppercase">Qualifying</h2>
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-1 bg-primary rounded-full" />
+                  <h2 className="text-lg font-bold uppercase">Qualifying</h2>
+                </div>
+                {nextRace.race_quali_date && (
+                  <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
+                    {formatSessionTime(nextRace.race_quali_date)}
+                  </span>
+                )}
               </div>
               <Card className="bg-card/50 border-white/5">
                 <CardHeader className="pb-2">
@@ -453,9 +502,16 @@ export function PicksScreen() {
             {/* The Podium - Only render enabled positions */}
             {(scoringConfig?.p1?.enabled || scoringConfig?.p2?.enabled || scoringConfig?.p3?.enabled) && (
               <section className="space-y-3">
-                <div className="flex items-center gap-2 px-1">
-                  <div className="h-4 w-1 bg-primary rounded-full" />
-                  <h2 className="text-lg font-bold uppercase">The Podium</h2>
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-1 bg-primary rounded-full" />
+                    <h2 className="text-lg font-bold uppercase">The Podium</h2>
+                  </div>
+                  {nextRace.date && (
+                    <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
+                      {formatSessionTime(nextRace.date)}
+                    </span>
+                  )}
                 </div>
                 {renderPodiumGroup("race")}
               </section>
