@@ -11,29 +11,40 @@ export function calculatePoints(
   userPick: PickSelections,
   officialResults: PickSelections,
   config: ScoringConfig = DEFAULT_SCORING_CONFIG
-): number {
+): { score: number; correct: number; total: number } {
   let score = 0;
+  let correct = 0;
+  let total = 0;
+
+  // Helper to count picks
+  const checkPick = (userValue: string | null | undefined, officialValue: string | null | undefined, configRule: { enabled: boolean, points: number }) => {
+    if (userValue) {
+      total++;
+      if (userValue === officialValue) {
+        correct++;
+        if (configRule.enabled) {
+          score += configRule.points;
+        }
+      }
+    }
+  };
+
+  // Sprint picks
+  checkPick(userPick.sprintQualifyingP1, officialResults.sprintQualifyingP1, { enabled: false, points: 0 }); // config has no sprint quali, just count it
+  checkPick(userPick.sprintP1, officialResults.sprintP1, { enabled: false, points: 0 }); // config has no sprint podium explicit rules yet, just count it
+  checkPick(userPick.sprintP2, officialResults.sprintP2, { enabled: false, points: 0 });
+  checkPick(userPick.sprintP3, officialResults.sprintP3, { enabled: false, points: 0 });
+  checkPick(userPick.sprintFastestLap, officialResults.sprintFastestLap, config.sprintFastestLap);
 
   // Race picks
-  if (config.quali.enabled && userPick.raceQualifyingP1 && userPick.raceQualifyingP1 === officialResults.raceQualifyingP1)
-    score += config.quali.points;
+  checkPick(userPick.raceQualifyingP1, officialResults.raceQualifyingP1, config.quali);
+  checkPick(userPick.raceP1, officialResults.raceP1, config.p1);
+  checkPick(userPick.raceP2, officialResults.raceP2, config.p2);
+  checkPick(userPick.raceP3, officialResults.raceP3, config.p3);
+  checkPick(userPick.fastestLap, officialResults.fastestLap, config.fastestLap);
+  checkPick(userPick.firstDnf, officialResults.firstDnf, config.firstDNF);
 
-  if (config.p1.enabled && userPick.raceP1 && userPick.raceP1 === officialResults.raceP1)
-    score += config.p1.points;
-
-  if (config.p2.enabled && userPick.raceP2 && userPick.raceP2 === officialResults.raceP2)
-    score += config.p2.points;
-
-  if (config.p3.enabled && userPick.raceP3 && userPick.raceP3 === officialResults.raceP3)
-    score += config.p3.points;
-
-  if (config.fastestLap.enabled && userPick.fastestLap && userPick.fastestLap === officialResults.fastestLap)
-    score += config.fastestLap.points;
-
-  if (config.firstDNF.enabled && userPick.firstDnf && userPick.firstDnf === officialResults.firstDnf)
-    score += config.firstDNF.points;
-
-  // Bonus: Perfect Order
+  // Bonus: Perfect Order (doesn't add to correct/total, just points)
   const hasPerfectOrder =
     userPick.raceP1 &&
     userPick.raceP2 &&
@@ -47,6 +58,7 @@ export function calculatePoints(
   }
 
   // Bonus: Podium (Any driver in top 3 predicted in any top 3 position)
+  // Already counted in the "correct" counts above if exactly matching, but podium awards points for being in the top 3 at all
   if (config.podium.enabled) {
     const officialTop3 = [officialResults.raceP1, officialResults.raceP2, officialResults.raceP3].filter(Boolean);
     const userTop3 = [userPick.raceP1, userPick.raceP2, userPick.raceP3].filter(Boolean);
@@ -61,5 +73,6 @@ export function calculatePoints(
     score += podiumMatches * config.podium.points;
   }
 
-  return score;
+  return { score, correct, total };
 }
+

@@ -79,7 +79,10 @@ export const submitResults = withAdmin(async (req) => {
       const points = calculatePoints(userPick, results, config);
 
       return db`
-        UPDATE picks SET total_points = ${points}
+        UPDATE picks
+        SET total_points = ${points.score},
+            correct_predictions = ${points.correct},
+            total_predictions = ${points.total}
         WHERE id = ${pick.id}
       `;
     })

@@ -205,7 +205,7 @@ export const api = {
 
   users: {
     getMe: () =>
-      api.get<{ user: { id: string; display_name: string | null; full_name: string | null; avatar_url: string | null; role: string; preferences: UserPreferences } }>("/users/me"),
+      api.get<{ user: { id: string; display_name: string | null; full_name: string | null; avatar_url: string | null; role: string; preferences: UserPreferences }, stats: { globalCorrectPredictions: number, globalTotalPredictions: number } }>("/users/me"),
 
     updateProfile: (payload: { display_name?: string; full_name?: string | null; avatar_url?: string | null; preferences?: UserPreferences }) =>
       api.put<{ user: any }>("/users/me", payload),
@@ -269,7 +269,11 @@ export const api = {
 
 export interface LeaderboardEntry {
   userId: string;
-  displayName: string;
+  displayName: string | null;
   contact?: string;
+  avatarUrl?: string | null;
+  totalPredictions?: number;
+  leagueCorrectPredictions?: number;
+  leagueTotalPredictions?: number;
   totalPoints: number;
 }

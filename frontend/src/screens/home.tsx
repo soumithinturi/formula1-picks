@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Countdown } from "@/components/ui/countdown";
-import { ChevronRight, ChevronLeft, Trophy, Loader2, AlertCircle } from "lucide-react";
+import { ChevronRight, ChevronLeft, Trophy, Loader2, AlertCircle, Target } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
@@ -51,6 +51,9 @@ export function HomeScreen() {
   const [userPickRow, setUserPickRow] = useState<PickRow | null>(null);
   const [currentPickPage, setCurrentPickPage] = useState(0);
 
+  // Global Stats
+  const [globalStats, setGlobalStats] = useState<{ correct: number; total: number } | null>(null);
+
   // Track metadata from local data
   const localRaceData = nextRace
     ? races2026.find((r) => r.name === nextRace.name || r.name.includes(nextRace.name.split(" ")[0] || ""))
@@ -69,6 +72,7 @@ export function HomeScreen() {
           api.races.list(),
           api.drivers.list(),
           api.leagues.list(),
+          api.users.getMe(),
         ]);
 
         if (!mounted) return;
@@ -123,6 +127,15 @@ export function HomeScreen() {
         // Sort rankings by points
         leagueRankings.sort((a, b) => b.points - a.points);
         setRankings(leagueRankings);
+
+        // Fetch global stats from users/me response
+        const meRes = await api.users.getMe();
+        if (mounted && meRes.stats) {
+          setGlobalStats({
+            correct: meRes.stats.globalCorrectPredictions || 0,
+            total: meRes.stats.globalTotalPredictions || 0,
+          });
+        }
       } catch (err: any) {
         console.error("Failed to load home data:", err);
         if (mounted) {
@@ -462,6 +475,33 @@ export function HomeScreen() {
               ) : (
                 <div className="text-center py-4 text-muted-foreground text-sm">Loading prediction rules...</div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Global Accuracy Stats */}
+        {globalStats && globalStats.total > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg font-semibold">Global Accuracy</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-card border">
+                <div className="space-y-1">
+                  <p className="font-semibold">Career Accuracy</p>
+                  <p className="text-sm text-muted-foreground">
+                    {globalStats.correct} out of {globalStats.total} predictions correct
+                  </p>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-3xl font-black text-primary">
+                    {Math.round((globalStats.correct / globalStats.total) * 100)}%
+                  </span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}

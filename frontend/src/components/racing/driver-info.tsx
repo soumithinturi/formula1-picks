@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn, CONSTRUCTOR_COLORS } from "@/lib/utils";
+import { F1HelmetAvatar } from "@/components/user/f1-helmet-avatar";
 
 interface DriverInfoProps extends React.HTMLAttributes<HTMLDivElement> {
   name: string;
@@ -27,11 +28,37 @@ export function getTeamColor(teamName?: string): string | undefined {
 }
 
 export function DriverInfo({ name, team, avatarUrl, driverNumber, className, ...props }: DriverInfoProps) {
+  let isHelmet = false;
+  let helmetColor, bgColor;
+
+  try {
+    if (avatarUrl) {
+      const parsed = JSON.parse(avatarUrl);
+      if (parsed.helmetColor || parsed.bgColor) {
+        isHelmet = true;
+        helmetColor = parsed.helmetColor;
+        bgColor = parsed.bgColor;
+      }
+    }
+  } catch (e) {
+    // Not a JSON string
+  }
+
   return (
     <div className={cn("flex items-center gap-3 w-full", className)} {...props}>
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={avatarUrl} alt={name} />
-        <AvatarFallback style={{ backgroundColor: getTeamColor(team), color: "#fff" }}>{name.charAt(0)}</AvatarFallback>
+      <Avatar className={cn("h-8 w-8 shrink-0", isHelmet ? "overflow-visible" : "")}>
+        {isHelmet ? (
+          <div className="w-full h-full rounded-full overflow-hidden border">
+            <F1HelmetAvatar helmetColor={helmetColor} bgColor={bgColor} />
+          </div>
+        ) : (
+          <AvatarImage src={avatarUrl} alt={name} />
+        )}
+        {!isHelmet && (
+          <AvatarFallback style={{ backgroundColor: getTeamColor(team), color: "#fff" }}>
+            {name.charAt(0)}
+          </AvatarFallback>
+        )}
       </Avatar>
       <div className="flex flex-col text-left flex-1 min-w-0">
         <span className="text-sm font-medium leading-none truncate">{name}</span>

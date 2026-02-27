@@ -1,6 +1,5 @@
 import { db } from "../db/index.ts";
 import { withAuth } from "../middleware/auth.ts";
-import type { LeaderboardEntry } from "../types/index.ts";
 
 /**
  * GET /api/v1/leaderboard/:leagueId
@@ -28,17 +27,21 @@ export const getLeaderboard = withAuth(async (req) => {
   // ----------------------------------
 
   // Aggregate total points per user for this league
-  const standings = await db<LeaderboardEntry[]>`
+  const standings = await db`
     SELECT
       u.id AS "userId",
       u.display_name AS "displayName",
       u.contact,
+      u.avatar_url AS "avatarUrl",
+      COUNT(p.id)::int AS "totalPredictions",
+      COALESCE(SUM(p.correct_predictions), 0)::int AS "leagueCorrectPredictions",
+      COALESCE(SUM(p.total_predictions), 0)::int AS "leagueTotalPredictions",
       COALESCE(SUM(p.total_points), 0)::int AS "totalPoints"
     FROM league_members lm
     INNER JOIN users u ON u.id = lm.user_id
     LEFT JOIN picks p ON p.user_id = lm.user_id AND p.league_id = ${leagueId}
     WHERE lm.league_id = ${leagueId}
-    GROUP BY u.id, u.display_name, u.contact
+    GROUP BY u.id, u.display_name, u.contact, u.avatar_url
     ORDER BY "totalPoints" DESC
   `;
 

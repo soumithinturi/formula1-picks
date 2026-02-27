@@ -18,7 +18,16 @@ export async function getProfile(req: AuthedRequest): Promise<Response> {
     return Response.json({ error: "User not found" }, { status: 404 });
   }
 
-  return Response.json({ user });
+  // Calculate global prediction stats from all their picks
+  const [stats] = await db`
+    SELECT
+      COALESCE(SUM(correct_predictions), 0)::int AS "globalCorrectPredictions",
+      COALESCE(SUM(total_predictions), 0)::int AS "globalTotalPredictions"
+    FROM picks
+    WHERE user_id = ${req.user.id}
+  `;
+
+  return Response.json({ user, stats });
 }
 
 /**

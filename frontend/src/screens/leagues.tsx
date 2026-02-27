@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/page-container";
 import { api, type League } from "@/lib/api";
+import { TEAMS } from "@/context/theme-context";
 
 // Extended interface for UI logic
 interface UILeague extends League {
@@ -77,22 +78,39 @@ export function LeaguesScreen() {
       setLoading(false);
     }
   }
-
   async function fetchLeaderboard(leagueId: string) {
     try {
       const data = await api.leaderboard.get(leagueId);
       // Map to Leaderboard component format
-      const mapped = data.map((entry, index) => ({
-        id: entry.userId,
-        rank: index + 1,
-        previousRank: index + 1, // Mock
-        name: entry.displayName || "Unknown",
-        team: "Racer", // Mock
-        predictionsCorrect: 0,
-        totalPredictions: 0,
-        points: entry.totalPoints,
-        avatarUrl: undefined,
-      }));
+      const mapped = data.map((entry, index) => {
+        let teamName = "Independent";
+        let avatarLink = undefined;
+        try {
+          if (entry.avatarUrl) {
+            const parsed = JSON.parse(entry.avatarUrl);
+            if (parsed.teamId && parsed.teamId !== "default") {
+              const foundTeam = TEAMS.find((t) => t.id === parsed.teamId);
+              if (foundTeam) {
+                teamName = foundTeam.name;
+              }
+            }
+          }
+        } catch {
+          avatarLink = entry.avatarUrl ?? undefined; // It was a raw URL
+        }
+
+        return {
+          id: entry.userId,
+          rank: index + 1,
+          previousRank: index + 1, // Mock
+          name: entry.displayName || "Unknown",
+          team: teamName,
+          predictionsCorrect: entry.leagueCorrectPredictions || 0,
+          totalPredictions: entry.leagueTotalPredictions || 0,
+          points: entry.totalPoints,
+          avatarUrl: entry.avatarUrl, // Pass raw string (URL or JSON) to DriverInfo
+        };
+      });
       setLeaderboard(mapped);
     } catch (error) {
       console.error("Failed to fetch leaderboard:", error);

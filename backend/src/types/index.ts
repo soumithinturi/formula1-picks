@@ -187,6 +187,8 @@ export interface PickRow {
   race_id: number;
   league_id: string;
   total_points: number;
+  correct_predictions: number;
+  total_predictions: number;
   submitted_at: string;
   sprint_qualifying_p1: string | null;
   sprint_p1: string | null;
@@ -214,6 +216,10 @@ export interface LeaderboardEntry {
   userId: string;
   displayName: string | null;
   contact: string;
+  avatarUrl?: string | null;
+  totalPredictions?: number;
+  leagueCorrectPredictions?: number;
+  leagueTotalPredictions?: number;
   totalPoints: number;
 }
 

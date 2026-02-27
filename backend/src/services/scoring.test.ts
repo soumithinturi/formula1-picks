@@ -31,7 +31,7 @@ describe("Scoring Logic", () => {
     expected += (3 * 10); // Podium (all 3 in top 3)
     expected += 15; // Perfect order
 
-    expect(score).toBe(expected);
+    expect(score.score).toBe(expected);
   });
 
   test("calculates score with mixed podium", () => {
@@ -49,12 +49,12 @@ describe("Scoring Logic", () => {
     // Podium: NOR, VER, LEC are all in official top 3 (VER, NOR, LEC). So 3 drivers * 10 = 30 points
     // Perfect order: No.
     // Total: 1 + 30 = 31
-    expect(score).toBe(31);
+    expect(score.score).toBe(31);
   });
 
   test("handles empty picks safely", () => {
     const score = calculatePoints({}, defaultResults, DEFAULT_SCORING_CONFIG);
-    expect(score).toBe(0);
+    expect(score.score).toBe(0);
   });
 
   test("uses custom scoring config correctly", () => {
@@ -68,7 +68,7 @@ describe("Scoring Logic", () => {
     };
 
     const score = calculatePoints(pick, defaultResults, customConfig);
-    expect(score).toBe(25);
+    expect(score.score).toBe(25);
   });
 
   test("ignores disabled rules", () => {
@@ -81,6 +81,6 @@ describe("Scoring Logic", () => {
     };
 
     const score = calculatePoints(pick, defaultResults, customConfig);
-    expect(score).toBe(0);
+    expect(score.score).toBe(0);
   });
 });
