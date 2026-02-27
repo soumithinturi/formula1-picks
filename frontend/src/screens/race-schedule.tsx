@@ -118,7 +118,7 @@ export default function RaceSchedule() {
                 )}
 
                 {/* Reminder Bell */}
-                <Button
+                {/* <Button
                   variant="ghost"
                   size="icon"
                   className="absolute top-2 right-2 z-20 h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
@@ -127,13 +127,13 @@ export default function RaceSchedule() {
                     console.log(`Reminder set for ${race.name}`);
                   }}>
                   <Bell className="h-4 w-4" />
-                </Button>
+                </Button> */}
 
                 <div className="relative p-4">
                   <div className="flex justify-between items-start z-10 relative">
                     <div className="space-y-1 max-w-[60%]">
                       <span className="text-[10px] font-bold tracking-tighter uppercase text-muted-foreground">
-                        Race {(index + 1).toString().padStart(2, "0")}
+                        Round {(index + 1).toString().padStart(2, "0")}
                       </span>
                       <h3 className="text-lg font-bold leading-tight">{race.name}</h3>
 
@@ -178,7 +178,7 @@ export default function RaceSchedule() {
 
                     {/* Track Map */}
                     {staticData?.trackMap && (
-                      <div className="absolute right-0 top-0 w-24 h-24 sm:w-28 sm:h-28 object-contain transition-opacity">
+                      <div className="absolute right-3 top-0 w-24 h-24 sm:w-28 sm:h-28 object-contain transition-opacity">
                         <img
                           src={staticData.trackMap.white}
                           alt={`${race.name} Circuit`}
