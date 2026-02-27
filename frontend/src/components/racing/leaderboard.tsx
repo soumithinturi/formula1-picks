@@ -28,8 +28,7 @@ export function Leaderboard({ entries, className, ...props }: LeaderboardProps) 
           <tr>
             <th className="px-2 sm:px-3 py-2 font-medium text-left">Rank</th>
             <th className="px-2 sm:px-3 py-2 font-medium text-left">
-              <span className="hidden sm:inline">Driver (User)</span>
-              <span className="inline sm:hidden">Driver</span>
+              <span className="hidden sm:inline">Racer</span>
             </th>
             <th className="px-2 sm:px-3 py-2 font-medium text-right">Points</th>
           </tr>

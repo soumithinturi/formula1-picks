@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Trophy, BarChart2, Bell, ChevronDown, ShieldAlert, Globe } from "lucide-react";
+import { MapPin, Calendar, Trophy, BarChart2, Bell, ChevronDown, ShieldAlert, Globe, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageContainer } from "@/components/layout/page-container";
 import { races2026 } from "@/data/races-2026";
@@ -10,7 +10,7 @@ import { api, type Race } from "@/lib/api";
 import { usePreferences } from "@/context/preferences-context";
 
 export default function RaceSchedule() {
-  const currentSeason = 2025;
+  const currentSeason = new Date().getFullYear();
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRaceId, setExpandedRaceId] = useState<string | null>(null);
@@ -81,7 +81,11 @@ export default function RaceSchedule() {
             size="sm"
             className="text-xs text-muted-foreground hover:text-foreground h-8"
             onClick={() => setTimezoneDisplay(timezoneDisplay === "local" ? "track" : "local")}>
-            <Globe className="h-3.5 w-3.5 mr-1.5" />
+            {timezoneDisplay === "local" ? (
+              <Clock className="h-3.5 w-3.5 mr-1.5" />
+            ) : (
+              <Globe className="h-3.5 w-3.5 mr-1.5" />
+            )}
             Showing: <strong className="ml-1 uppercase text-foreground">{timezoneDisplay} Time</strong>
           </Button>
         </div>
@@ -157,19 +161,19 @@ export default function RaceSchedule() {
                         )}
 
                         {isNext && (
-                          <Button size="sm" className="h-8 text-xs font-bold gap-2">
+                          <Button size="sm" className="h-8 text-xs font-bold gap-2 relative z-10">
                             <BarChart2 className="h-3 w-3" />
                             PREDICT NOW
                           </Button>
                         )}
-                        <ChevronDown
-                          className={cn(
-                            "h-4 w-4 text-muted-foreground transition-transform duration-200 ml-auto",
-                            isExpanded && "rotate-180",
-                          )}
-                        />
                       </div>
                     </div>
+                    <ChevronDown
+                      className={cn(
+                        "absolute bottom-0 right-0 h-5 w-5 text-muted-foreground transition-transform duration-200 z-10",
+                        isExpanded && "rotate-180",
+                      )}
+                    />
 
                     {/* Track Map */}
                     {staticData?.trackMap && (

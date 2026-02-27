@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Leaderboard } from "@/components/racing/leaderboard";
@@ -26,11 +26,13 @@ interface UILeague extends League {
 
 export function LeaguesScreen() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [leagues, setLeagues] = useState<UILeague[]>([]);
   const [activeLeagueId, setActiveLeagueId] = useState<string>("");
   const [isJoinOpen, setJoinOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
@@ -40,6 +42,7 @@ export function LeaguesScreen() {
 
   useEffect(() => {
     if (activeLeagueId) {
+      setIsExpanded(false); // Reset expansion state when changing leagues
       fetchLeaderboard(activeLeagueId);
     }
   }, [activeLeagueId]);
@@ -57,7 +60,14 @@ export function LeaguesScreen() {
       setLeagues(uiLeagues);
 
       const firstLeague = uiLeagues[0];
-      if (firstLeague && !activeLeagueId) {
+      const leagueIdParam = searchParams.get("leagueId");
+
+      if (leagueIdParam && uiLeagues.some((l) => l.id === leagueIdParam)) {
+        setActiveLeagueId(leagueIdParam);
+        setIsExpanded(true);
+        // Clear the search param so it doesn't stick around if user changes tabs later
+        setSearchParams(new URLSearchParams(), { replace: true });
+      } else if (firstLeague && !activeLeagueId) {
         setActiveLeagueId(firstLeague.id);
       }
     } catch (error) {
@@ -72,7 +82,7 @@ export function LeaguesScreen() {
     try {
       const data = await api.leaderboard.get(leagueId);
       // Map to Leaderboard component format
-      const mapped = data.slice(0, 5).map((entry, index) => ({
+      const mapped = data.map((entry, index) => ({
         id: entry.userId,
         rank: index + 1,
         previousRank: index + 1, // Mock
@@ -188,15 +198,10 @@ export function LeaguesScreen() {
               <div className="space-y-2 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-2xl font-bold uppercase tracking-wide">{activeLeague.name}</CardTitle>
-                  <span className="px-2 py-0.5 bg-primary text-primary-foreground text-xs font-bold rounded">
-                    PRIVATE
-                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
                   <Users className="h-4 w-4" />
                   <span>{activeLeague.members_count || 1} Racers</span>
-                  <span>•</span>
-                  <span>Season 2024</span>
                 </div>
               </div>
               {activeLeague.nextRace && (
@@ -245,17 +250,15 @@ export function LeaguesScreen() {
                 <Trophy className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg font-semibold">Standings</CardTitle>
               </div>
-              <span className="text-xs font-semibold text-muted-foreground uppercase">League Standings</span>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Leaderboard entries={leaderboard} />
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate(`/leagues/${activeLeagueId}/standings`)}>
-              View Full Standings
-            </Button>
+            <Leaderboard entries={isExpanded ? leaderboard : leaderboard.slice(0, 5)} />
+            {leaderboard.length > 5 && (
+              <Button variant="outline" className="w-full" onClick={() => setIsExpanded(!isExpanded)}>
+                {isExpanded ? "Collapse Standings" : "View Full Standings"}
+              </Button>
+            )}
           </CardContent>
         </Card>
         {/* FAB */}

@@ -11,7 +11,6 @@ import { PicksScreen } from "./screens/picks";
 import { RaceWinnersHistoryScreen } from "@/screens/race-winners-history";
 import { LeaguesHistoryScreen } from "@/screens/leagues-history";
 import { CreateLeagueWizard } from "@/screens/create-league/wizard";
-import { StandingsScreen } from "./screens/standings";
 import { InviteScreen } from "./screens/invite";
 import { SettingsScreen } from "@/screens/settings";
 import { ProfileScreen } from "@/screens/profile";
@@ -54,7 +53,6 @@ export function App() {
           <Route index element={<HomeScreen />} />
           <Route path="leagues" element={<LeaguesScreen />} />
           <Route path="leagues/create" element={<CreateLeagueWizard />} />
-          <Route path="leagues/:leagueId/standings" element={<StandingsScreen />} />
           <Route path="invite/:code" element={<InviteScreen />} />
           <Route path="picks" element={<PicksScreen />} />
           <Route path="profile" element={<ProfileScreen />} />

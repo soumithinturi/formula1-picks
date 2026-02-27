@@ -56,57 +56,26 @@ export function Step1({ initialData, onNext, onCancel }: Step1Props) {
               </div>
 
               <div className="space-y-3 pt-4">
-                <Label className="text-base font-semibold">League Privacy</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div
-                    className={`relative cursor-pointer border rounded-xl p-6 transition-all hover:bg-muted/50 ${
-                      privacy === "public" ? "border-primary bg-primary/5" : "border-white/10"
-                    }`}
-                    onClick={() => setPrivacy("public")}>
+                <div className="flex items-center gap-2">
+                  <Label className="text-base font-semibold">League Privacy</Label>
+                  <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">BETA</span>
+                </div>
+                <div className="grid grid-cols-1">
+                  <div className="relative border rounded-xl p-6 border-primary bg-primary/5">
                     <div className="flex justify-between items-start mb-4">
-                      <div
-                        className={`p-3 rounded-full ${
-                          privacy === "public" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                        }`}>
-                        <Globe className="h-6 w-6" />
-                      </div>
-                      <div
-                        className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                          privacy === "public" ? "border-primary" : "border-muted-foreground/30"
-                        }`}>
-                        {privacy === "public" && <div className="h-3 w-3 rounded-full bg-primary" />}
-                      </div>
-                    </div>
-                    <h3 className="font-bold text-lg mb-2">Open Paddock</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      Anyone can join via search. Compete on the global leaderboard against the world.
-                    </p>
-                  </div>
-
-                  <div
-                    className={`relative cursor-pointer border rounded-xl p-6 transition-all hover:bg-muted/50 ${
-                      privacy === "private" ? "border-primary bg-primary/5" : "border-white/10"
-                    }`}
-                    onClick={() => setPrivacy("private")}>
-                    <div className="flex justify-between items-start mb-4">
-                      <div
-                        className={`p-3 rounded-full ${
-                          privacy === "private"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground"
-                        }`}>
+                      <div className="p-3 rounded-full bg-primary text-primary-foreground">
                         <Lock className="h-6 w-6" />
                       </div>
-                      <div
-                        className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-                          privacy === "private" ? "border-primary" : "border-muted-foreground/30"
-                        }`}>
-                        {privacy === "private" && <div className="h-3 w-3 rounded-full bg-primary" />}
+                      <div className="h-6 w-6 rounded-full border-2 flex items-center justify-center border-primary">
+                        <div className="h-3 w-3 rounded-full bg-primary" />
                       </div>
                     </div>
                     <h3 className="font-bold text-lg mb-2">Private Garage</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       Invite-only via secure link. Perfect for close groups of friends and rivalries.
+                    </p>
+                    <p className="text-xs text-primary mt-2 font-semibold">
+                      Note: All leagues created during the beta period are invite-only.
                     </p>
                   </div>
                 </div>
@@ -122,8 +91,8 @@ export function Step1({ initialData, onNext, onCancel }: Step1Props) {
                 Cancel
               </Button>
               <div className="flex justify-end">
-                <Button type="submit" disabled={!name.trim()} className="w-full md:w-auto px-8 py-6 text-lg">
-                  Continue <ChevronRight className="ml-2 h-5 w-5" />
+                <Button type="submit" disabled={!name.trim()}>
+                  Continue <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>

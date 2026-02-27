@@ -17,7 +17,7 @@ export function CreateLeagueWizard() {
 
   const [formData, setFormData] = useState({
     name: "",
-    privacy: "public" as "public" | "private",
+    privacy: "private" as "public" | "private",
     rules: {
       p1: { enabled: true, points: 5 },
       p2: { enabled: true, points: 3 },

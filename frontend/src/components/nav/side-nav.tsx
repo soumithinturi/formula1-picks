@@ -19,10 +19,15 @@ export function SideNav({ className, ...props }: SideNavProps) {
   return (
     <div className={cn("flex flex-col h-full w-64 bg-card border-r border-border p-4", className)} {...props}>
       <div className="flex items-center gap-2 mb-8 px-2">
-        <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-lg">F1</span>
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-lg">F1</span>
+          </div>
+          <span className="text-xl font-bold tracking-tight">Picks</span>
         </div>
-        <span className="text-xl font-bold tracking-tight">Picks</span>
+        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ml-1 mt-1">
+          BETA
+        </span>
       </div>
 
       <nav className="flex-1 space-y-1">

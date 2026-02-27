@@ -480,7 +480,7 @@ export function HomeScreen() {
                     <div
                       key={league.id}
                       className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                      onClick={() => navigate(`/leagues/${league.id}/standings`)}>
+                      onClick={() => navigate(`/leagues?leagueId=${league.id}`)}>
                       <div className="grid grid-cols-[3rem_1fr] items-center gap-x-2 gap-y-1">
                         <span className="text-xl font-bold font-mono leading-none text-center">{league.rank}</span>
                         <span className="font-semibold leading-none truncate">{league.name}</span>
