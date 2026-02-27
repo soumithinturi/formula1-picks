@@ -1,12 +1,14 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Searchbar } from "@/components/ui/searchbar";
 import { ProfileHeader } from "@/components/user/profile-header";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "react-router";
 import { F1HelmetAvatar } from "@/components/user/f1-helmet-avatar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { NotificationPanel } from "@/components/notifications/notification-panel";
+import { useNotifications } from "@/context/notification-context";
 
 interface HeaderNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -16,6 +18,8 @@ import { TEAMS } from "@/context/theme-context";
 
 export function HeaderNav({ className, ...props }: HeaderNavProps) {
   const [user, setUser] = React.useState<UserProfile | null>(auth.getUser());
+  const [notifOpen, setNotifOpen] = React.useState(false);
+  const { unreadCount, markAllRead } = useNotifications();
 
   React.useEffect(() => {
     const handleUserUpdate = (e: Event) => {
@@ -26,6 +30,14 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
     window.addEventListener("f1_user_updated", handleUserUpdate);
     return () => window.removeEventListener("f1_user_updated", handleUserUpdate);
   }, []);
+
+  const handleNotifOpen = (open: boolean) => {
+    setNotifOpen(open);
+    // Mark all as read when the panel is opened
+    if (open && unreadCount > 0) {
+      markAllRead();
+    }
+  };
 
   const displayName = user?.display_name || user?.contact || "User";
   const avatarChar = displayName.charAt(0).toUpperCase();
@@ -58,6 +70,31 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       <div className="flex items-center gap-2 md:gap-4 shrink-0">
         <TeamSwitcher />
         <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
+
+        {/* Notification Bell */}
+        <Popover open={notifOpen} onOpenChange={handleNotifOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              id="notification-bell-btn"
+              variant="ghost"
+              size="icon"
+              className="relative h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60">
+              <Bell className="h-4.5 w-4.5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            sideOffset={8}
+            className="p-0 rounded-xl overflow-hidden border-border/60 shadow-2xl w-auto">
+            <NotificationPanel />
+          </PopoverContent>
+        </Popover>
 
         {/* Desktop Profile Header */}
         <Link to="/profile" className="hidden sm:block">

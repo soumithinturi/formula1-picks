@@ -122,7 +122,8 @@ export default function RaceSchedule() {
                   variant="ghost"
                   size="icon"
                   className="absolute top-2 right-2 z-20 h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     console.log(`Reminder set for ${race.name}`);
                   }}>
                   <Bell className="h-4 w-4" />

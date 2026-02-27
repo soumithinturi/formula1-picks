@@ -5,8 +5,9 @@ import { getPickForRace, submitPick } from "./routes/picks.ts";
 import { createLeague, listLeagues, joinLeague, previewLeague } from "./routes/leagues.ts";
 import { getLeaderboard } from "./routes/leaderboard.ts";
 import { submitResults } from "./routes/admin.ts";
-import { updateProfile } from "./routes/users.ts";
+import { updateProfile, getProfile } from "./routes/users.ts";
 import { submitFeedback } from "./routes/feedback.ts";
+import { listNotifications, markAllRead } from "./routes/notifications.ts";
 import { seedDatabase } from "./services/seed.ts";
 import { startCronJobs } from "./services/cron.ts";
 import { withAuth } from "./middleware/auth.ts";
@@ -126,6 +127,7 @@ const server = Bun.serve({
 
     // ─── Users ─────────────────────────────────────────────────────────────
     "/api/v1/users/me": {
+      GET: withCors(withAuth(getProfile)),
       PUT: withCors(withAuth(updateProfile)),
       OPTIONS: handleOptions,
     },
@@ -133,6 +135,16 @@ const server = Bun.serve({
     // ─── Feedback ──────────────────────────────────────────────────────────
     "/api/v1/feedback": {
       POST: withCors(withAuth(submitFeedback)),
+      OPTIONS: handleOptions,
+    },
+
+    // ─── Notifications ──────────────────────────────────────────────────────
+    "/api/v1/notifications": {
+      GET: withCors(listNotifications),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/notifications/read": {
+      PUT: withCors(markAllRead),
       OPTIONS: handleOptions,
     },
 

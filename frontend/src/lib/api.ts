@@ -85,9 +85,24 @@ export interface League {
   id: string;
   name: string;
   invite_code: string;
-  created_by: string; // user id
+  created_by: string;
   members_count?: number;
   scoring_config?: ScoringConfig;
+}
+
+export interface Notification {
+  id: string;
+  type: "RESULTS_IN" | "PICKS_DUE" | "LEAGUE_ACTIVITY";
+  title: string;
+  body: string;
+  metadata: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface UserPreferences {
+  themeId?: string;
+  timezoneDisplay?: "local" | "track";
 }
 
 async function request<T>(
@@ -189,7 +204,10 @@ export const api = {
   },
 
   users: {
-    updateProfile: (payload: { display_name?: string; full_name?: string | null; avatar_url?: string | null }) =>
+    getMe: () =>
+      api.get<{ user: { id: string; display_name: string | null; full_name: string | null; avatar_url: string | null; role: string; preferences: UserPreferences } }>("/users/me"),
+
+    updateProfile: (payload: { display_name?: string; full_name?: string | null; avatar_url?: string | null; preferences?: UserPreferences }) =>
       api.put<{ user: any }>("/users/me", payload),
   },
 
@@ -240,6 +258,12 @@ export const api = {
 
   leaderboard: {
     get: (leagueId: string) => api.get<LeaderboardEntry[]>(`/leaderboard/${leagueId}`),
+  },
+
+  notifications: {
+    list: () =>
+      api.get<{ notifications: Notification[]; unreadCount: number }>("/notifications"),
+    markAllRead: () => api.put<{ updated: number }>("/notifications/read", {}),
   },
 };
 

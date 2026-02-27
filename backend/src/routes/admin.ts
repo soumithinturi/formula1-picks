@@ -2,6 +2,7 @@ import { db } from "../db/index.ts";
 import { withAdmin, parseBody } from "../middleware/auth.ts";
 import { ResultSubmissionSchema, type PickRow, type LeagueRow, type ScoringConfig } from "../types/index.ts";
 import { calculatePoints } from "../services/scoring.ts";
+import { createNotificationsForAllPicksInRace } from "../services/notifications.ts";
 
 /**
  * POST /api/v1/admin/results
@@ -84,7 +85,18 @@ export const submitResults = withAdmin(async (req) => {
     })
   );
 
-  // 5. Mark race as completed
+  // 5. Fan out in-app notifications to all users who picked on this race
+  const [race] = await db<{ name: string }[]>`SELECT name FROM races WHERE id = ${data.raceId}`;
+  const raceName = race?.name ?? `Race #${data.raceId}`;
+  await createNotificationsForAllPicksInRace(
+    data.raceId,
+    "RESULTS_IN",
+    `${raceName} — Results In! 🏁`,
+    "The official results have been submitted. Check your score on the leaderboard.",
+    { raceId: data.raceId }
+  );
+
+  // 6. Mark race as completed
   await db`
     UPDATE races SET status = 'COMPLETED' WHERE id = ${data.raceId}
   `;
