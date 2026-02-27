@@ -43,7 +43,7 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
   const avatarChar = displayName.charAt(0).toUpperCase();
 
   let helmetColors = null;
-  let userTeam = TEAMS[1]!;
+  let userTeam = TEAMS[0]!;
 
   if (user?.avatar_url) {
     try {
