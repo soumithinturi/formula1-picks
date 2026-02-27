@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getTeamColor } from "@/components/racing/driver-info";
 import { usePreferences } from "@/context/preferences-context";
 import { races2026 } from "@/data/races-2026";
+import { Label } from "@/components/ui/label";
 
 export function PicksScreen() {
   const navigate = useNavigate();
@@ -373,7 +374,8 @@ export function PicksScreen() {
 
         {/* League Selector */}
         {leagues.length > 0 && (
-          <div className="w-full max-w-[340px] mx-auto mt-4">
+          <div className="w-full max-w-[340px] mx-auto mt-4 space-y-1.5 flex flex-col items-start">
+            <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">League</Label>
             <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select League" />

@@ -28,9 +28,31 @@ interface Step3Props {
 export function Step3({ league, rules, onFinish, onBack }: Step3Props) {
   const inviteCode = league.invite_code;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(inviteCode);
-    toast.success("Invite code copied!");
+  const getInviteLink = (code: string) => `${window.location.origin}/#/invite/${code}`;
+
+  const handleCopyInviteCode = () => {
+    if (inviteCode) {
+      navigator.clipboard.writeText(getInviteLink(inviteCode));
+      toast.success("Invite link copied!");
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `Join ${league.name} on F1 Picks`,
+          text: `Join my F1 Picks league: ${league.name}`,
+          url: getInviteLink(inviteCode),
+        })
+        .then(() => toast.success("Shared successfully!"))
+        .catch(() => {
+          // If share fails or is cancelled, fallback to copy
+          handleCopyInviteCode();
+        });
+    } else {
+      handleCopyInviteCode();
+    }
   };
 
   return (
@@ -118,8 +140,8 @@ export function Step3({ league, rules, onFinish, onBack }: Step3Props) {
             <p className="text-muted-foreground">Share this unique code to let others join your grid immediately.</p>
 
             <div
-              className="flex items-center gap-2 p-4 bg-background/50 rounded-xl border border-white/10"
-              onClick={handleCopy}>
+              className="flex items-center gap-2 p-4 bg-background/50 rounded-xl border border-white/10 cursor-pointer"
+              onClick={handleCopyInviteCode}>
               <code
                 className="flex-1 text-center font-mono text-2xl font-bold tracking-widest text-primary cursor-pointer hover:bg-background/80 rounded transition-colors"
                 title="Click to copy">
@@ -131,13 +153,16 @@ export function Step3({ league, rules, onFinish, onBack }: Step3Props) {
                 className="hover:bg-background"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCopy();
+                  handleCopyInviteCode();
                 }}>
                 <Copy className="h-5 w-5" />
               </Button>
             </div>
 
-            <Button variant="outline" className="w-full gap-2 border-primary/20 hover:bg-primary/5">
+            <Button
+              variant="outline"
+              className="w-full gap-2 border-primary/20 hover:bg-primary/5"
+              onClick={handleShare}>
               <Share2 className="h-4 w-4" /> Share Link
             </Button>
           </CardContent>
@@ -145,10 +170,7 @@ export function Step3({ league, rules, onFinish, onBack }: Step3Props) {
       </div>
 
       <div className="flex justify-center pt-8">
-        <Button
-          onClick={onFinish}
-          size="lg"
-          className="px-12 py-6 text-lg w-full md:w-auto shadow-lg shadow-primary/20">
+        <Button onClick={onFinish}>
           Go to League Dashboard <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
       </div>

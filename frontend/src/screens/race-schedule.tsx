@@ -8,8 +8,10 @@ import { PageContainer } from "@/components/layout/page-container";
 import { races2026 } from "@/data/races-2026";
 import { api, type Race } from "@/lib/api";
 import { usePreferences } from "@/context/preferences-context";
+import { useNavigate } from "react-router";
 
 export default function RaceSchedule() {
+  const navigate = useNavigate();
   const currentSeason = new Date().getFullYear();
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,7 +164,13 @@ export default function RaceSchedule() {
                         )}
 
                         {isNext && (
-                          <Button size="sm" className="h-8 text-xs font-bold gap-2 relative z-10">
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs font-bold gap-2 relative z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate("/picks");
+                            }}>
                             <BarChart2 className="h-3 w-3" />
                             PREDICT NOW
                           </Button>
