@@ -19,6 +19,15 @@ export function LoginScreen() {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidPhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, "");
+    return digits.length === 11 && digits.startsWith("1");
+  };
+
+  const isContactValid = authType === "email" ? isValidEmail(contact) : isValidPhone(contact);
+  const showContactError = contact.length > 0 && !isContactValid;
+
   // Check for Magic Link URL hash on load
   useEffect(() => {
     let hash = window.location.hash;
@@ -199,7 +208,7 @@ export function LoginScreen() {
               value={authType}
               onValueChange={(v) => {
                 setAuthType(v as "email" | "phone");
-                setContact("");
+                setContact(v === "phone" ? "+1 " : "");
               }}
               className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -214,7 +223,9 @@ export function LoginScreen() {
               <form onSubmit={handleRequestOtp}>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="contact">{authType === "email" ? "Email address" : "Phone number"}</Label>
+                    <Label htmlFor="contact" className={showContactError ? "text-red-500" : ""}>
+                      {authType === "email" ? "Email address" : "Phone number"}
+                    </Label>
                     <Input
                       id="contact"
                       type={authType === "email" ? "email" : "tel"}
@@ -223,9 +234,20 @@ export function LoginScreen() {
                       onChange={handleContactChange}
                       required
                       autoFocus
+                      className={showContactError ? "border-red-500 focus-visible:ring-red-500" : ""}
                     />
+                    {showContactError && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {authType === "email"
+                          ? "Please enter a valid email address"
+                          : "Please enter a valid phone number"}
+                      </p>
+                    )}
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={loading || (contact.length > 0 && !isContactValid)}>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Send Code
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -283,7 +305,10 @@ export function LoginScreen() {
                     onChange={(e) => setDisplayName(e.target.value)}
                     required
                     autoFocus
-                    maxLength={50}
+                    minLength={2}
+                    maxLength={32}
+                    pattern="^[a-zA-Z0-9_-]+$"
+                    title="Only letters, numbers, underscores, and hyphens are allowed"
                   />
                   <p className="text-sm text-muted-foreground">
                     This is how you'll appear on leaderboards and to other players.

@@ -105,6 +105,10 @@ export function ProfileScreen() {
               placeholder="e.g. Max Verstappen"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
+              minLength={2}
+              maxLength={32}
+              pattern="^[a-zA-Z\\s'-]+$"
+              title="Only letters, spaces, hyphens, and apostrophes are allowed"
             />
           </div>
 
@@ -115,6 +119,10 @@ export function ProfileScreen() {
               placeholder="e.g. SuperMax"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              minLength={2}
+              maxLength={32}
+              pattern="^[a-zA-Z0-9_-]+$"
+              title="Only letters, numbers, underscores, and hyphens are allowed"
             />
           </div>
 

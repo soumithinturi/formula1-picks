@@ -50,6 +50,8 @@ export function Step1({ initialData, onNext, onCancel }: Step1Props) {
                     onChange={(e) => setName(e.target.value)}
                     className="text-lg py-6 bg-background/50 border-white/10 focus:border-primary/50"
                     autoFocus
+                    minLength={2}
+                    maxLength={50}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">Choose a unique name for your racing group.</p>
