@@ -25,7 +25,7 @@ seedDatabase()
 
 // Setup dynamic CORS to support credentials (cookies)
 const ALLOWED_ORIGINS = process.env.NODE_ENV === "production"
-  ? ["https://formula1-picks.sintur2527.workers.dev"]
+  ? ["https://formula1-picks.sintur-labs.workers.dev"]
   : ["http://localhost:3000", "http://127.0.0.1:3000"];
 
 function getCorsHeaders(req: Request) {
