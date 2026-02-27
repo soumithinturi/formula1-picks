@@ -56,7 +56,7 @@ export function SettingsScreen() {
                             className="h-3 w-3 rounded-full shadow-sm"
                             style={{ backgroundColor: team.primaryColor }}
                           />
-                          <span>{team.name}</span>
+                          <span>{team.themeName}</span>
                         </div>
                       </SelectItem>
                     ))}

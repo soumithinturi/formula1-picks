@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { CONSTRUCTOR_COLORS } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 export type Team = {
   id: string;
@@ -93,39 +94,58 @@ export const TEAMS: Team[] = [
 type ThemeContextType = {
   currentTeam: Team;
   setTeam: (teamId: string) => void;
+  /** Called by the app after auth resolves to hydrate the theme from the DB. */
+  hydrateFromRemote: (teamId: string | undefined) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function resolveTeam(teamId: string | null | undefined): Team {
+  if (teamId) {
+    const found = TEAMS.find((t) => t.id === teamId);
+    if (found) return found;
+  }
+  return TEAMS[0]!;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [currentTeam, setCurrentTeam] = useState<Team>(TEAMS[1]!);
+  // Bootstrap from localStorage immediately so there's no flash-of-default-theme.
+  const [currentTeam, setCurrentTeam] = useState<Team>(() => resolveTeam(localStorage.getItem("f1-theme-team-id")));
 
+  // Apply theme CSS variables whenever the team changes.
   useEffect(() => {
-    // Load from local storage
-    const savedTeamId = localStorage.getItem("f1-theme-team-id");
-    if (savedTeamId) {
-      const team = TEAMS.find((t) => t.id === savedTeamId);
-      if (team) setCurrentTeam(team);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Apply theme variables
     const root = document.documentElement;
-
     root.style.setProperty("--primary", currentTeam.primaryColor);
     root.style.setProperty("--primary-foreground", currentTeam.primaryForeground);
-    root.style.setProperty("--ring", currentTeam.primaryColor); // sync ring
+    root.style.setProperty("--ring", currentTeam.primaryColor);
 
+    // Keep localStorage in sync as a fast bootstrap for next load.
     localStorage.setItem("f1-theme-team-id", currentTeam.id);
   }, [currentTeam]);
 
+  /** Called from the Settings screen — updates state and persists to DB. */
   const setTeam = (teamId: string) => {
-    const team = TEAMS.find((t) => t.id === teamId);
-    if (team) setCurrentTeam(team);
+    const team = resolveTeam(teamId);
+    setCurrentTeam(team);
+
+    // Fire-and-forget: persist to the user's profile in the DB.
+    api.users.updateProfile({ preferences: { themeId: teamId } }).catch((err) => {
+      console.error("[ThemeProvider] Failed to save theme preference:", err);
+    });
   };
 
-  return <ThemeContext.Provider value={{ currentTeam, setTeam }}>{children}</ThemeContext.Provider>;
+  /**
+   * Called after the auth layer fetches the user profile from the DB.
+   * Overrides the localStorage value with the authoritative server-side setting.
+   * Uses a silent update (no DB write) so we don't create a pointless round-trip.
+   */
+  const hydrateFromRemote = (teamId: string | undefined) => {
+    if (!teamId) return;
+    const team = resolveTeam(teamId);
+    setCurrentTeam(team);
+  };
+
+  return <ThemeContext.Provider value={{ currentTeam, setTeam, hydrateFromRemote }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

@@ -134,7 +134,7 @@ export async function verifyOtp(req: Request): Promise<Response> {
 
   // Fetch the full user profile to return
   const [userProfile] = await db`
-    SELECT id, contact, display_name, full_name, avatar_url, role FROM users WHERE id = ${supabaseUser.id}
+    SELECT id, contact, display_name, full_name, avatar_url, role, preferences FROM users WHERE id = ${supabaseUser.id}
   `;
 
   return Response.json({
@@ -178,9 +178,8 @@ export async function syncAuth(req: Request): Promise<Response> {
   `;
 
   const [userProfile] = await db`
-    SELECT id, contact, display_name, full_name, avatar_url, role FROM users WHERE id = ${user.id}
+    SELECT id, contact, display_name, full_name, avatar_url, role, preferences FROM users WHERE id = ${user.id}
   `;
-
   return Response.json({
     user: userProfile
   }, {

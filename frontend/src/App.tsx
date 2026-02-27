@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { Routes, Route, Outlet, useLocation } from "react-router";
-import { ThemeProvider } from "@/context/theme-context";
+import { NotificationProvider } from "@/context/notification-context";
 import { SideNav } from "@/components/nav/side-nav";
 import { MobileNav } from "@/components/nav/mobile-nav";
 import { HeaderNav } from "@/components/nav/header-nav";
@@ -17,6 +18,37 @@ import { ProfileScreen } from "@/screens/profile";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
+import { api } from "@/lib/api";
+import { useTheme } from "@/context/theme-context";
+import { usePreferences } from "@/context/preferences-context";
+
+/**
+ * Mounts inside AppLayout (behind ProtectedRoute), so it's always post-auth.
+ * Fetches the user's DB profile and hydrates the theme + timezone contexts
+ * with the authoritative server-side values, overriding any localStorage state.
+ */
+function PreferencesHydrator() {
+  const { hydrateFromRemote: hydrateTheme } = useTheme();
+  const { hydrateFromRemote: hydrateTimezone } = usePreferences();
+
+  useEffect(() => {
+    api.users
+      .getMe()
+      .then(({ user }) => {
+        const prefs = user.preferences ?? {};
+        hydrateTheme(prefs.themeId);
+        hydrateTimezone(prefs.timezoneDisplay);
+      })
+      .catch((err) => {
+        // Non-fatal: user continues with localStorage values.
+        console.error("[PreferencesHydrator] Failed to load user preferences:", err);
+      });
+    // Intentionally run once on mount per authenticated session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
 
 /** Shell layout — wraps all routes with the nav chrome */
 function AppLayout() {
@@ -25,6 +57,9 @@ function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground font-sans">
+      {/* Hydrates theme + timezone from DB once the user is authenticated. */}
+      <PreferencesHydrator />
+
       {/* Desktop Sidebar - Hidden on mobile */}
       <SideNav className="hidden md:flex shrink-0" />
 
@@ -45,25 +80,27 @@ function AppLayout() {
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginScreen />} />
+    <NotificationProvider>
+      <Routes>
+        <Route path="/login" element={<LoginScreen />} />
 
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
-          <Route index element={<HomeScreen />} />
-          <Route path="leagues" element={<LeaguesScreen />} />
-          <Route path="leagues/create" element={<CreateLeagueWizard />} />
-          <Route path="invite/:code" element={<InviteScreen />} />
-          <Route path="picks" element={<PicksScreen />} />
-          <Route path="profile" element={<ProfileScreen />} />
-          <Route path="schedule" element={<RaceSchedule />} />
-          <Route path="settings" element={<SettingsScreen />} />
-          {/* <Route path="more/race-winners-history" element={<RaceWinnersHistoryScreen />} /> */}
-          {/* <Route path="more/leagues-history" element={<LeaguesHistoryScreen />} /> */}
-          {/* Fallback */}
-          <Route path="*" element={<HomeScreen />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route index element={<HomeScreen />} />
+            <Route path="leagues" element={<LeaguesScreen />} />
+            <Route path="leagues/create" element={<CreateLeagueWizard />} />
+            <Route path="invite/:code" element={<InviteScreen />} />
+            <Route path="picks" element={<PicksScreen />} />
+            <Route path="profile" element={<ProfileScreen />} />
+            <Route path="schedule" element={<RaceSchedule />} />
+            <Route path="settings" element={<SettingsScreen />} />
+            {/* <Route path="more/race-winners-history" element={<RaceWinnersHistoryScreen />} /> */}
+            {/* <Route path="more/leagues-history" element={<LeaguesHistoryScreen />} /> */}
+            {/* Fallback */}
+            <Route path="*" element={<HomeScreen />} />
+          </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </NotificationProvider>
   );
 }

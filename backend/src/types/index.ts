@@ -16,10 +16,20 @@ export const AuthVerifySchema = z.object({
 export type AuthRequest = z.infer<typeof AuthRequestSchema>;
 export type AuthVerify = z.infer<typeof AuthVerifySchema>;
 
+// ─── User Preferences ────────────────────────────────────────────────────────
+
+export const UserPreferencesSchema = z.object({
+  themeId: z.string().optional(),
+  timezoneDisplay: z.enum(["local", "track"]).optional(),
+});
+
+export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
+
 export const UpdateProfileSchema = z.object({
   display_name: z.string().min(1).max(50).optional(),
   full_name: z.string().max(100).nullable().optional(),
   avatar_url: z.string().nullable().optional(),
+  preferences: UserPreferencesSchema.optional(),
 });
 export type UpdateProfile = z.infer<typeof UpdateProfileSchema>;
 
@@ -119,6 +129,7 @@ export interface UserRow {
   avatar_url: string | null;
   role: "USER" | "ADMIN";
   created_at: string;
+  preferences: UserPreferences;
 }
 
 export interface RaceRow {
@@ -182,4 +193,19 @@ export interface LeaderboardEntry {
   displayName: string | null;
   contact: string;
   totalPoints: number;
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export type NotificationType = "RESULTS_IN" | "PICKS_DUE" | "LEAGUE_ACTIVITY";
+
+export interface NotificationRow {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  metadata: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
 }
