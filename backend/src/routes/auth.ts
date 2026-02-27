@@ -27,14 +27,14 @@ function getCookieString(token: string) {
   const isProd = process.env.NODE_ENV === "production";
   const sameSite = isProd ? "None" : "Lax";
   const secure = isProd ? "Secure;" : "";
-  return `f1_auth_token=${token}; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=${60 * 60 * 24 * 7}`;
+  return `f1_auth_token=${token}; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=${60 * 60 * 24 * 7}; Partitioned`;
 }
 
 function getClearCookieString() {
   const isProd = process.env.NODE_ENV === "production";
   const sameSite = isProd ? "None" : "Lax";
   const secure = isProd ? "Secure;" : "";
-  return `f1_auth_token=; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=0`;
+  return `f1_auth_token=; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=0; Partitioned`;
 }
 
 /**

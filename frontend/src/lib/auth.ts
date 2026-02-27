@@ -12,12 +12,11 @@ export interface UserProfile {
 }
 
 export const auth = {
-  // We keep setToken empty to prevent storing new JWTs in localStorage.
-  // The server handles setting the HttpOnly cookie for us.
+  // We store the JWT in localStorage as a fallback for cross-origin mobile environments
+  // where third-party HttpOnly cookies are aggressively blocked (e.g., Safari on iOS).
   setToken(token: string) {
     if (typeof window !== "undefined") {
-      // Intentionally avoiding localStorage.setItem(TOKEN_KEY, token);
-      // to mitigate XSS risks on the token.
+      localStorage.setItem(TOKEN_KEY, token);
     }
   },
 

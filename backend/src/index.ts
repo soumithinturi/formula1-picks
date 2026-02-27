@@ -33,11 +33,18 @@ function getCorsHeaders(req: Request) {
   const origin = req.headers.get("Origin");
 
   // If no Origin header (e.g. direct API hit, or non-browser request), allow fallback
-  // If an Origin exists, check if it's allowed. If so, reflect it. If not, reflect it anyway 
-  // to avoid caching a valid origin on an invalid request, but ideally we'd reject.
-  // We'll reflect it back strictly if it matches, otherwise we'll just echo the bad origin 
-  // so the browser blocks it cleanly without complaining about a mismatch to 5173.
-  const allowOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : (origin || ALLOWED_ORIGINS[0]);
+  let allowOrigin = ALLOWED_ORIGINS[0];
+  if (origin) {
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      allowOrigin = origin;
+    } else if (process.env.NODE_ENV === "production" && origin.endsWith(".sintur-labs.workers.dev")) {
+      // Support Cloudflare Pages preview URLs
+      allowOrigin = origin;
+    } else {
+      // Echo bad origin so the browser blocks it cleanly
+      allowOrigin = origin;
+    }
+  }
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
