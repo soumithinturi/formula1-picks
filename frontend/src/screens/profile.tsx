@@ -8,6 +8,8 @@ import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TEAMS } from "@/context/theme-context";
 
 const PRESET_COLORS = [
   "#dc2626", // Red
@@ -31,6 +33,7 @@ export function ProfileScreen() {
   const [displayName, setDisplayName] = React.useState("");
   const [helmetColor, setHelmetColor] = React.useState("#dc2626");
   const [bgColor, setBgColor] = React.useState("#1e293b");
+  const [teamId, setTeamId] = React.useState("default");
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -48,6 +51,7 @@ export function ProfileScreen() {
         const parsed = JSON.parse(currentUser.avatar_url);
         if (parsed.helmetColor) setHelmetColor(parsed.helmetColor);
         if (parsed.bgColor) setBgColor(parsed.bgColor);
+        if (parsed.teamId) setTeamId(parsed.teamId);
       } catch (e) {
         // ignore JSON parse errors
       }
@@ -57,7 +61,7 @@ export function ProfileScreen() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const avatar_url = JSON.stringify({ helmetColor, bgColor });
+      const avatar_url = JSON.stringify({ helmetColor, bgColor, teamId });
 
       const payload = {
         full_name: fullName || null,
@@ -112,6 +116,28 @@ export function ProfileScreen() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="favorite_team">Favorite Team</Label>
+            <Select value={teamId} onValueChange={setTeamId}>
+              <SelectTrigger id="favorite_team">
+                <SelectValue placeholder="Select a team" />
+              </SelectTrigger>
+              <SelectContent>
+                {TEAMS.map((team) => (
+                  <SelectItem key={team.id} value={team.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-3 w-3 rounded-full border border-border"
+                        style={{ background: team.primaryColor }}
+                      />
+                      {team.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

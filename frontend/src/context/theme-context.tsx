@@ -4,6 +4,7 @@ import { CONSTRUCTOR_COLORS } from "@/lib/utils";
 export type Team = {
   id: string;
   name: string;
+  themeName: string;
   primaryColor: string; // Hex or OKLCH
   primaryForeground: string; // Hex or OKLCH
 };
@@ -11,26 +12,82 @@ export type Team = {
 export const TEAMS: Team[] = [
   {
     id: "default",
-    name: "F1 Desktop (Default)",
+    name: "F1 (Default)",
+    themeName: "F1 (Default)",
     primaryColor: "oklch(0.58 0.23 28)",
     primaryForeground: "oklch(0.985 0 0)",
   },
-  { id: "redbull", name: "Red Bull Blue", primaryColor: CONSTRUCTOR_COLORS.RED_BULL, primaryForeground: "#ffffff" },
-  { id: "ferrari", name: "Ferrari Red", primaryColor: CONSTRUCTOR_COLORS.FERRARI, primaryForeground: "#ffffff" },
-  { id: "mclaren", name: "McLaren Papaya", primaryColor: CONSTRUCTOR_COLORS.MCLAREN, primaryForeground: "#000000" },
-  { id: "mercedes", name: "Mercedes Teal", primaryColor: CONSTRUCTOR_COLORS.MERCEDES, primaryForeground: "#000000" },
+  {
+    id: "redbull",
+    themeName: "Red Bull Blue",
+    name: "Red Bull",
+    primaryColor: CONSTRUCTOR_COLORS.RED_BULL,
+    primaryForeground: "#ffffff",
+  },
+  {
+    id: "ferrari",
+    themeName: "Ferrari Red",
+    name: "Ferrari",
+    primaryColor: CONSTRUCTOR_COLORS.FERRARI,
+    primaryForeground: "#ffffff",
+  },
+  {
+    id: "mclaren",
+    themeName: "McLaren Papaya",
+    name: "McLaren",
+    primaryColor: CONSTRUCTOR_COLORS.MCLAREN,
+    primaryForeground: "#000000",
+  },
+  {
+    id: "mercedes",
+    themeName: "Mercedes Teal",
+    name: "Mercedes",
+    primaryColor: CONSTRUCTOR_COLORS.MERCEDES,
+    primaryForeground: "#000000",
+  },
   {
     id: "astonmartin",
-    name: "Aston Martin Green",
+    themeName: "Aston Martin Green",
+    name: "Aston Martin",
     primaryColor: CONSTRUCTOR_COLORS.ASTON_MARTIN,
     primaryForeground: "#ffffff",
   },
-  { id: "alpine", name: "Alpine Pink", primaryColor: CONSTRUCTOR_COLORS.ALPINE, primaryForeground: "#000000" },
-  { id: "williams", name: "Williams Blue", primaryColor: CONSTRUCTOR_COLORS.WILLIAMS, primaryForeground: "#000000" },
-  { id: "rb", name: "RB Blue", primaryColor: CONSTRUCTOR_COLORS.RB, primaryForeground: "#000000" },
-  { id: "audi", name: "Audi Red", primaryColor: CONSTRUCTOR_COLORS.SAUBER, primaryForeground: "#ffffff" },
-  { id: "haas", name: "Haas Grey", primaryColor: CONSTRUCTOR_COLORS.HAAS, primaryForeground: "#000000" },
-  { id: "cadillac", name: "Cadillac Gold", primaryColor: CONSTRUCTOR_COLORS.CADILLAC, primaryForeground: "#000000" },
+  {
+    id: "alpine",
+    themeName: "Alpine Pink",
+    name: "Alpine",
+    primaryColor: CONSTRUCTOR_COLORS.ALPINE,
+    primaryForeground: "#000000",
+  },
+  {
+    id: "williams",
+    themeName: "Williams Blue",
+    name: "Williams",
+    primaryColor: CONSTRUCTOR_COLORS.WILLIAMS,
+    primaryForeground: "#000000",
+  },
+  { id: "rb", themeName: "RB Blue", name: "RB", primaryColor: CONSTRUCTOR_COLORS.RB, primaryForeground: "#000000" },
+  {
+    id: "audi",
+    themeName: "Audi Red",
+    name: "Audi",
+    primaryColor: CONSTRUCTOR_COLORS.SAUBER,
+    primaryForeground: "#ffffff",
+  },
+  {
+    id: "haas",
+    themeName: "Haas Grey",
+    name: "Haas",
+    primaryColor: CONSTRUCTOR_COLORS.HAAS,
+    primaryForeground: "#000000",
+  },
+  {
+    id: "cadillac",
+    themeName: "Cadillac Gold",
+    name: "Cadillac",
+    primaryColor: CONSTRUCTOR_COLORS.CADILLAC,
+    primaryForeground: "#000000",
+  },
 ];
 
 type ThemeContextType = {
@@ -41,7 +98,7 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [currentTeam, setCurrentTeam] = useState<Team>(TEAMS[0]!);
+  const [currentTeam, setCurrentTeam] = useState<Team>(TEAMS[1]!);
 
   useEffect(() => {
     // Load from local storage

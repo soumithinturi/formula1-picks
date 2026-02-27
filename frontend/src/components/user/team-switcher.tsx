@@ -32,7 +32,7 @@ export function TeamSwitcher() {
             className="flex items-center justify-between gap-2 cursor-pointer">
             <div className="flex items-center gap-2">
               <div className="h-4 w-4 rounded-full border border-border" style={{ background: team.primaryColor }} />
-              <span className={cn(team.id === currentTeam.id && "font-bold")}>{team.name}</span>
+              <span className={cn(team.id === currentTeam.id && "font-bold")}>{team.themeName}</span>
             </div>
             {team.id === currentTeam.id && <Check className="h-4 w-4 ml-auto" />}
           </DropdownMenuItem>

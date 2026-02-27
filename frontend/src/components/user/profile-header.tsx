@@ -6,10 +6,11 @@ import { F1HelmetAvatar } from "./f1-helmet-avatar";
 interface ProfileHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   name: string;
   team?: string;
+  teamId?: string;
   avatarData?: string | null;
 }
 
-export function ProfileHeader({ name, team, avatarData, className, ...props }: ProfileHeaderProps) {
+export function ProfileHeader({ name, team, teamId, avatarData, className, ...props }: ProfileHeaderProps) {
   let helmetColors = null;
   if (avatarData) {
     try {
@@ -28,9 +29,9 @@ export function ProfileHeader({ name, team, avatarData, className, ...props }: P
           <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
       )}
-      <div className="flex flex-col">
+      <div className="flex flex-col justify-center">
         <span className="text-sm font-semibold leading-none">{name}</span>
-        {team && <span className="text-xs text-muted-foreground">{team}</span>}
+        {team && <span className="text-xs text-muted-foreground mt-0.5">{team}</span>}
       </div>
     </div>
   );

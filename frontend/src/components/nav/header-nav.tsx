@@ -12,6 +12,7 @@ interface HeaderNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 import { TeamSwitcher } from "@/components/user/team-switcher";
 import { auth, type UserProfile } from "@/lib/auth";
+import { TEAMS } from "@/context/theme-context";
 
 export function HeaderNav({ className, ...props }: HeaderNavProps) {
   const [user, setUser] = React.useState<UserProfile | null>(auth.getUser());
@@ -30,9 +31,16 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
   const avatarChar = displayName.charAt(0).toUpperCase();
 
   let helmetColors = null;
+  let userTeam = TEAMS[1]!;
+
   if (user?.avatar_url) {
     try {
-      helmetColors = JSON.parse(user.avatar_url);
+      const parsed = JSON.parse(user.avatar_url);
+      helmetColors = parsed;
+      if (parsed.teamId) {
+        const found = TEAMS.find((t) => t.id === parsed.teamId);
+        if (found) userTeam = found;
+      }
     } catch (e) {}
   }
 
@@ -55,7 +63,8 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
         <Link to="/profile" className="hidden sm:block">
           <ProfileHeader
             name={displayName}
-            team="Alpine"
+            team={userTeam.name}
+            teamId={userTeam.id}
             className="hover:opacity-80 transition-opacity cursor-pointer"
             avatarData={user?.avatar_url}
           />
