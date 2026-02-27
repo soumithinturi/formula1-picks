@@ -59,7 +59,10 @@ export const submitResults = withAdmin(async (req) => {
   // Run updates in parallel for performance
   await Promise.all(
     picks.map((pick) => {
-      const config = leagueConfigMap.get(pick.league_id);
+      let config = leagueConfigMap.get(pick.league_id);
+      if (typeof config === "string") {
+        config = JSON.parse(config);
+      }
       const userPick = {
         sprintQualifyingP1: pick.sprint_qualifying_p1,
         sprintP1: pick.sprint_p1,

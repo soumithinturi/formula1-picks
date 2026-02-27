@@ -33,7 +33,7 @@ export const getLeaderboard = withAuth(async (req) => {
       u.id AS "userId",
       u.display_name AS "displayName",
       u.contact,
-      COALESCE(SUM(p.total_points), 0) AS "totalPoints"
+      COALESCE(SUM(p.total_points), 0)::int AS "totalPoints"
     FROM league_members lm
     INNER JOIN users u ON u.id = lm.user_id
     LEFT JOIN picks p ON p.user_id = lm.user_id AND p.league_id = ${leagueId}
