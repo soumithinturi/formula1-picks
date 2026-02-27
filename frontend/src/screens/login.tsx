@@ -247,6 +247,8 @@ export function LoginScreen() {
                     required
                     autoFocus
                     maxLength={6}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     className="text-center text-lg tracking-widest"
                   />
                 </div>
