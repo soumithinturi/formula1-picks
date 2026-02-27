@@ -186,7 +186,7 @@ export const api = {
   },
 
   users: {
-    updateProfile: (payload: { display_name: string }) =>
+    updateProfile: (payload: { display_name?: string; full_name?: string | null; avatar_url?: string | null }) =>
       api.put<{ user: any }>("/users/me", payload),
   },
 

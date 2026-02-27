@@ -4,6 +4,24 @@ import { AuthRequestSchema, AuthVerifySchema } from "../types/index.ts";
 import { z } from "zod";
 import { db } from "../db/index.ts";
 
+// The same preset palette as the frontend profile picker.
+const AVATAR_COLORS = [
+  "#dc2626", "#ea580c", "#eab308", "#16a34a", "#2563eb",
+  "#4f46e5", "#9333ea", "#ec4899", "#1e293b", "#94a3b8"
+];
+
+/**
+ * Pick two distinct random colors from AVATAR_COLORS for the helmet and background.
+ */
+function randomAvatarUrl(): string {
+  const helmetIndex = Math.floor(Math.random() * AVATAR_COLORS.length);
+  let bgIndex: number;
+  do {
+    bgIndex = Math.floor(Math.random() * AVATAR_COLORS.length);
+  } while (bgIndex === helmetIndex);
+  return JSON.stringify({ helmetColor: AVATAR_COLORS[helmetIndex], bgColor: AVATAR_COLORS[bgIndex] });
+}
+
 function getCookieString(token: string) {
   // 1 week expiry. Use SameSite=None and Secure for cross-origin in production.
   const isProd = process.env.NODE_ENV === "production";
@@ -100,13 +118,15 @@ export async function verifyOtp(req: Request): Promise<Response> {
   const { user: supabaseUser, session } = sessionData;
 
   // Upsert user profile in our own users table.
-  // On first login this creates the row; on subsequent logins it's a no-op.
+  // On first login this creates the row with a random avatar; on subsequent logins it's a no-op.
+  const newAvatarUrl = randomAvatarUrl();
   await db`
-    INSERT INTO users (id, contact, role, created_at)
+    INSERT INTO users (id, contact, role, avatar_url, created_at)
     VALUES (
       ${supabaseUser.id},
       ${data.contact},
       'USER',
+      ${newAvatarUrl},
       NOW()
     )
     ON CONFLICT (id) DO NOTHING
@@ -114,7 +134,7 @@ export async function verifyOtp(req: Request): Promise<Response> {
 
   // Fetch the full user profile to return
   const [userProfile] = await db`
-    SELECT id, contact, display_name, role FROM users WHERE id = ${supabaseUser.id}
+    SELECT id, contact, display_name, full_name, avatar_url, role FROM users WHERE id = ${supabaseUser.id}
   `;
 
   return Response.json({
@@ -149,15 +169,16 @@ export async function syncAuth(req: Request): Promise<Response> {
 
   const contact = user.email || user.phone || "";
 
-  // Upsert user profile
+  // Upsert user profile with a random avatar on first creation.
+  const newAvatarUrl = randomAvatarUrl();
   await db`
-    INSERT INTO users (id, contact, role, created_at)
-    VALUES (${user.id}, ${contact}, 'USER', NOW())
+    INSERT INTO users (id, contact, role, avatar_url, created_at)
+    VALUES (${user.id}, ${contact}, 'USER', ${newAvatarUrl}, NOW())
     ON CONFLICT (id) DO NOTHING
   `;
 
   const [userProfile] = await db`
-    SELECT id, contact, display_name, role FROM users WHERE id = ${user.id}
+    SELECT id, contact, display_name, full_name, avatar_url, role FROM users WHERE id = ${user.id}
   `;
 
   return Response.json({

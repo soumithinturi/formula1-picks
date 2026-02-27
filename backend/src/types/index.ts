@@ -17,7 +17,9 @@ export type AuthRequest = z.infer<typeof AuthRequestSchema>;
 export type AuthVerify = z.infer<typeof AuthVerifySchema>;
 
 export const UpdateProfileSchema = z.object({
-  display_name: z.string().min(1).max(50),
+  display_name: z.string().min(1).max(50).optional(),
+  full_name: z.string().max(100).nullable().optional(),
+  avatar_url: z.string().nullable().optional(),
 });
 export type UpdateProfile = z.infer<typeof UpdateProfileSchema>;
 
@@ -113,6 +115,8 @@ export interface UserRow {
   id: string; // Supabase auth UUID
   contact: string;
   display_name: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
   role: "USER" | "ADMIN";
   created_at: string;
 }

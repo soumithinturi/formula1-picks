@@ -5,16 +5,36 @@ import { ProfileHeader } from "@/components/user/profile-header";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Link } from "react-router";
+import { F1HelmetAvatar } from "@/components/user/f1-helmet-avatar";
 
 interface HeaderNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 import { TeamSwitcher } from "@/components/user/team-switcher";
-import { auth } from "@/lib/auth";
+import { auth, type UserProfile } from "@/lib/auth";
 
 export function HeaderNav({ className, ...props }: HeaderNavProps) {
-  const user = auth.getUser();
+  const [user, setUser] = React.useState<UserProfile | null>(auth.getUser());
+
+  React.useEffect(() => {
+    const handleUserUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<UserProfile>;
+      setUser(customEvent.detail);
+    };
+
+    window.addEventListener("f1_user_updated", handleUserUpdate);
+    return () => window.removeEventListener("f1_user_updated", handleUserUpdate);
+  }, []);
+
   const displayName = user?.display_name || user?.contact || "User";
   const avatarChar = displayName.charAt(0).toUpperCase();
+
+  let helmetColors = null;
+  if (user?.avatar_url) {
+    try {
+      helmetColors = JSON.parse(user.avatar_url);
+    } catch (e) {}
+  }
 
   return (
     <header
@@ -24,27 +44,35 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       )}
       {...props}>
       <div className="flex-1 max-w-sm mr-4">
-        <Searchbar placeholder="Search..." className="w-full text-xs md:text-sm pl-8 md:pl-9 h-9" />
+        {/* <Searchbar placeholder="Search..." className="w-full text-xs md:text-sm pl-8 md:pl-9 h-9" /> */}
       </div>
 
       <div className="flex items-center gap-2 md:gap-4 shrink-0">
         <TeamSwitcher />
-        {/* <Button
-          variant="ghost"
-          size="icon"
-          className="relative text-muted-foreground hover:text-foreground h-8 w-8 md:h-9 md:w-9">
-          <Bell className="h-4 w-4 md:h-5 md:w-5" />
-          <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full border border-background" />
-        </Button> */}
         <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
 
         {/* Desktop Profile Header */}
-        <ProfileHeader name={displayName} team="Alpine" className="hidden sm:flex" />
+        <Link to="/profile" className="hidden sm:block">
+          <ProfileHeader
+            name={displayName}
+            team="Alpine"
+            className="hover:opacity-80 transition-opacity cursor-pointer"
+            avatarData={user?.avatar_url}
+          />
+        </Link>
 
         {/* Mobile Profile Badge (Avatar Only) */}
-        <Avatar className="h-8 w-8 sm:hidden">
-          <AvatarFallback>{avatarChar}</AvatarFallback>
-        </Avatar>
+        <Link to="/profile" className="sm:hidden block">
+          {helmetColors ? (
+            <div className="h-8 w-8 aspect-square rounded-full shrink-0">
+              <F1HelmetAvatar helmetColor={helmetColors.helmetColor} bgColor={helmetColors.bgColor} />
+            </div>
+          ) : (
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>{avatarChar}</AvatarFallback>
+            </Avatar>
+          )}
+        </Link>
       </div>
     </header>
   );

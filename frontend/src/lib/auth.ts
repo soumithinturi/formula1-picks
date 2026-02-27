@@ -6,6 +6,8 @@ export interface UserProfile {
   contact: string;
   role: "USER" | "ADMIN";
   display_name?: string;
+  full_name?: string;
+  avatar_url?: string;
   created_at?: string;
 }
 
@@ -36,6 +38,7 @@ export const auth = {
   setUser(user: UserProfile) {
     if (typeof window !== "undefined") {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+      window.dispatchEvent(new CustomEvent("f1_user_updated", { detail: user }));
     }
   },
 
