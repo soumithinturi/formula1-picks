@@ -67,39 +67,6 @@ export function SettingsScreen() {
           </Card>
         </section>
 
-        {/* Notifications */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Bell className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Notifications</h2>
-          </div>
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Lock In Picks Reminders</Label>
-                  <p className="text-sm text-muted-foreground">Receive an alert 1 hour before Qualifying starts.</p>
-                </div>
-                {/* Simple Tailwind Toggle */}
-                <label className="relative inline-flex items-center cursor-pointer shrinks-0 ml-4">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                </label>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Session Start Alerts</Label>
-                  <p className="text-sm text-muted-foreground">Get notified when a race or sprint begins.</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer shrinks-0 ml-4">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                </label>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
         {/* Beta Support */}
         <section className="space-y-3">
           <div className="flex items-center gap-2 mb-2">
@@ -110,7 +77,12 @@ export function SettingsScreen() {
             <CardContent className="p-4 space-y-3">
               <FeedbackModal />
               <div className="text-center pt-2">
-                <p className="text-xs text-muted-foreground font-mono">App Version: v1.0.0 (Beta)</p>
+                <p className="text-xs text-muted-foreground font-mono">
+                  App Version: v0.0.1
+                  <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ml-1 mt-1">
+                    BETA
+                  </span>
+                </p>
               </div>
             </CardContent>
           </Card>
