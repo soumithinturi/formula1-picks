@@ -19,6 +19,24 @@ export function LoginScreen() {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({ email: false, phone: false });
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    const lastRequest = localStorage.getItem("lastOtpRequest");
+    if (lastRequest) {
+      const elapsed = Math.floor((Date.now() - parseInt(lastRequest, 10)) / 1000);
+      if (elapsed < 60) {
+        setCooldown(60 - elapsed);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const isValidPhone = (phone: string) => {
@@ -113,12 +131,14 @@ export function LoginScreen() {
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contact) return;
+    if (!contact || cooldown > 0) return;
 
     setLoading(true);
     try {
       await api.auth.requestOtp({ type: authType, contact: getCleanContact() });
       setStep("verify");
+      setCooldown(60);
+      localStorage.setItem("lastOtpRequest", Date.now().toString());
       toast.success("Code sent!", { description: `Check your ${authType} for the code.` });
     } catch (error) {
       toast.error("Failed to send code", { description: String(error) });
@@ -254,10 +274,10 @@ export function LoginScreen() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={loading || (contact.length > 0 && !isContactValid)}>
+                    disabled={loading || (contact.length > 0 && !isContactValid) || cooldown > 0}>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Send Code
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    {cooldown > 0 ? `Try again in ${cooldown}s` : "Send Code"}
+                    {cooldown === 0 && <ArrowRight className="ml-2 h-4 w-4" />}
                   </Button>
                 </div>
               </form>
