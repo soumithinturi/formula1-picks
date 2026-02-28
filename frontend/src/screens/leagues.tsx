@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,8 +41,19 @@ export function LeaguesScreen() {
   const [isJoinOpen, setJoinOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const selectedLeagueRef = useRef<HTMLButtonElement>(null);
 
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (selectedLeagueRef.current) {
+      selectedLeagueRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }, [activeLeagueId]);
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
@@ -231,6 +242,7 @@ export function LeaguesScreen() {
           {leagues.map((league) => (
             <button
               key={league.id}
+              ref={activeLeagueId === league.id ? selectedLeagueRef : null}
               onClick={() => setActiveLeagueId(league.id)}
               className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors shrink-0 ${
                 activeLeague.id === league.id

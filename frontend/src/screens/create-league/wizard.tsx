@@ -117,7 +117,7 @@ export function CreateLeagueWizard() {
               return (
                 <div
                   key={s.id}
-                  className={`flex-1 flex flex-col gap-3 group ${canNavigate ? "cursor-pointer" : ""}`}
+                  className={`flex-1 flex flex-col justify-between gap-3 group ${canNavigate ? "cursor-pointer" : ""}`}
                   onClick={() => canNavigate && setStep(s.id)}>
                   <span
                     className={`text-xs font-bold uppercase tracking-widest transition-colors ${
