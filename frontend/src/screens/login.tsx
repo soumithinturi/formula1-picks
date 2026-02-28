@@ -18,6 +18,7 @@ export function LoginScreen() {
   const [code, setCode] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({ email: false, phone: false });
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const isValidPhone = (phone: string) => {
@@ -26,7 +27,10 @@ export function LoginScreen() {
   };
 
   const isContactValid = authType === "email" ? isValidEmail(contact) : isValidPhone(contact);
-  const showContactError = contact.length > 0 && !isContactValid;
+  const showContactError =
+    touched[authType] &&
+    (authType === "email" ? contact.length > 0 : contact !== "+1 " && contact.length > 0) &&
+    !isContactValid;
 
   // Check for Magic Link URL hash on load
   useEffect(() => {
@@ -209,6 +213,7 @@ export function LoginScreen() {
               onValueChange={(v) => {
                 setAuthType(v as "email" | "phone");
                 setContact(v === "phone" ? "+1 " : "");
+                setTouched({ email: false, phone: false });
               }}
               className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -227,11 +232,13 @@ export function LoginScreen() {
                       {authType === "email" ? "Email address" : "Phone number"}
                     </Label>
                     <Input
-                      id="contact"
+                      key={authType}
+                      id={`contact-${authType}`}
                       type={authType === "email" ? "email" : "tel"}
                       placeholder={authType === "email" ? "me@example.com" : "+1 (555) 000-0000"}
                       value={contact}
                       onChange={handleContactChange}
+                      onBlur={() => setTouched((prev) => ({ ...prev, [authType]: true }))}
                       required
                       autoFocus
                       className={showContactError ? "border-red-500 focus-visible:ring-red-500" : ""}
