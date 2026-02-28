@@ -54,8 +54,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
    * Overrides the localStorage value with the authoritative server-side setting.
    */
   const hydrateFromRemote = (val: TimezonePreference | undefined) => {
-    if (!val) return;
-    setTimezoneInternal(val);
+    setTimezoneInternal(resolveTimezone(val));
   };
 
   return (

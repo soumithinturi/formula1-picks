@@ -140,7 +140,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
    * Uses a silent update (no DB write) so we don't create a pointless round-trip.
    */
   const hydrateFromRemote = (teamId: string | undefined) => {
-    if (!teamId) return;
     const team = resolveTeam(teamId);
     setCurrentTeam(team);
   };
