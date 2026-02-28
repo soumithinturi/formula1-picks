@@ -120,7 +120,7 @@ export function InviteScreen() {
 
           <Button size="lg" className="w-full text-lg h-14" disabled={joining} onClick={handleJoin}>
             {joining ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Users className="h-5 w-5 mr-2" />}
-            Join "{leagueInfo.name}"
+            Accept Invite
           </Button>
 
           <Button variant="ghost" onClick={handleGoHome} disabled={joining} className="w-full">
