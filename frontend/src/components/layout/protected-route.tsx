@@ -7,8 +7,14 @@ export function ProtectedRoute() {
 
   if (!isAuthenticated) {
     // Save the current URL to session storage so we can redirect back after login
-    // Don't save if it's already the login page
-    if (location.pathname !== "/login" && location.pathname !== "/") {
+    // Don't save if it's already the login page, or if it's an auth callback fragment
+    const isAuthCallback =
+      location.pathname.includes("access_token") ||
+      location.pathname.includes("type=magiclink") ||
+      location.pathname.includes("type=recovery") ||
+      location.pathname.includes("type=signup");
+
+    if (location.pathname !== "/login" && location.pathname !== "/" && !isAuthCallback) {
       sessionStorage.setItem("post_login_redirect", location.pathname + location.search + location.hash);
     }
     return <Navigate to="/login" replace />;

@@ -84,8 +84,14 @@ export function LoginScreen() {
               });
 
               const redirect = sessionStorage.getItem("post_login_redirect");
-              if (redirect) {
-                sessionStorage.removeItem("post_login_redirect");
+              sessionStorage.removeItem("post_login_redirect");
+              if (
+                redirect &&
+                !redirect.includes("access_token") &&
+                !redirect.includes("type=magiclink") &&
+                !redirect.includes("type=recovery") &&
+                !redirect.includes("type=signup")
+              ) {
                 navigate(redirect);
               } else {
                 navigate("/");
@@ -168,8 +174,14 @@ export function LoginScreen() {
           description: `Signed in as ${user.display_name || user.contact}`,
         });
         const redirect = sessionStorage.getItem("post_login_redirect");
-        if (redirect) {
-          sessionStorage.removeItem("post_login_redirect");
+        sessionStorage.removeItem("post_login_redirect");
+        if (
+          redirect &&
+          !redirect.includes("access_token") &&
+          !redirect.includes("type=magiclink") &&
+          !redirect.includes("type=recovery") &&
+          !redirect.includes("type=signup")
+        ) {
           navigate(redirect);
         } else {
           navigate("/");
@@ -196,8 +208,14 @@ export function LoginScreen() {
         description: `Welcome, ${user.display_name}!`,
       });
       const redirect = sessionStorage.getItem("post_login_redirect");
-      if (redirect) {
-        sessionStorage.removeItem("post_login_redirect");
+      sessionStorage.removeItem("post_login_redirect");
+      if (
+        redirect &&
+        !redirect.includes("access_token") &&
+        !redirect.includes("type=magiclink") &&
+        !redirect.includes("type=recovery") &&
+        !redirect.includes("type=signup")
+      ) {
         navigate(redirect);
       } else {
         navigate("/");
