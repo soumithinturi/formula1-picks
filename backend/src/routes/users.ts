@@ -109,9 +109,9 @@ export async function deleteProfile(req: AuthedRequest): Promise<Response> {
   const userId = req.user.id;
 
   try {
-    // 1. Delete user from the database (cascade should handle related records if set)
+    // 1. Delete user from the public.users database (cascade should handle related records if set)
     const [deletedUser] = await db`
-      DELETE FROM users
+      DELETE FROM public.users
       WHERE id = ${userId}
       RETURNING id
     `;
@@ -120,20 +120,24 @@ export async function deleteProfile(req: AuthedRequest): Promise<Response> {
       return Response.json({ error: "User not found or already deleted" }, { status: 404 });
     }
 
-    // 2. Delete user from Supabase Auth completely using the Admin API
+    // 2. Delete user from Supabase Auth explicitly using the Admin API
     const { error: authError } = await supabase.auth.admin.deleteUser(userId);
 
     if (authError) {
       console.error("Failed to delete user from Supabase Auth:", authError);
-      // Even if auth deletion fails, we've deleted their DB record.
-      // But it's best practice to try and keep them in sync, or at least log the drift.
-      return Response.json({ error: "Failed to fully delete account from Auth provider" }, { status: 500 });
+      return Response.json({
+        error: "Failed to fully delete account from Auth provider. Check SUPABASE_SECRET_KEY.",
+        details: authError.message
+      }, { status: 500 });
     }
 
     return Response.json({ success: true, message: "Account deleted successfully." });
   } catch (err: any) {
     console.error("Account deletion error:", err);
-    return Response.json({ error: "An unexpected error occurred deleting the account." }, { status: 500 });
+    return Response.json({
+      error: "An unexpected error occurred deleting the account.",
+      details: err?.message || String(err)
+    }, { status: 500 });
   }
 }
 
