@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,27 @@ export function FeedbackModal() {
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<"bug" | "feature_request" | "general">("bug");
   const [message, setMessage] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    const lastFeedback = localStorage.getItem("lastFeedback");
+    if (lastFeedback) {
+      const elapsed = Math.floor((Date.now() - parseInt(lastFeedback, 10)) / 1000);
+      if (elapsed < 60) {
+        setCooldown(60 - elapsed);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const handleSubmit = async () => {
+    if (cooldown > 0) return;
     if (!message.trim()) {
       toast.error("Please enter a message");
       return;
@@ -39,6 +58,8 @@ export function FeedbackModal() {
       toast.success("Feedback submitted! Thank you.");
       setOpen(false);
       setMessage("");
+      setCooldown(60);
+      localStorage.setItem("lastFeedback", Date.now().toString());
     } catch (error) {
       toast.error("Failed to submit feedback. Please try again.");
       console.error(error);
@@ -91,9 +112,9 @@ export function FeedbackModal() {
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !message.trim()}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Submit
+          <Button onClick={handleSubmit} disabled={loading || !message.trim() || cooldown > 0}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {cooldown > 0 ? `Wait ${cooldown}s` : "Submit"}
           </Button>
         </DialogFooter>
       </DialogContent>

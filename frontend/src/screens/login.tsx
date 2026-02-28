@@ -301,7 +301,7 @@ export function LoginScreen() {
                     className="text-center text-lg tracking-widest"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || code.trim().length < 6}>
                   {loading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (

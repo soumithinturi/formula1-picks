@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Step1 } from "./step-1";
 import { Step2 } from "./step-2";
@@ -14,6 +14,26 @@ export function CreateLeagueWizard() {
   const [step, setStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);
   const [createdLeague, setCreatedLeague] = useState<League | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Initialize cooldown from localStorage
+  useState(() => {
+    const lastCreate = localStorage.getItem("lastLeagueCreate");
+    if (lastCreate) {
+      const elapsed = Math.floor((Date.now() - parseInt(lastCreate, 10)) / 1000);
+      if (elapsed < 30) {
+        setCooldown(30 - elapsed);
+      }
+    }
+  });
+
+  // Handle cooldown tick
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -35,6 +55,10 @@ export function CreateLeagueWizard() {
     setFormData(newData);
 
     if (step === 2) {
+      if (cooldown > 0) {
+        toast.error(`Please wait ${cooldown}s before creating another league.`);
+        return;
+      }
       // Create League
       setIsCreating(true);
       try {
@@ -44,6 +68,8 @@ export function CreateLeagueWizard() {
         });
         setCreatedLeague(league);
         setStep(3);
+        setCooldown(30);
+        localStorage.setItem("lastLeagueCreate", Date.now().toString());
         toast.success("League created successfully!");
       } catch (error: any) {
         console.error("Failed to create league:", error);

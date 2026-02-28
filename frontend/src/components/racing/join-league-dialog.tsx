@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,14 @@ export function JoinLeagueDialog({
 
   const [inviteCode, setInviteCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +50,11 @@ export function JoinLeagueDialog({
       return;
     }
 
+    if (cooldown > 0) {
+      toast.error(`Please wait ${cooldown}s before trying again.`);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -52,6 +65,7 @@ export function JoinLeagueDialog({
     } catch (error) {
       console.error("Failed to join league:", error);
       toast.error("Failed to join league. Check the code and try again.");
+      setCooldown(5); // Add cooldown on failure to prevent brute forcing
     } finally {
       setIsLoading(false);
     }
@@ -98,8 +112,14 @@ export function JoinLeagueDialog({
             <Button type="button" variant="outline" onClick={handleClose} className="flex-1" disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={isLoading}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join League"}
+            <Button type="submit" className="flex-1" disabled={isLoading || cooldown > 0}>
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : cooldown > 0 ? (
+                `Wait ${cooldown}s`
+              ) : (
+                "Join League"
+              )}
             </Button>
           </div>
         </form>
