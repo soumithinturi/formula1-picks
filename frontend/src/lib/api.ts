@@ -215,6 +215,8 @@ export const api = {
 
     updateProfile: (payload: { display_name?: string; full_name?: string | null; avatar_url?: string | null; preferences?: UserPreferences }) =>
       api.put<{ user: any }>("/users/me", payload),
+
+    delete: () => api.delete<{ success: boolean }>("/users/me"),
   },
 
   races: {

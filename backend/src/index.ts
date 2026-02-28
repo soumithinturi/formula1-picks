@@ -5,7 +5,7 @@ import { getPickForRace, submitPick } from "./routes/picks.ts";
 import { createLeague, listLeagues, joinLeague, previewLeague, updateLeague } from "./routes/leagues.ts";
 import { getLeaderboard } from "./routes/leaderboard.ts";
 import { submitResults } from "./routes/admin.ts";
-import { updateProfile, getProfile } from "./routes/users.ts";
+import { updateProfile, getProfile, deleteProfile } from "./routes/users.ts";
 import { submitFeedback } from "./routes/feedback.ts";
 import { listNotifications, markAllRead } from "./routes/notifications.ts";
 import { seedDatabase } from "./services/seed.ts";
@@ -140,6 +140,7 @@ const server = Bun.serve({
     "/api/v1/users/me": {
       GET: withCors(withAuth(getProfile)),
       PUT: withCors(withAuth(updateProfile)),
+      DELETE: withCors(withAuth(deleteProfile)),
       OPTIONS: handleOptions,
     },
 

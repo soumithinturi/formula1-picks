@@ -387,20 +387,22 @@ export function HomeScreen() {
             <CardHeader className="pb-3 border-b border-border/10 mb-2">
               <div className="flex justify-between items-center mb-2">
                 <CardTitle className="text-lg font-semibold shrink-0">My Prediction</CardTitle>
-                <div className="w-[200px] flex justify-end">
-                  <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
-                    <SelectTrigger className="h-8 text-xs w-full">
-                      <SelectValue placeholder="Select League" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {leagues.map((l) => (
-                        <SelectItem key={l.id} value={l.id}>
-                          {l.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {leagues.length > 0 && (
+                  <div className="w-[200px] flex justify-end">
+                    <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
+                      <SelectTrigger className="h-8 text-xs w-full">
+                        <SelectValue placeholder="Select League" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leagues.map((l) => (
+                          <SelectItem key={l.id} value={l.id}>
+                            {l.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {leagues.length > 0 && predictionPages.length > 1 && (

@@ -3,17 +3,48 @@ import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bell, Globe, Bug, Trash2, LogOut } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Bell, Globe, Bug, Trash2, LogOut, Loader2 } from "lucide-react";
 import { useTheme, TEAMS } from "@/context/theme-context";
 import { auth } from "@/lib/auth";
 import { usePreferences } from "@/context/preferences-context";
 import { FeedbackModal } from "@/components/user/feedback-modal";
+import { useState } from "react";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 export function SettingsScreen() {
   const navigate = useNavigate();
   const { currentTeam, setTeam } = useTheme();
   const { timezoneDisplay, setTimezoneDisplay } = usePreferences();
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationText.toLowerCase() !== "delete my account") return;
+
+    setIsDeleting(true);
+    try {
+      await api.users.delete();
+      auth.logout();
+      toast.success("Account deleted successfully.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete account");
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <PageContainer title="Settings" subtitle="Manage your app preferences and account">
@@ -96,11 +127,60 @@ export function SettingsScreen() {
               Log Out
             </Button>
             <div className="text-center pt-2">
-              <Button
-                variant="ghost"
-                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs h-auto py-1 px-2">
-                Delete Account
-              </Button>
+              <Dialog
+                open={isDeleteDialogOpen}
+                onOpenChange={(open) => {
+                  setIsDeleteDialogOpen(open);
+                  if (!open) setDeleteConfirmationText("");
+                }}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs h-auto py-1 px-2">
+                    Delete Account
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="text-destructive">Delete Account</DialogTitle>
+                    <DialogDescription>
+                      This action cannot be undone. This will permanently delete your account, your picks, and remove
+                      you from all leagues. If you created any leagues, they will remain but you will no longer be the
+                      owner.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmation">
+                        Please type <span className="font-bold">delete my account</span> to confirm.
+                      </Label>
+                      <Input
+                        id="confirmation"
+                        value={deleteConfirmationText}
+                        onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                        placeholder="delete my account"
+                        className="bg-background/50"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteAccount}
+                      disabled={deleteConfirmationText.toLowerCase() !== "delete my account" || isDeleting}>
+                      {isDeleting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-2 h-4 w-4" />
+                      )}
+                      Confirm Delete
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </section>
