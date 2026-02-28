@@ -3,9 +3,11 @@ import { auth } from "@/lib/auth";
 
 export function ProtectedRoute() {
   const location = useLocation();
-  const isAuthenticated = auth.isAuthenticated();
+  const user = auth.getUser();
+  const isAuthenticated = !!user;
+  const hasProfile = !!user?.display_name;
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !hasProfile) {
     // Save the current URL to session storage so we can redirect back after login
     // Don't save if it's already the login page, or if it's an auth callback fragment
     const isAuthCallback =

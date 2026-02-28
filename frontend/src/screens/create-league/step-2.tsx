@@ -2,8 +2,6 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Info, Minus, Plus, ChevronRight, AlertTriangle, Lightbulb, XCircle } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 interface Rule {
   enabled: boolean;
   points: number;
@@ -61,189 +59,183 @@ export function Step2({ initialData, onNext, onBack }: Step2Props) {
   const maxPoints = Object.values(rules).reduce((acc, r) => acc + (r.enabled ? r.points : 0), 0);
 
   return (
-    <div className="animate-in fade-in slide-in-from-right-4 duration-300 max-w-6xl mx-auto w-full h-[calc(100vh-8rem)] overflow-hidden">
-      <div className="flex flex-col lg:flex-row gap-8 h-full">
-        {/* Left Column: Rules Configuration */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="space-y-2 shrink-0">
-            <h1 className="text-3xl font-bold tracking-tight">League Scoring Rules</h1>
-            <div className="h-1 w-20 bg-primary/20 rounded-full overflow-hidden">
-              <div className="h-full bg-primary w-2/3" />
+    <>
+      <div className="animate-in fade-in slide-in-from-right-4 duration-300 max-w-6xl mx-auto w-full">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Left Column: Rules Configuration */}
+          <div className="flex-1 flex flex-col">
+            <div className="space-y-2 shrink-0">
+              <h1 className="text-3xl font-bold tracking-tight">League Scoring Rules</h1>
+              <div className="h-1 w-20 bg-primary/20 rounded-full overflow-hidden">
+                <div className="h-full bg-primary w-2/3" />
+              </div>
             </div>
-          </div>
 
-          <p className="text-muted-foreground shrink-0 mt-4 mb-4 pr-4">
-            Customize how points are awarded in your private league. Enable or disable specific rules and set their
-            point values.
-          </p>
-
-          <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-6 shrink-0 flex gap-3 items-start mr-4">
-            <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-            <p className="text-sm text-foreground/80 leading-relaxed">
-              <span className="font-bold text-foreground">Sprint Races:</span> The points configured below for P1, P2,
-              P3, Qualifying Winner (Sprint Shootout P1), and Fastest Lap will also apply to Sprint races.
+            <p className="text-muted-foreground shrink-0 mt-4 mb-4 pr-4">
+              Customize how points are awarded in your private league. Enable or disable specific rules and set their
+              point values.
             </p>
-          </div>
 
-          <Tabs defaultValue="standard" className="w-full flex-1 flex flex-col min-h-0">
-            <TabsList className="grid grid-cols-2 mb-4 shrink-0 mr-4 w-[calc(100%-1rem)]">
-              <TabsTrigger value="standard">Standard Rules</TabsTrigger>
-              <TabsTrigger value="bonus">Bonus Rules</TabsTrigger>
-            </TabsList>
-
-            <TabsContent
-              value="standard"
-              className="space-y-4 data-[state=inactive]:hidden flex-1 overflow-y-auto pr-4 min-h-0">
-              <RuleCard
-                title="Race Winner (P1)"
-                description="Points for correctly predicting the race winner."
-                enabled={rules.p1.enabled}
-                points={rules.p1.points}
-                onToggle={() => toggleRule("p1")}
-                onPointsChange={(d) => updatePoints("p1", d)}
-              />
-              <RuleCard
-                title="Second Place (P2)"
-                description="Points for correctly predicting the second place finisher."
-                enabled={rules.p2.enabled}
-                points={rules.p2.points}
-                onToggle={() => toggleRule("p2")}
-                onPointsChange={(d) => updatePoints("p2", d)}
-              />
-              <RuleCard
-                title="Third Place (P3)"
-                description="Points for correctly predicting the third place finisher."
-                enabled={rules.p3.enabled}
-                points={rules.p3.points}
-                onToggle={() => toggleRule("p3")}
-                onPointsChange={(d) => updatePoints("p3", d)}
-              />
-              <RuleCard
-                title="Qualifying Winner"
-                description="Points for predicting the Pole Sitter from qualifying."
-                enabled={rules.quali.enabled}
-                points={rules.quali.points}
-                onToggle={() => toggleRule("quali")}
-                onPointsChange={(d) => updatePoints("quali", d)}
-              />
-            </TabsContent>
-
-            <TabsContent
-              value="bonus"
-              className="space-y-4 data-[state=inactive]:hidden flex-1 overflow-y-auto pr-4 min-h-0">
-              <RuleCard
-                title="Correct Podium"
-                description="Points awarded for any driver who finishes in the top 3"
-                enabled={rules.podium.enabled}
-                points={rules.podium.points}
-                onToggle={() => toggleRule("podium")}
-                onPointsChange={(d) => updatePoints("podium", d)}
-              />
-              <RuleCard
-                title="Perfect Order Bonus"
-                description="Extra points if P1, P2, and P3 are predicted in exact order"
-                enabled={rules.perfectOrder.enabled}
-                points={rules.perfectOrder.points}
-                onToggle={() => toggleRule("perfectOrder")}
-                onPointsChange={(d) => updatePoints("perfectOrder", d)}
-              />
-              <RuleCard
-                title="Fastest Lap"
-                description="Guess which driver sets the fastest lap of the race"
-                enabled={rules.fastestLap.enabled}
-                points={rules.fastestLap.points}
-                onToggle={() => toggleRule("fastestLap")}
-                onPointsChange={(d) => updatePoints("fastestLap", d)}
-              />
-              <RuleCard
-                title="First DNF"
-                description="Predict the first driver to retire from the race"
-                enabled={rules.firstDNF.enabled}
-                points={rules.firstDNF.points}
-                onToggle={() => toggleRule("firstDNF")}
-                onPointsChange={(d) => updatePoints("firstDNF", d)}
-              />
-            </TabsContent>
-          </Tabs>
-
-          {/* Navigation for Mobile (hidden on LG) */}
-          <div className="flex lg:hidden items-center justify-between pt-4 pb-2 border-t border-white/5 shrink-0 mt-2">
-            <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Max Points</span>
-              <span className="text-xl font-bold leading-none">
-                {maxPoints} <span className="text-sm font-normal text-muted-foreground">PTS</span>
-              </span>
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-6 shrink-0 flex gap-3 items-start mr-4">
+              <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <p className="text-sm text-foreground/80 leading-relaxed">
+                <span className="font-bold text-foreground">Sprint Races:</span> The points configured below for P1, P2,
+                P3, Qualifying Winner (Sprint Shootout P1), and Fastest Lap will also apply to Sprint races.
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={onBack}>
-                Back
-              </Button>
-              <Button onClick={() => onNext({ rules })}>
-                Next <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
 
-        {/* Right Column: Summary & Preview — single sticky block */}
-        <div className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col gap-4">
-          <Card className="border border-white/10 bg-card/30 backdrop-blur-sm">
-            <CardContent className="p-6 space-y-6">
-              <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-4">Summary Preview</h3>
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <h2 className="text-xl font-bold tracking-tight">Standard Rules</h2>
+                <RuleCard
+                  title="Race Winner (P1)"
+                  description="Points for correctly predicting the race winner."
+                  enabled={rules.p1.enabled}
+                  points={rules.p1.points}
+                  onToggle={() => toggleRule("p1")}
+                  onPointsChange={(d) => updatePoints("p1", d)}
+                />
+                <RuleCard
+                  title="Second Place (P2)"
+                  description="Points for correctly predicting the second place finisher."
+                  enabled={rules.p2.enabled}
+                  points={rules.p2.points}
+                  onToggle={() => toggleRule("p2")}
+                  onPointsChange={(d) => updatePoints("p2", d)}
+                />
+                <RuleCard
+                  title="Third Place (P3)"
+                  description="Points for correctly predicting the third place finisher."
+                  enabled={rules.p3.enabled}
+                  points={rules.p3.points}
+                  onToggle={() => toggleRule("p3")}
+                  onPointsChange={(d) => updatePoints("p3", d)}
+                />
+                <RuleCard
+                  title="Qualifying Winner"
+                  description="Points for predicting the Pole Sitter from qualifying."
+                  enabled={rules.quali.enabled}
+                  points={rules.quali.points}
+                  onToggle={() => toggleRule("quali")}
+                  onPointsChange={(d) => updatePoints("quali", d)}
+                />
+              </div>
 
               <div className="space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Rules Enabled:</span>
-                  <span className="font-bold">{activeRulesCount}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Base Difficulty:</span>
-                  <span className={`font-bold ${maxPoints > 40 ? "text-red-500" : "text-green-500"}`}>
-                    {maxPoints > 40 ? "Competitive" : "Casual"}
-                  </span>
-                </div>
+                <h2 className="text-xl font-bold tracking-tight">Bonus Rules</h2>
+                <RuleCard
+                  title="Correct Podium"
+                  description="Points awarded for any driver who finishes in the top 3"
+                  enabled={rules.podium.enabled}
+                  points={rules.podium.points}
+                  onToggle={() => toggleRule("podium")}
+                  onPointsChange={(d) => updatePoints("podium", d)}
+                />
+                <RuleCard
+                  title="Perfect Order Bonus"
+                  description="Extra points if P1, P2, and P3 are predicted in exact order"
+                  enabled={rules.perfectOrder.enabled}
+                  points={rules.perfectOrder.points}
+                  onToggle={() => toggleRule("perfectOrder")}
+                  onPointsChange={(d) => updatePoints("perfectOrder", d)}
+                />
+                <RuleCard
+                  title="Fastest Lap"
+                  description="Guess which driver sets the fastest lap of the race"
+                  enabled={rules.fastestLap.enabled}
+                  points={rules.fastestLap.points}
+                  onToggle={() => toggleRule("fastestLap")}
+                  onPointsChange={(d) => updatePoints("fastestLap", d)}
+                />
+                <RuleCard
+                  title="First DNF"
+                  description="Predict the first driver to retire from the race"
+                  enabled={rules.firstDNF.enabled}
+                  points={rules.firstDNF.points}
+                  onToggle={() => toggleRule("firstDNF")}
+                  onPointsChange={(d) => updatePoints("firstDNF", d)}
+                />
+              </div>
+            </div>
+          </div>
 
-                <div className="pt-4 border-t border-white/5">
-                  <p className="text-xs text-muted-foreground uppercase mb-1">Max Points Per Race</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold">{maxPoints}</span>
-                    <span className="text-sm font-medium text-muted-foreground">PTS</span>
+          {/* Right Column: Summary & Preview — single sticky block */}
+          <div className="hidden lg:flex lg:w-80 xl:w-96 shrink-0 flex-col gap-4 sticky top-24 h-fit">
+            <Card className="border border-white/10 bg-card/30 backdrop-blur-sm">
+              <CardContent className="p-6 space-y-6">
+                <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-4">Summary Preview</h3>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Rules Enabled:</span>
+                    <span className="font-bold">{activeRulesCount}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Base Difficulty:</span>
+                    <span className={`font-bold ${maxPoints > 40 ? "text-red-500" : "text-green-500"}`}>
+                      {maxPoints > 40 ? "Competitive" : "Casual"}
+                    </span>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/5">
+                    <p className="text-xs text-muted-foreground uppercase mb-1">Max Points Per Race</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold">{maxPoints}</span>
+                      <span className="text-sm font-medium text-muted-foreground">PTS</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-background/40 p-4 rounded-lg border border-white/5 space-y-2">
-                <div className="flex gap-2">
-                  <Lightbulb className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                <div className="bg-background/40 p-4 rounded-lg border border-white/5 space-y-2">
+                  <div className="flex gap-2">
+                    <Lightbulb className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      <span className="font-bold text-foreground">Tip:</span> Higher point values for "Perfect Order"
+                      encourage more strategic, risky predictions!
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Competition — merged into same card */}
+                <div className="pt-4 border-t border-white/5">
+                  <h3 className="font-bold text-sm mb-2">Live Competition</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    <span className="font-bold text-foreground">Tip:</span> Higher point values for "Perfect Order"
-                    encourage more strategic, risky predictions!
+                    Changes to scoring rules after the league starts will only apply to future races.
                   </p>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
 
-              {/* Live Competition — merged into same card */}
-              <div className="pt-4 border-t border-white/5">
-                <h3 className="font-bold text-sm mb-2">Live Competition</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Changes to scoring rules after the league starts will only apply to future races.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Navigation for Desktop */}
-          <div className="hidden lg:flex items-center justify-between pt-2">
-            <Button variant="outline" onClick={onBack}>
+      <div className="fixed bottom-16 md:bottom-0 left-0 md:left-64 right-0 z-40 bg-background border-t p-4 px-4 md:px-8">
+        <div className="max-w-6xl mx-auto grid grid-cols-3 items-center">
+          <div className="flex justify-start">
+            <Button
+              variant="ghost"
+              onClick={onBack}
+              className="px-0 sm:px-4 text-muted-foreground hover:text-foreground hover:bg-transparent">
               Back
             </Button>
+          </div>
+          <div className="flex flex-col items-center lg:hidden">
+            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none">
+              Max Points
+            </span>
+            <span className="text-xl font-bold leading-none mt-1">
+              {maxPoints} <span className="text-sm font-normal text-muted-foreground">PTS</span>
+            </span>
+          </div>
+          <div className="justify-end hidden lg:flex" />
+          <div className="flex justify-end items-center gap-2">
             <Button onClick={() => onNext({ rules })}>
-              Next: Finalize League <ChevronRight className="ml-2 h-4 w-4" />
+              Finalize <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

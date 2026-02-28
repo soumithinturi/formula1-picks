@@ -133,7 +133,7 @@ export function ProfileScreen() {
                 <SelectValue placeholder="Select a team" />
               </SelectTrigger>
               <SelectContent>
-                {TEAMS.map((team) => (
+                {TEAMS.filter((t) => t.id !== "default").map((team) => (
                   <SelectItem key={team.id} value={team.id}>
                     <div className="flex items-center gap-2">
                       <div

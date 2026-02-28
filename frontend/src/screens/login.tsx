@@ -22,6 +22,13 @@ export function LoginScreen() {
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
+    const user = auth.getUser();
+    if (user && !user.display_name) {
+      setStep("profile");
+    }
+  }, []);
+
+  useEffect(() => {
     const lastRequest = localStorage.getItem("lastOtpRequest");
     if (lastRequest) {
       const elapsed = Math.floor((Date.now() - parseInt(lastRequest, 10)) / 1000);
@@ -291,10 +298,7 @@ export function LoginScreen() {
                       </p>
                     )}
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={loading || (contact.length > 0 && !isContactValid) || cooldown > 0}>
+                  <Button type="submit" className="w-full" disabled={loading || !isContactValid || cooldown > 0}>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     {cooldown > 0 ? `Try again in ${cooldown}s` : "Send Code"}
                     {cooldown === 0 && <ArrowRight className="ml-2 h-4 w-4" />}

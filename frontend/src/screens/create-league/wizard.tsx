@@ -68,6 +68,7 @@ export function CreateLeagueWizard() {
         });
         setCreatedLeague(league);
         setStep(3);
+        window.scrollTo({ top: 0, behavior: "smooth" });
         setCooldown(30);
         localStorage.setItem("lastLeagueCreate", Date.now().toString());
         toast.success("League created successfully!");
@@ -79,11 +80,13 @@ export function CreateLeagueWizard() {
       }
     } else {
       setStep((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleBackStep = () => {
     setStep((prev) => prev - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const steps = [
@@ -93,7 +96,7 @@ export function CreateLeagueWizard() {
   ];
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="min-h-full flex flex-col relative">
       {/* Wizard Header — sticks to top of scroll container */}
       <div className="sticky top-0 z-10 bg-background border-b pt-6 pb-6">
         <div className="max-w-5xl mx-auto px-4 md:px-8">
@@ -138,7 +141,7 @@ export function CreateLeagueWizard() {
       </div>
 
       {/* Wizard Content */}
-      <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-8 pb-24 relative">
+      <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-8 pb-32 md:pb-40 lg:pb-48 relative">
         {isCreating && (
           <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center flex-col gap-4">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
