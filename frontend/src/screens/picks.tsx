@@ -100,7 +100,7 @@ export function PicksScreen() {
         if (firstLeague) {
           setSelectedLeagueId(firstLeague.id);
         } else {
-          toast.info("Join or create a league to make picks!");
+          toast.info("Join or create a league to make picks!", { id: "no-leagues-toast" });
           navigate("/leagues");
         }
       } catch (error) {
