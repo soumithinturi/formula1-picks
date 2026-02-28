@@ -40,6 +40,7 @@ export function LeaguesScreen() {
   const [activeLeagueId, setActiveLeagueId] = useState<string>("");
   const [isJoinOpen, setJoinOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const selectedLeagueRef = useRef<HTMLButtonElement>(null);
 
@@ -168,12 +169,21 @@ export function LeaguesScreen() {
     return `${window.location.origin}/#/invite/${code}`;
   };
 
-  const handleCopyInviteCode = () => {
+  const handleCopyCode = () => {
+    if (activeLeague?.invite_code) {
+      navigator.clipboard.writeText(activeLeague.invite_code);
+      setCopiedCode(true);
+      toast.success("Invite code copied!");
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
+
+  const handleCopyLink = () => {
     if (activeLeague?.invite_code) {
       navigator.clipboard.writeText(getInviteLink(activeLeague.invite_code));
-      setCopiedCode(true);
+      setCopiedLink(true);
       toast.success("Invite link copied!");
-      setTimeout(() => setCopiedCode(false), 2000);
+      setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -188,10 +198,10 @@ export function LeaguesScreen() {
           })
           .catch(() => {
             // If share fails, just copy
-            handleCopyInviteCode();
+            handleCopyLink();
           });
       } else {
-        handleCopyInviteCode();
+        handleCopyLink();
       }
     }
   };
@@ -345,10 +355,10 @@ export function LeaguesScreen() {
               </Button>
             </div>
             <button
-              onClick={handleCopyInviteCode}
+              onClick={handleCopyCode}
               className="w-full flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors group overflow-hidden">
-              <span className="text-sm font-mono font-medium tracking-tight text-primary truncate mr-3">
-                {getInviteLink(activeLeague.invite_code)}
+              <span className="text-sm font-medium tracking-tight truncate mr-3">
+                Code: <span className="font-mono text-primary text-base ml-1">{activeLeague.invite_code}</span>
               </span>
               {copiedCode ? (
                 <Check className="h-4 w-4 text-green-500 shrink-0" />
