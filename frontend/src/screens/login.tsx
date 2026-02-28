@@ -307,7 +307,7 @@ export function LoginScreen() {
                     autoFocus
                     minLength={2}
                     maxLength={32}
-                    pattern="^[a-zA-Z0-9_-]+$"
+                    pattern="^[-a-zA-Z0-9_]+$"
                     title="Only letters, numbers, underscores, and hyphens are allowed"
                   />
                   <p className="text-sm text-muted-foreground">

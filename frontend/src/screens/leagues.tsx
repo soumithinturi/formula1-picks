@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Leaderboard } from "@/components/racing/leaderboard";
 import { JoinLeagueDialog } from "../components/racing/join-league-dialog";
-import { Trophy, Users, Copy, Check, Share2, Plus, UserPlus, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trophy, Users, Copy, Check, Share2, Plus, UserPlus, Loader2, Pencil, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +16,12 @@ import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/page-container";
 import { api, type League } from "@/lib/api";
 import { TEAMS } from "@/context/theme-context";
+import { auth } from "@/lib/auth";
+
+const truncateName = (name: string, length: number = 16) => {
+  if (!name) return "";
+  return name.length > length ? `${name.substring(0, length)}...` : name;
+};
 
 // Extended interface for UI logic
 interface UILeague extends League {
@@ -36,6 +43,11 @@ export function LeaguesScreen() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [isSavingName, setIsSavingName] = useState(false);
+  const currentUser = auth.getUser();
 
   useEffect(() => {
     fetchLeagues();
@@ -120,6 +132,27 @@ export function LeaguesScreen() {
 
   const activeLeague = leagues.find((l) => l.id === activeLeagueId);
 
+  const handleSaveLeagueName = async () => {
+    if (!activeLeague || draftName.trim() === activeLeague.name || draftName.trim().length < 2) {
+      setIsEditingName(false);
+      return;
+    }
+
+    try {
+      setIsSavingName(true);
+      const updated = await api.leagues.update(activeLeague.id, { name: draftName.trim() });
+
+      setLeagues((prev) => prev.map((l) => (l.id === activeLeague.id ? { ...l, name: updated.name } : l)));
+
+      setIsEditingName(false);
+      toast.success("League name updated");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update league name");
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
   const getInviteLink = (code: string) => {
     return `${window.location.origin}/#/invite/${code}`;
   };
@@ -203,8 +236,10 @@ export function LeaguesScreen() {
                 activeLeague.id === league.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}>
-              {league.name}
+              }`}
+              title={league.name}>
+              <span className="md:hidden">{league.name}</span>
+              <span className="hidden md:inline">{truncateName(league.name, 16)}</span>
             </button>
           ))}
         </div>
@@ -215,7 +250,59 @@ export function LeaguesScreen() {
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <CardTitle className="text-2xl font-bold uppercase tracking-wide">{activeLeague.name}</CardTitle>
+                  {isEditingName ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={draftName}
+                        onChange={(e) => setDraftName(e.target.value)}
+                        maxLength={50}
+                        autoFocus
+                        className="text-xl md:text-2xl font-bold uppercase tracking-wide h-auto py-1 w-[160px] sm:w-[220px] md:w-[280px] text-ellipsis"
+                        disabled={isSavingName}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleSaveLeagueName}
+                        disabled={isSavingName || draftName.trim().length < 2}
+                        className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-500/10 shrink-0">
+                        {isSavingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setIsEditingName(false);
+                          setDraftName(activeLeague.name);
+                        }}
+                        disabled={isSavingName}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0">
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <span className="text-xs text-muted-foreground ml-1 hidden md:inline-block">
+                        {draftName.length}/50
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <CardTitle className="text-2xl font-bold uppercase tracking-wide" title={activeLeague.name}>
+                        <span className="md:hidden">{activeLeague.name}</span>
+                        <span className="hidden md:inline">{truncateName(activeLeague.name, 16)}</span>
+                      </CardTitle>
+                      {currentUser?.id === activeLeague.created_by && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setDraftName(activeLeague.name);
+                            setIsEditingName(true);
+                          }}
+                          className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
                   <Users className="h-4 w-4" />

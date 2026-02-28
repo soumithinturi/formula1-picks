@@ -184,6 +184,12 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  patch: <T>(endpoint: string, body: unknown) =>
+    request<T>(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: "DELETE" }),
 
   // Specific API methods (can be moved to services later if gets too big)
@@ -238,6 +244,9 @@ export const api = {
   leagues: {
     create: (payload: { name: string; scoringConfig?: any }) =>
       api.post<League>("/leagues", payload),
+
+    update: (id: string, payload: { name: string }) =>
+      api.patch<League>(`/leagues/${id}`, payload),
 
     list: () => api.get<League[]>("/leagues"),
 

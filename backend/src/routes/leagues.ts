@@ -2,6 +2,7 @@ import { db } from "../db/index.ts";
 import { withAuth, parseBody } from "../middleware/auth.ts";
 import {
   CreateLeagueSchema,
+  UpdateLeagueSchema,
   JoinLeagueSchema,
   DEFAULT_SCORING_CONFIG,
   type LeagueRow,
@@ -145,3 +146,53 @@ export const previewLeague = async (req: Request) => {
     return Response.json({ error: "Failed to load league info" }, { status: 500 });
   }
 };
+
+/**
+ * PATCH /api/v1/leagues/:id
+ * Updates an existing league's metadata (e.g., name).
+ * Requires the user to be the creator of the league.
+ */
+export const updateLeague = withAuth(async (req) => {
+  const url = new URL(req.url);
+  const id = url.pathname.split("/").pop();
+
+  if (!id) {
+    return Response.json({ error: "Missing league ID" }, { status: 400 });
+  }
+
+  const { data, error } = await parseBody(req, UpdateLeagueSchema);
+  if (error) return error;
+
+  try {
+    // Check if the user is the creator of the league
+    const [league] = await db`
+      SELECT created_by FROM leagues WHERE id = ${id} LIMIT 1
+    `;
+
+    if (!league) {
+      return Response.json({ error: "League not found" }, { status: 404 });
+    }
+
+    if (league.created_by !== req.user.id) {
+      return Response.json({ error: "Only the league creator can edit the league" }, { status: 403 });
+    }
+
+    // Update the league name
+    const [updatedLeague] = await db<LeagueRow[]>`
+      UPDATE leagues
+      SET name = ${data.name}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return Response.json({
+      ...updatedLeague,
+      scoring_config: typeof updatedLeague.scoring_config === "string"
+        ? JSON.parse(updatedLeague.scoring_config)
+        : updatedLeague.scoring_config
+    });
+  } catch (err: any) {
+    console.error("League update error:", err);
+    return Response.json({ error: "Failed to update league" }, { status: 500 });
+  }
+});

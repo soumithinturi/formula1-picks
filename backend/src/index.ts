@@ -2,7 +2,7 @@ import { requestOtp, verifyOtp, syncAuth } from "./routes/auth.ts";
 import { listRaces } from "./routes/races.ts";
 import { listDrivers } from "./routes/drivers.ts";
 import { getPickForRace, submitPick } from "./routes/picks.ts";
-import { createLeague, listLeagues, joinLeague, previewLeague } from "./routes/leagues.ts";
+import { createLeague, listLeagues, joinLeague, previewLeague, updateLeague } from "./routes/leagues.ts";
 import { getLeaderboard } from "./routes/leaderboard.ts";
 import { submitResults } from "./routes/admin.ts";
 import { updateProfile, getProfile } from "./routes/users.ts";
@@ -48,7 +48,7 @@ function getCorsHeaders(req: Request) {
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
     "Access-Control-Allow-Credentials": "true",
   };
@@ -119,6 +119,10 @@ const server = Bun.serve({
     },
     "/api/v1/leagues/join": {
       POST: withCors(joinLeague),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/leagues/:id": {
+      PATCH: withCors(updateLeague),
       OPTIONS: handleOptions,
     },
     "/api/v1/leagues/invite/:code": {

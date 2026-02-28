@@ -54,7 +54,10 @@ export function Step1({ initialData, onNext, onCancel }: Step1Props) {
                     maxLength={50}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Choose a unique name for your racing group.</p>
+                <div className="flex justify-between items-center mt-1">
+                  <p className="text-xs text-muted-foreground">Choose a unique name for your racing group.</p>
+                  <span className="text-xs text-muted-foreground">{name.length}/50</span>
+                </div>
               </div>
 
               <div className="space-y-3 pt-4">

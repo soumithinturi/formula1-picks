@@ -134,11 +134,16 @@ export const CreateLeagueSchema = z.object({
   scoringConfig: ScoringConfigSchema.optional(),
 });
 
+export const UpdateLeagueSchema = z.object({
+  name: z.string().min(2).max(50),
+});
+
 export const JoinLeagueSchema = z.object({
   inviteCode: z.string().min(1),
 });
 
 export type CreateLeague = z.infer<typeof CreateLeagueSchema>;
+export type UpdateLeague = z.infer<typeof UpdateLeagueSchema>;
 export type JoinLeague = z.infer<typeof JoinLeagueSchema>;
 
 // ─── DB Row Types ─────────────────────────────────────────────────────────────
