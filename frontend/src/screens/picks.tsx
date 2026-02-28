@@ -358,7 +358,7 @@ export function PicksScreen() {
   };
 
   return (
-    <div className="space-y-6 pb-20 relative">
+    <div className="space-y-6 pb-32 md:pb-8 relative">
       {/* Header */}
       <div className="flex flex-col items-center justify-center space-y-4 pt-4">
         <StatusPill variant={nextRace?.status === "OPEN" ? "success" : "neutral"} className="uppercase tracking-wider">
@@ -603,10 +603,10 @@ export function PicksScreen() {
         </Tabs>
       )}
 
-      <div className="fixed bottom-20 left-4 right-4 z-50 md:hidden flex justify-center">
+      <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
         <Button
           size="lg"
-          className="w-full shadow-lg text-lg font-bold bg-primary text-primary-foreground"
+          className="w-full text-lg font-bold bg-primary text-primary-foreground"
           onClick={handleSave}
           disabled={saving || !nextRace}>
           {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}

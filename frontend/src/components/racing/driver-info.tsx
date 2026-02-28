@@ -54,8 +54,8 @@ export function DriverInfo({
   }
 
   return (
-    <div className={cn("flex items-center gap-3 w-full", className)} {...props}>
-      <Avatar className={cn("h-8 w-8 shrink-0", isHelmet ? "overflow-visible" : "")}>
+    <div className={cn("flex items-center gap-2 sm:gap-3 w-full", className)} {...props}>
+      <Avatar className={cn("h-7 w-7 sm:h-8 sm:w-8 shrink-0", isHelmet ? "overflow-visible" : "")}>
         {isHelmet ? (
           <div className="w-full h-full rounded-full overflow-hidden border">
             <F1HelmetAvatar helmetColor={helmetColor} bgColor={bgColor} />
@@ -70,11 +70,11 @@ export function DriverInfo({
         )}
       </Avatar>
       <div className="flex flex-col text-left flex-1 min-w-0">
-        <span className="text-sm font-medium leading-none truncate">
+        <span className="text-xs sm:text-sm font-medium leading-none truncate">
           {name}
           {isCurrentUser && <span className="text-primary ml-1">(You)</span>}
         </span>
-        {team && <span className="text-xs text-muted-foreground truncate">{team}</span>}
+        {team && <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{team}</span>}
       </div>
       {typeof driverNumber === "number" && (
         <span className="text-sm font-black text-muted-foreground/50 ml-auto pr-1">#{driverNumber}</span>

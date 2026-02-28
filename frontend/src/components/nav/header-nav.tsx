@@ -63,7 +63,14 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
         className,
       )}
       {...props}>
-      <div className="flex-1 max-w-sm mr-4">
+      <div className="flex items-center gap-2 md:hidden mr-auto">
+        <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shrink-0">
+          <span className="text-primary-foreground font-bold text-lg">F1</span>
+        </div>
+        <span className="text-xl font-bold tracking-tight">Picks</span>
+      </div>
+
+      <div className="hidden md:flex flex-1 max-w-sm mr-4">
         {/* <Searchbar placeholder="Search..." className="w-full text-xs md:text-sm pl-8 md:pl-9 h-9" /> */}
       </div>
 
