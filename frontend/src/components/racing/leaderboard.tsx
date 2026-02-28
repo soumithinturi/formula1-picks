@@ -55,7 +55,12 @@ export function Leaderboard({ entries, className, ...props }: LeaderboardProps) 
                   </div>
                 </td>
                 <td className="px-2 sm:px-3 py-2.5 sm:py-3">
-                  <DriverInfo name={entry.name} team={entry.team} avatarUrl={entry.avatarUrl} />
+                  <DriverInfo
+                    name={entry.name}
+                    team={entry.team}
+                    avatarUrl={entry.avatarUrl}
+                    isCurrentUser={entry.isCurrentUser}
+                  />
                 </td>
                 <td className="px-2 sm:px-3 py-2.5 sm:py-3 text-center">
                   <div className="flex flex-col items-center">

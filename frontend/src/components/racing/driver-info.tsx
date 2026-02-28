@@ -8,6 +8,7 @@ interface DriverInfoProps extends React.HTMLAttributes<HTMLDivElement> {
   team?: string;
   avatarUrl?: string;
   driverNumber?: number;
+  isCurrentUser?: boolean;
 }
 
 export function getTeamColor(teamName?: string): string | undefined {
@@ -27,7 +28,15 @@ export function getTeamColor(teamName?: string): string | undefined {
   return undefined;
 }
 
-export function DriverInfo({ name, team, avatarUrl, driverNumber, className, ...props }: DriverInfoProps) {
+export function DriverInfo({
+  name,
+  team,
+  avatarUrl,
+  driverNumber,
+  isCurrentUser,
+  className,
+  ...props
+}: DriverInfoProps) {
   let isHelmet = false;
   let helmetColor, bgColor;
 
@@ -61,7 +70,10 @@ export function DriverInfo({ name, team, avatarUrl, driverNumber, className, ...
         )}
       </Avatar>
       <div className="flex flex-col text-left flex-1 min-w-0">
-        <span className="text-sm font-medium leading-none truncate">{name}</span>
+        <span className="text-sm font-medium leading-none truncate">
+          {name}
+          {isCurrentUser && <span className="text-primary ml-1">(You)</span>}
+        </span>
         {team && <span className="text-xs text-muted-foreground truncate">{team}</span>}
       </div>
       {typeof driverNumber === "number" && (

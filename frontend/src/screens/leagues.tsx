@@ -133,6 +133,7 @@ export function LeaguesScreen() {
           totalPredictions: entry.leagueTotalPredictions || 0,
           points: entry.totalPoints,
           avatarUrl: entry.avatarUrl, // Pass raw string (URL or JSON) to DriverInfo
+          isCurrentUser: entry.userId === currentUser?.id,
         };
       });
       setLeaderboard(mapped);
