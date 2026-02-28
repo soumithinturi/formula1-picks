@@ -84,117 +84,126 @@ export function ProfileScreen() {
   if (!user) return null;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl tracking-tight font-bold">Edit Profile</h1>
-        <p className="text-muted-foreground mt-2">Update your personal details and customize your driver helmet.</p>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-8 items-start">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="contact">Contact</Label>
-            <Input id="contact" value={user.contact} disabled className="bg-muted/50" />
-            <p className="text-xs text-muted-foreground">Your login credential cannot be changed.</p>
+    <>
+      <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32 sm:pb-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl tracking-tight font-bold">Edit Profile</h1>
+            <p className="text-muted-foreground mt-2">Update your personal details and customize your driver helmet.</p>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="full_name">Full Name</Label>
-            <Input
-              id="full_name"
-              placeholder="e.g. Max Verstappen"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              minLength={2}
-              maxLength={32}
-              pattern="^[a-zA-Z\\s'-]+$"
-              title="Only letters, spaces, hyphens, and apostrophes are allowed"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="display_name">Display Name</Label>
-            <Input
-              id="display_name"
-              placeholder="e.g. SuperMax"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              minLength={2}
-              maxLength={32}
-              pattern="^[a-zA-Z0-9_-]+$"
-              title="Only letters, numbers, underscores, and hyphens are allowed"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="favorite_team">Favorite Team</Label>
-            <Select value={teamId} onValueChange={setTeamId}>
-              <SelectTrigger id="favorite_team">
-                <SelectValue placeholder="Select a team" />
-              </SelectTrigger>
-              <SelectContent>
-                {TEAMS.filter((t) => t.id !== "default").map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-3 w-3 rounded-full border border-border"
-                        style={{ background: team.primaryColor }}
-                      />
-                      {team.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Button onClick={handleSave} disabled={loading} size="lg" className="hidden sm:inline-flex">
+            {loading ? "Saving..." : "Save Profile"}
+          </Button>
         </div>
 
-        <div className="space-y-6 border rounded-xl p-6 bg-card">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-32 h-32 ring-4 ring-background shadow-xl rounded-full">
-              <F1HelmetAvatar helmetColor={helmetColor} bgColor={bgColor} />
+        <div className="grid md:grid-cols-2 gap-8 items-start">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="contact">Contact</Label>
+              <Input id="contact" value={user.contact} disabled className="bg-muted/50" />
+              <p className="text-xs text-muted-foreground">Your login credential cannot be changed.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                placeholder="e.g. Max Verstappen"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                minLength={2}
+                maxLength={32}
+                pattern="^[a-zA-Z\\s'-]+$"
+                title="Only letters, spaces, hyphens, and apostrophes are allowed"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="display_name">Display Name</Label>
+              <Input
+                id="display_name"
+                placeholder="e.g. SuperMax"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                minLength={2}
+                maxLength={32}
+                pattern="^[a-zA-Z0-9_-]+$"
+                title="Only letters, numbers, underscores, and hyphens are allowed"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="favorite_team">Favorite Team</Label>
+              <Select value={teamId} onValueChange={setTeamId}>
+                <SelectTrigger id="favorite_team">
+                  <SelectValue placeholder="Select a team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TEAMS.filter((t) => t.id !== "default").map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full border border-border"
+                          style={{ background: team.primaryColor }}
+                        />
+                        {team.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-border">
-            <Label>Helmet Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_COLORS.map((c) => (
-                <button
-                  key={`helmet-${c}`}
-                  type="button"
-                  className={`w-8 h-8 rounded-full border-2 transition-transform ${helmetColor === c ? "border-primary scale-110 shadow-sm" : "border-transparent hover:scale-105"}`}
-                  style={{ backgroundColor: c }}
-                  onClick={() => setHelmetColor(c)}
-                  aria-label={`Select helmet color ${c}`}
-                />
-              ))}
+          <div className="space-y-4 border rounded-xl p-5 bg-card">
+            <div className="flex flex-col items-center">
+              <div className="w-24 h-24 ring-4 ring-background shadow-xl rounded-full">
+                <F1HelmetAvatar helmetColor={helmetColor} bgColor={bgColor} />
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-3 pt-2">
-            <Label>Background Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_COLORS.map((c) => (
-                <button
-                  key={`bg-${c}`}
-                  type="button"
-                  className={`w-8 h-8 rounded-full border-2 transition-transform ${bgColor === c ? "border-primary scale-110 shadow-sm" : "border-transparent hover:scale-105"}`}
-                  style={{ backgroundColor: c }}
-                  onClick={() => setBgColor(c)}
-                  aria-label={`Select background color ${c}`}
-                />
-              ))}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+              <div className="space-y-3">
+                <Label className="text-xs text-muted-foreground uppercase font-bold">Helmet</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={`helmet-${c}`}
+                      type="button"
+                      className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 transition-transform ${helmetColor === c ? "border-primary scale-110 shadow-sm" : "border-transparent hover:scale-110"}`}
+                      style={{ backgroundColor: c }}
+                      onClick={() => setHelmetColor(c)}
+                      aria-label={`Select helmet color ${c}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-xs text-muted-foreground uppercase font-bold">Background</Label>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      key={`bg-${c}`}
+                      type="button"
+                      className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 transition-transform ${bgColor === c ? "border-primary scale-110 shadow-sm" : "border-transparent hover:scale-110"}`}
+                      style={{ backgroundColor: c }}
+                      onClick={() => setBgColor(c)}
+                      aria-label={`Select background color ${c}`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end pt-4">
-        <Button onClick={handleSave} disabled={loading} size="lg">
+      <div className="sm:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
+        <Button onClick={handleSave} disabled={loading} size="lg" className="w-full">
           {loading ? "Saving..." : "Save Profile"}
         </Button>
       </div>
-    </div>
+    </>
   );
 }
