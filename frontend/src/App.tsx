@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, Outlet, useLocation } from "react-router";
+import { Routes, Route, Outlet, useLocation, Navigate } from "react-router";
 import { NotificationProvider } from "@/context/notification-context";
 import { SideNav } from "@/components/nav/side-nav";
 import { MobileNav } from "@/components/nav/mobile-nav";
@@ -97,7 +97,7 @@ export function App() {
             {/* <Route path="more/race-winners-history" element={<RaceWinnersHistoryScreen />} /> */}
             {/* <Route path="more/leagues-history" element={<LeaguesHistoryScreen />} /> */}
             {/* Fallback */}
-            <Route path="*" element={<HomeScreen />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>
       </Routes>
