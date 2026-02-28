@@ -119,7 +119,7 @@ export function LoginScreen() {
     if (authType === "phone") {
       setContact(formatPhoneNumber(value));
     } else {
-      setContact(value);
+      setContact(value.trim());
     }
   };
 
@@ -261,6 +261,8 @@ export function LoginScreen() {
                       onBlur={() => setTouched((prev) => ({ ...prev, [authType]: true }))}
                       required
                       autoFocus
+                      autoCapitalize={authType === "email" ? "none" : undefined}
+                      autoCorrect={authType === "email" ? "off" : undefined}
                       className={showContactError ? "border-red-500 focus-visible:ring-red-500" : ""}
                     />
                     {showContactError && (
