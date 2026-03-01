@@ -108,7 +108,7 @@ export function ProfileScreen() {
               <Label htmlFor="full_name">Full Name</Label>
               <Input
                 id="full_name"
-                placeholder="e.g. Max Verstappen"
+                placeholder="e.g. Lewis Hamilton"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 minLength={2}
