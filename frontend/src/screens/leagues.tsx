@@ -329,7 +329,7 @@ export function LeaguesScreen() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
                   <Users className="h-4 w-4" />
-                  <span>{activeLeague.members_count || 1} Racers</span>
+                  <span>{activeLeague.members_count} Racers</span>
                 </div>
               </div>
               {activeLeague.nextRace && (

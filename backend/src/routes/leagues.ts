@@ -42,6 +42,7 @@ export const createLeague = withAuth(async (req) => {
 
     return Response.json({
       ...league,
+      members_count: 1,
       scoring_config: typeof league.scoring_config === "string" ? JSON.parse(league.scoring_config) : league.scoring_config
     }, { status: 201 });
   } catch (err: any) {
@@ -56,7 +57,7 @@ export const createLeague = withAuth(async (req) => {
  */
 export const listLeagues = withAuth(async (req) => {
   const leagues = await db<LeagueRow[]>`
-    SELECT l.*
+    SELECT l.*, (SELECT count(*) FROM league_members WHERE league_id = l.id)::int as members_count
     FROM leagues l
     INNER JOIN league_members lm ON lm.league_id = l.id
     WHERE lm.user_id = ${req.user.id}
@@ -100,9 +101,15 @@ export const joinLeague = withAuth(async (req) => {
     VALUES (${league.id}, ${req.user.id}, NOW())
   `;
 
+  const [updatedLeague] = await db<any[]>`
+    SELECT l.*, (SELECT count(*) FROM league_members WHERE league_id = l.id)::int as members_count
+    FROM leagues l
+    WHERE l.id = ${league.id}
+  `;
+
   return Response.json({
-    ...league,
-    scoring_config: typeof league.scoring_config === "string" ? JSON.parse(league.scoring_config) : league.scoring_config
+    ...updatedLeague,
+    scoring_config: typeof updatedLeague.scoring_config === "string" ? JSON.parse(updatedLeague.scoring_config) : updatedLeague.scoring_config
   });
 });
 
@@ -178,11 +185,16 @@ export const updateLeague = withAuth(async (req) => {
     }
 
     // Update the league name
-    const [updatedLeague] = await db<LeagueRow[]>`
+    await db`
       UPDATE leagues
       SET name = ${data.name}
       WHERE id = ${id}
-      RETURNING *
+    `;
+
+    const [updatedLeague] = await db<any[]>`
+      SELECT l.*, (SELECT count(*) FROM league_members WHERE league_id = l.id)::int as members_count
+      FROM leagues l
+      WHERE l.id = ${id}
     `;
 
     return Response.json({
