@@ -361,7 +361,7 @@ export function HomeScreen() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-2xl font-bold tracking-tight">{nextRace.name}</CardTitle>
                 {localRaceData && (
-                  <span className="text-xs font-medium text-muted-foreground bg-accent px-2 py-1 rounded">
+                  <span className="text-xs font-medium text-muted-foreground bg-accent px-2 py-1 rounded whitespace-nowrap shrink-0 ml-2">
                     Round {localRaceData.round}
                   </span>
                 )}
@@ -388,9 +388,9 @@ export function HomeScreen() {
               <div className="flex justify-between items-center mb-2">
                 <CardTitle className="text-lg font-semibold shrink-0">My Prediction</CardTitle>
                 {leagues.length > 0 && (
-                  <div className="w-[200px] flex justify-end">
+                  <div className="w-[140px] sm:w-[200px] flex justify-end">
                     <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
-                      <SelectTrigger className="h-8 text-xs w-full">
+                      <SelectTrigger className="h-8 text-xs w-full truncate">
                         <SelectValue placeholder="Select League" />
                       </SelectTrigger>
                       <SelectContent>
