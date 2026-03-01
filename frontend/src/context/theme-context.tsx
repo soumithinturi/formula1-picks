@@ -13,7 +13,7 @@ export type Team = {
 export const TEAMS: Team[] = [
   {
     id: "default",
-    name: "F1 (Default)",
+    name: "Independent",
     themeName: "F1 (Default)",
     primaryColor: "oklch(0.58 0.23 28)",
     primaryForeground: "oklch(0.985 0 0)",

@@ -56,7 +56,7 @@ function AppLayout() {
   const isCreateLeague = location.pathname === "/leagues/create";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground font-sans">
+    <div className="flex h-dvh overflow-hidden bg-background text-foreground font-sans">
       {/* Hydrates theme + timezone from DB once the user is authenticated. */}
       <PreferencesHydrator />
 
