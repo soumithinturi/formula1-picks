@@ -249,7 +249,7 @@ export function LeaguesScreen() {
     <PageContainer title="Leagues" subtitle="Compete with friends">
       <div className="space-y-4 pb-6">
         {/* League Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
           {leagues.map((league) => (
             <button
               key={league.id}
@@ -261,7 +261,7 @@ export function LeaguesScreen() {
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
               title={league.name}>
-              <span className="md:hidden">{league.name}</span>
+              <span className="md:hidden">{truncateName(league.name, 12)}</span>
               <span className="hidden md:inline">{truncateName(league.name, 16)}</span>
             </button>
           ))}
@@ -309,8 +309,9 @@ export function LeaguesScreen() {
                   ) : (
                     <>
                       <CardTitle className="text-2xl font-bold uppercase tracking-wide" title={activeLeague.name}>
-                        <span className="md:hidden">{activeLeague.name}</span>
-                        <span className="hidden md:inline">{truncateName(activeLeague.name, 16)}</span>
+                        <span className="md:hidden">{truncateName(activeLeague.name, 12)}</span>
+                        <span className="hidden md:inline lg:hidden">{truncateName(activeLeague.name, 16)}</span>
+                        <span className="hidden lg:inline">{truncateName(activeLeague.name, 26)}</span>
                       </CardTitle>
                       {currentUser?.id === activeLeague.created_by && (
                         <Button
@@ -349,7 +350,7 @@ export function LeaguesScreen() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">Invite Rivals</h3>
-                <p className="text-xs text-muted-foreground">Tap link to copy and share</p>
+                <p className="text-xs text-muted-foreground">Tap code to copy and share</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleShareCode}>
                 <Share2 className="h-4 w-4 text-primary" />

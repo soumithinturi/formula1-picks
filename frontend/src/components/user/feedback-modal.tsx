@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Loader2, MessageSquare } from "lucide-react";
+import pkg from "../../../package.json";
 import { api } from "@/lib/api";
 import { safeStorage } from "@/lib/utils";
 import { toast } from "sonner";
@@ -53,7 +54,7 @@ export function FeedbackModal() {
       await api.submitFeedback({
         type,
         message: message.trim(),
-        appVersion: "v1.0.0 (Beta)",
+        appVersion: `v${pkg.version}${pkg.version.includes("-") ? "" : " (Beta)"}`,
       });
 
       toast.success("Feedback submitted! Thank you.");
