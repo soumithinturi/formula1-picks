@@ -85,6 +85,7 @@ export interface League {
   id: string;
   name: string;
   invite_code: string;
+  invite_message: string | null;
   created_by: string;
   members_count?: number;
   scoring_config?: ScoringConfig;
@@ -247,13 +248,13 @@ export const api = {
     create: (payload: { name: string; scoringConfig?: any }) =>
       api.post<League>("/leagues", payload),
 
-    update: (id: string, payload: { name: string }) =>
+    update: (id: string, payload: { name?: string; invite_message?: string | null }) =>
       api.patch<League>(`/leagues/${id}`, payload),
 
     list: () => api.get<League[]>("/leagues"),
 
     preview: (inviteCode: string) =>
-      api.get<{ id: string; name: string; creatorName: string }>(`/leagues/invite/${inviteCode}`),
+      api.get<{ id: string; name: string; creatorName: string; inviteMessage: string | null }>(`/leagues/invite/${inviteCode}`),
 
     join: (inviteCode: string) =>
       api.post<League>(`/leagues/join`, { inviteCode }),

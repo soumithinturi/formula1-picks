@@ -135,7 +135,8 @@ export const CreateLeagueSchema = z.object({
 });
 
 export const UpdateLeagueSchema = z.object({
-  name: z.string().min(2).max(50),
+  name: z.string().min(2).max(50).optional(),
+  invite_message: z.string().max(200).nullable().optional(),
 });
 
 export const JoinLeagueSchema = z.object({
@@ -213,6 +214,7 @@ export interface LeagueRow {
   name: string;
   created_by: string;
   invite_code: string;
+  invite_message: string | null;
   scoring_config: ScoringConfig;
   created_at: string;
 }

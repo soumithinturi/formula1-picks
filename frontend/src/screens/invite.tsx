@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, Trophy, AlertCircle } from "lucide-react";
+import { Loader2, Users, Trophy, AlertCircle, MessageSquare } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { auth } from "@/lib/auth";
@@ -14,7 +14,12 @@ export function InviteScreen() {
 
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
-  const [leagueInfo, setLeagueInfo] = useState<{ id: string; name: string; creatorName: string } | null>(null);
+  const [leagueInfo, setLeagueInfo] = useState<{
+    id: string;
+    name: string;
+    creatorName: string;
+    inviteMessage: string | null;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -111,12 +116,19 @@ export function InviteScreen() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 pt-4 text-center">
-          <div className="p-4 bg-muted/50 rounded-lg border border-border">
-            <div className="text-sm text-muted-foreground uppercase tracking-widest font-semibold mb-1">
-              League Code
+          {leagueInfo.inviteMessage ? (
+            <div className="px-4 py-4 rounded-xl bg-primary/10 border border-primary/20 text-sm text-foreground/80 flex items-start gap-3 text-left">
+              <MessageSquare className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span className="italic leading-relaxed">&ldquo;{leagueInfo.inviteMessage}&rdquo;</span>
             </div>
-            <div className="font-mono text-2xl font-bold text-foreground tracking-[0.2em]">{code}</div>
-          </div>
+          ) : (
+            <div className="p-4 bg-muted/50 rounded-lg border border-border">
+              <div className="text-sm text-muted-foreground uppercase tracking-widest font-semibold mb-1">
+                League Code
+              </div>
+              <div className="font-mono text-2xl font-bold text-foreground tracking-[0.2em]">{code}</div>
+            </div>
+          )}
 
           <Button size="lg" className="w-full text-lg h-14" disabled={joining} onClick={handleJoin}>
             {joining ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Users className="h-5 w-5 mr-2" />}

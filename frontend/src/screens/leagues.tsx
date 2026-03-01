@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Leaderboard } from "@/components/racing/leaderboard";
 import { JoinLeagueDialog } from "../components/racing/join-league-dialog";
 import { Input } from "@/components/ui/input";
-import { Trophy, Users, Copy, Check, Share2, Plus, UserPlus, Loader2, Pencil, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Trophy, Users, Copy, Check, Share2, Plus, UserPlus, Loader2, Pencil, X, MessageSquare } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,6 +43,9 @@ export function LeaguesScreen() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [isSavingMessage, setIsSavingMessage] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedLeagueRef = useRef<HTMLButtonElement>(null);
 
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
@@ -71,6 +75,12 @@ export function LeaguesScreen() {
       fetchLeaderboard(activeLeagueId);
     }
   }, [activeLeagueId]);
+
+  // Seed the message textarea whenever the active league changes
+  useEffect(() => {
+    const league = leagues.find((l) => l.id === activeLeagueId);
+    setInviteMessage(league?.invite_message ?? "");
+  }, [activeLeagueId, leagues]);
 
   async function fetchLeagues() {
     try {
@@ -166,6 +176,33 @@ export function LeaguesScreen() {
     }
   };
 
+  // Debounced auto-save for invite message (fires 1s after the user stops typing)
+  const handleInviteMessageChange = useCallback(
+    (value: string) => {
+      setInviteMessage(value);
+      if (!activeLeague || currentUser?.id !== activeLeague.created_by) return;
+
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(async () => {
+        try {
+          setIsSavingMessage(true);
+          await api.leagues.update(activeLeague.id, {
+            invite_message: value.trim() || null,
+          });
+          // Optimistically update local state so it survives tab switches
+          setLeagues((prev) =>
+            prev.map((l) => (l.id === activeLeague.id ? { ...l, invite_message: value.trim() || null } : l)),
+          );
+        } catch {
+          // Silently swallow — non-critical save
+        } finally {
+          setIsSavingMessage(false);
+        }
+      }, 900);
+    },
+    [activeLeague, currentUser],
+  );
+
   const getInviteLink = (code: string) => {
     return `${window.location.origin}/#/invite/${code}`;
   };
@@ -190,12 +227,13 @@ export function LeaguesScreen() {
 
   const handleShareCode = () => {
     if (activeLeague) {
+      const link = getInviteLink(activeLeague.invite_code);
       if (navigator.share) {
         navigator
           .share({
             title: `Join ${activeLeague.name} on F1 Picks`,
             text: `Join my F1 Picks league: ${activeLeague.name}`,
-            url: getInviteLink(activeLeague.invite_code),
+            url: link,
           })
           .catch(() => {
             // If share fails, just copy
@@ -356,6 +394,36 @@ export function LeaguesScreen() {
                 <Share2 className="h-4 w-4 text-primary" />
               </Button>
             </div>
+
+            {/* Personal message */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>Add a personal message (optional)</span>
+              </div>
+              <Textarea
+                value={inviteMessage}
+                onChange={(e) => handleInviteMessageChange(e.target.value)}
+                placeholder="e.g. Hey! Come compete with us this season 🏎️"
+                maxLength={200}
+                rows={2}
+                className="resize-none text-sm"
+              />
+              <div className="flex items-center justify-between min-h-4">
+                {isSavingMessage ? (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Saving…
+                  </span>
+                ) : (
+                  <span />
+                )}
+                {inviteMessage.length > 0 && (
+                  <p className="text-xs text-muted-foreground">{inviteMessage.length}/200</p>
+                )}
+              </div>
+            </div>
+
             <button
               onClick={handleCopyCode}
               className="w-full flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition-colors group overflow-hidden">

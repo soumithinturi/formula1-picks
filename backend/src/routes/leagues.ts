@@ -128,7 +128,7 @@ export const previewLeague = async (req: Request) => {
 
   try {
     const [league] = await db`
-      SELECT id, name, created_by, invite_code
+      SELECT id, name, created_by, invite_code, invite_message
       FROM leagues 
       WHERE invite_code = ${code} 
       LIMIT 1
@@ -146,7 +146,8 @@ export const previewLeague = async (req: Request) => {
     return Response.json({
       id: league.id,
       name: league.name,
-      creatorName: creator?.display_name || "Unknown Driver"
+      creatorName: creator?.display_name || "Unknown Driver",
+      inviteMessage: league.invite_message || null,
     });
   } catch (err: any) {
     console.error("League preview error:", err);
@@ -184,12 +185,13 @@ export const updateLeague = withAuth(async (req) => {
       return Response.json({ error: "Only the league creator can edit the league" }, { status: 403 });
     }
 
-    // Update the league name
-    await db`
-      UPDATE leagues
-      SET name = ${data.name}
-      WHERE id = ${id}
-    `;
+    // Build partial update — only touch fields that were provided
+    if (data.name !== undefined) {
+      await db`UPDATE leagues SET name = ${data.name} WHERE id = ${id}`;
+    }
+    if (data.invite_message !== undefined) {
+      await db`UPDATE leagues SET invite_message = ${data.invite_message} WHERE id = ${id}`;
+    }
 
     const [updatedLeague] = await db<any[]>`
       SELECT l.*, (SELECT count(*) FROM league_members WHERE league_id = l.id)::int as members_count
