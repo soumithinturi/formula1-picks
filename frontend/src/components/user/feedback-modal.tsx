@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Loader2, MessageSquare } from "lucide-react";
 import { api } from "@/lib/api";
+import { safeStorage } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function FeedbackModal() {
@@ -24,7 +25,7 @@ export function FeedbackModal() {
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
-    const lastFeedback = localStorage.getItem("lastFeedback");
+    const lastFeedback = safeStorage.getItem("lastFeedback");
     if (lastFeedback) {
       const elapsed = Math.floor((Date.now() - parseInt(lastFeedback, 10)) / 1000);
       if (elapsed < 60) {
@@ -59,7 +60,7 @@ export function FeedbackModal() {
       setOpen(false);
       setMessage("");
       setCooldown(60);
-      localStorage.setItem("lastFeedback", Date.now().toString());
+      safeStorage.setItem("lastFeedback", Date.now().toString());
     } catch (error) {
       toast.error("Failed to submit feedback. Please try again.");
       console.error(error);

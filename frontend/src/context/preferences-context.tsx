@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { safeStorage } from "@/lib/utils";
 
 type TimezonePreference = "local" | "track";
 
@@ -23,7 +24,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   // Bootstrap from localStorage immediately for a fast initial render.
   const [timezoneDisplay, setTimezoneInternal] = useState<TimezonePreference>(() => {
     try {
-      const stored = localStorage.getItem(PREFS_KEY);
+      const stored = safeStorage.getItem(PREFS_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         return resolveTimezone(parsed.timezoneDisplay);
@@ -36,7 +37,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
   // Keep localStorage in sync for fast bootstrap on next load.
   useEffect(() => {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ timezoneDisplay }));
+    safeStorage.setItem(PREFS_KEY, JSON.stringify({ timezoneDisplay }));
   }, [timezoneDisplay]);
 
   /** Called from the Settings screen — updates state and persists to DB. */

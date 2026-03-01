@@ -9,6 +9,7 @@ import { Mail, Phone, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
+import { safeStorage } from "@/lib/utils";
 
 export function LoginScreen() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export function LoginScreen() {
   }, []);
 
   useEffect(() => {
-    const lastRequest = localStorage.getItem("lastOtpRequest");
+    const lastRequest = safeStorage.getItem("lastOtpRequest");
     if (lastRequest) {
       const elapsed = Math.floor((Date.now() - parseInt(lastRequest, 10)) / 1000);
       if (elapsed < 60) {
@@ -151,7 +152,7 @@ export function LoginScreen() {
       await api.auth.requestOtp({ type: authType, contact: getCleanContact() });
       setStep("verify");
       setCooldown(60);
-      localStorage.setItem("lastOtpRequest", Date.now().toString());
+      safeStorage.setItem("lastOtpRequest", Date.now().toString());
       toast.success("Code sent!", { description: `Check your ${authType} for the code.` });
     } catch (error) {
       toast.error("Failed to send code", { description: String(error) });

@@ -6,6 +6,7 @@ import { Step3 } from "./step-3";
 import { Button } from "@/components/ui/button";
 import { X, Loader2 } from "lucide-react";
 import { api, type League } from "@/lib/api";
+import { safeStorage } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function CreateLeagueWizard() {
@@ -18,7 +19,7 @@ export function CreateLeagueWizard() {
 
   // Initialize cooldown from localStorage
   useState(() => {
-    const lastCreate = localStorage.getItem("lastLeagueCreate");
+    const lastCreate = safeStorage.getItem("lastLeagueCreate");
     if (lastCreate) {
       const elapsed = Math.floor((Date.now() - parseInt(lastCreate, 10)) / 1000);
       if (elapsed < 30) {
@@ -70,7 +71,7 @@ export function CreateLeagueWizard() {
         setStep(3);
         window.scrollTo({ top: 0, behavior: "smooth" });
         setCooldown(30);
-        localStorage.setItem("lastLeagueCreate", Date.now().toString());
+        safeStorage.setItem("lastLeagueCreate", Date.now().toString());
         toast.success("League created successfully!");
       } catch (error: any) {
         console.error("Failed to create league:", error);

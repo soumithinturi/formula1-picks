@@ -18,3 +18,23 @@ export const CONSTRUCTOR_COLORS = {
   HAAS: "#B6BABD",
   CADILLAC: "#FEAA00",
 } as const;
+
+export const safeStorage = {
+  getItem: (key: string) => {
+    try {
+      return typeof window !== "undefined" ? localStorage.getItem(key) : null;
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      if (typeof window !== "undefined") localStorage.setItem(key, value);
+    } catch { }
+  },
+  removeItem: (key: string) => {
+    try {
+      if (typeof window !== "undefined") localStorage.removeItem(key);
+    } catch { }
+  }
+};

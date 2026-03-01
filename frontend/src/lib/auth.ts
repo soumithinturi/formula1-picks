@@ -1,3 +1,5 @@
+import { safeStorage } from "@/lib/utils";
+
 const TOKEN_KEY = "f1_auth_token";
 const USER_KEY = "f1_user";
 
@@ -16,34 +18,34 @@ export const auth = {
   // where third-party HttpOnly cookies are aggressively blocked (e.g., Safari on iOS).
   setToken(token: string) {
     if (typeof window !== "undefined") {
-      localStorage.setItem(TOKEN_KEY, token);
+      safeStorage.setItem(TOKEN_KEY, token);
     }
   },
 
   getToken(): string | null {
     if (typeof window !== "undefined") {
       // Returns any residual token if they haven't logged out yet
-      return localStorage.getItem(TOKEN_KEY);
+      return safeStorage.getItem(TOKEN_KEY);
     }
     return null;
   },
 
   removeToken() {
     if (typeof window !== "undefined") {
-      localStorage.removeItem(TOKEN_KEY);
+      safeStorage.removeItem(TOKEN_KEY);
     }
   },
 
   setUser(user: UserProfile) {
     if (typeof window !== "undefined") {
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      safeStorage.setItem(USER_KEY, JSON.stringify(user));
       window.dispatchEvent(new CustomEvent("f1_user_updated", { detail: user }));
     }
   },
 
   getUser(): UserProfile | null {
     if (typeof window === "undefined") return null;
-    const data = localStorage.getItem(USER_KEY);
+    const data = safeStorage.getItem(USER_KEY);
     if (!data) return null;
     try {
       return JSON.parse(data);
@@ -55,7 +57,7 @@ export const auth = {
   logout() {
     if (typeof window !== "undefined") {
       this.removeToken();
-      localStorage.removeItem(USER_KEY);
+      safeStorage.removeItem(USER_KEY);
 
       // Fire-and-forget call to backend to clear HttpOnly cookie
       const BASE_URL = import.meta.env?.BUN_PUBLIC_API_URL || (process.env.NODE_ENV !== 'production'

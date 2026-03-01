@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { CONSTRUCTOR_COLORS } from "@/lib/utils";
+import { CONSTRUCTOR_COLORS, safeStorage } from "@/lib/utils";
 import { api } from "@/lib/api";
 
 export type Team = {
@@ -110,7 +110,7 @@ function resolveTeam(teamId: string | null | undefined): Team {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Bootstrap from localStorage immediately so there's no flash-of-default-theme.
-  const [currentTeam, setCurrentTeam] = useState<Team>(() => resolveTeam(localStorage.getItem("f1-theme-team-id")));
+  const [currentTeam, setCurrentTeam] = useState<Team>(() => resolveTeam(safeStorage.getItem("f1-theme-team-id")));
 
   // Apply theme CSS variables whenever the team changes.
   useEffect(() => {
@@ -120,7 +120,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty("--ring", currentTeam.primaryColor);
 
     // Keep localStorage in sync as a fast bootstrap for next load.
-    localStorage.setItem("f1-theme-team-id", currentTeam.id);
+    safeStorage.setItem("f1-theme-team-id", currentTeam.id);
   }, [currentTeam]);
 
   /** Called from the Settings screen — updates state and persists to DB. */
