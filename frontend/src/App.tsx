@@ -73,7 +73,6 @@ function AppLayout() {
 
       {/* Mobile Bottom Navigation */}
       <MobileNav />
-      <Toaster />
     </div>
   );
 }
@@ -101,6 +100,7 @@ export function App() {
           </Route>
         </Route>
       </Routes>
+      <Toaster />
     </NotificationProvider>
   );
 }

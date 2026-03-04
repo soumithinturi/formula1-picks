@@ -137,19 +137,18 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
-      // Token is invalid/expired/from old project. Force logout.
-      auth.logout();
-      throw new Error("Session expired. Please log in again.");
+    let errorMessage = response.statusText || "An unexpected error occurred";
+    let errorBody: any = null;
+
+    try {
+      errorBody = await response.json();
+      if (errorBody) {
+        errorMessage = errorBody.error || errorBody.message || errorMessage;
+      }
+    } catch {
+      // Not JSON, use statusText
     }
 
-    let errorMessage = "An unexpected error occurred";
-    try {
-      const errorBody = await response.json();
-      errorMessage = errorBody.error || errorBody.message || errorMessage;
-    } catch {
-      errorMessage = response.statusText;
-    }
     throw new Error(errorMessage);
   }
 
