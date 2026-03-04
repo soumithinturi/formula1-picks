@@ -141,21 +141,14 @@ if (existsSync(envFile)) {
     const [key, ...rest] = trimmedLine.split("=");
     if (key && key.startsWith("BUN_PUBLIC_")) {
       const value = rest.join("=").trim();
-      define[`process.env.${key}`] = JSON.stringify(value);
-      console.log(`🔹 Injected process.env.${key} = ${value}`);
+      const stringifiedValue = JSON.stringify(value);
+      define[`process.env.${key}`] = stringifiedValue;
+      define[`globalThis.process.env.${key}`] = stringifiedValue;
+      define[`import.meta.env.${key}`] = stringifiedValue;
+      console.log(`🔹 Injected ${key}`);
     }
   });
 }
-
-// Add a catch-all for process.env if needed by libraries
-define["process.env"] = JSON.stringify({
-  NODE_ENV: mode === "development" ? "development" : "production",
-  ...Object.fromEntries(
-    Object.entries(define)
-      .filter(([k]) => k.startsWith("process.env.BUN_PUBLIC_"))
-      .map(([k, v]) => [k.replace("process.env.", ""), JSON.parse(v)])
-  )
-});
 
 const result = await Bun.build({
   entrypoints,

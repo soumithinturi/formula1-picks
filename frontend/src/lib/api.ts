@@ -1,6 +1,17 @@
 import { auth } from "./auth";
 
-const BASE_URL = `${process.env.BUN_PUBLIC_API_URL}/api/v1`;
+const getApiUrl = () => {
+  const url = process.env.BUN_PUBLIC_API_URL || import.meta.env?.BUN_PUBLIC_API_URL;
+  if (!url || url === "undefined") {
+    // Fallback to local if truly missing, or production if on a real domain
+    return typeof window !== "undefined" && window.location.hostname === "localhost"
+      ? "http://localhost:8080/api/v1"
+      : "https://formula1-picks-production.up.railway.app/api/v1";
+  }
+  return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
+};
+
+const BASE_URL = getApiUrl();
 
 export interface ApiResponse<T> {
   data?: T;
