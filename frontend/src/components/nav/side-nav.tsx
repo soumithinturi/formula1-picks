@@ -3,6 +3,7 @@ import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
 import { Home, Trophy, Users, Calendar, Settings, LogOut, Flag, Archive } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { Disclaimer } from "@/components/ui/disclaimer";
 
 interface SideNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -70,6 +71,10 @@ export function SideNav({ className, ...props }: SideNavProps) {
           <LogOut className="mr-3 h-5 w-5" />
           Log Out
         </button>
+      </div>
+
+      <div className="mt-6 px-2">
+        <Disclaimer variant="small" />
       </div>
     </div>
   );

@@ -15,8 +15,8 @@ export const TEAMS: Team[] = [
     id: "default",
     name: "Independent",
     themeName: "F1 (Default)",
-    primaryColor: "oklch(0.58 0.23 28)",
-    primaryForeground: "oklch(0.985 0 0)",
+    primaryColor: "#e10600",
+    primaryForeground: "#ffffff",
   },
   {
     id: "redbull",
@@ -65,14 +65,14 @@ export const TEAMS: Team[] = [
     themeName: "Williams Blue",
     name: "Williams",
     primaryColor: CONSTRUCTOR_COLORS.WILLIAMS,
-    primaryForeground: "#000000",
+    primaryForeground: "#ffffff",
   },
   { id: "rb", themeName: "RB Blue", name: "RB", primaryColor: CONSTRUCTOR_COLORS.RB, primaryForeground: "#000000" },
   {
     id: "audi",
-    themeName: "Audi Red",
+    themeName: "Audi Orange",
     name: "Audi",
-    primaryColor: CONSTRUCTOR_COLORS.SAUBER,
+    primaryColor: CONSTRUCTOR_COLORS.AUDI,
     primaryForeground: "#ffffff",
   },
   {

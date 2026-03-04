@@ -22,6 +22,7 @@ import { FeedbackModal } from "@/components/user/feedback-modal";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { Disclaimer } from "@/components/ui/disclaimer";
 import pkg from "../../package.json";
 
 export function SettingsScreen() {
@@ -116,6 +117,7 @@ export function SettingsScreen() {
                   </span>
                 </p>
               </div>
+              <Disclaimer className="mt-4 pt-4 border-t border-border/50 text-center" variant="muted" />
             </CardContent>
           </Card>
         </section>
