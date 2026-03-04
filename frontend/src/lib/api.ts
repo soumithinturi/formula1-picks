@@ -1,13 +1,6 @@
 import { auth } from "./auth";
 
-// In Bun frontend setups, `import.meta.env` corresponds to server/build environment variables.
-// If not explicitly provided via a `.env` file or export, `NODE_ENV` is implicitly 'development' when running `bun dev`.
-const isDev = process.env.NODE_ENV !== 'production';
-
-// Use the explicit env variable first, fallback to context-aware defaults
-const BASE_URL = import.meta.env?.BUN_PUBLIC_API_URL || (isDev
-  ? "http://localhost:8080/api/v1"
-  : "https://formula1-picks-production.up.railway.app/api/v1");
+const BASE_URL = `${process.env.BUN_PUBLIC_API_URL}/api/v1`;
 
 export interface ApiResponse<T> {
   data?: T;
