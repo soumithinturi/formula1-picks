@@ -60,11 +60,10 @@ export const auth = {
       safeStorage.removeItem(USER_KEY);
 
       // Fire-and-forget call to backend to clear HttpOnly cookie
-      const BASE_URL = import.meta.env?.BUN_PUBLIC_API_URL || (process.env.NODE_ENV !== 'production'
-        ? "http://localhost:8080/api/v1"
-        : "https://formula1-picks-production.up.railway.app/api/v1");
+      const BASE_URL = process.env.BUN_PUBLIC_API_URL || "http://localhost:8080";
+      const apiEndpoint = BASE_URL.endsWith("/api/v1") ? `${BASE_URL}/auth/logout` : `${BASE_URL}/api/v1/auth/logout`;
 
-      fetch(`${BASE_URL}/auth/logout`, {
+      fetch(apiEndpoint, {
         method: "POST",
         credentials: "include"
       }).catch(console.error);

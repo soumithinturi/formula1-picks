@@ -7,7 +7,9 @@
     "dev": "bun --hot src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",
     "build": "bun run build.ts",
+    "build:staging": "bun run build.ts --mode development --minify",
     "deploy": "wrangler deploy",
+    "deploy:staging": "bun run build:staging && wrangler deploy --env staging",
     "preview": "wrangler dev"
   },
   "dependencies": {

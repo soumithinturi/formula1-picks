@@ -3,12 +3,18 @@
   "name": "formula1-picks",
   "compatibility_date": "2025-09-27",
   "observability": {
-    "enabled": true
+    "enabled": true,
   },
   "assets": {
-    "directory": "dist"
+    "directory": "dist",
   },
-  "compatibility_flags": [
-    "nodejs_compat"
-  ]
+  "compatibility_flags": ["nodejs_compat"],
+  "env": {
+    "staging": {
+      "name": "formula1-picks-staging",
+    },
+    "production": {
+      "name": "formula1-picks",
+    },
+  },
 }

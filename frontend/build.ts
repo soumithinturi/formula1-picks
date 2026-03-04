@@ -124,15 +124,49 @@ const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
   .filter(dir => !dir.includes("node_modules"));
 console.log(`📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
 
+const mode = (cliConfig as any).mode || "production";
+const envFile = `.env.${mode}`;
+console.log(`🌍 Loading environment for mode: ${mode} from ${envFile}`);
+
+const define: Record<string, string> = {
+  "process.env.NODE_ENV": JSON.stringify(mode === "development" ? "development" : "production"),
+};
+
+if (existsSync(envFile)) {
+  const file = Bun.file(envFile);
+  const text = await file.text();
+  text.split("\n").forEach(line => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine || trimmedLine.startsWith("#")) return;
+    const [key, ...rest] = trimmedLine.split("=");
+    if (key && key.startsWith("BUN_PUBLIC_")) {
+      const value = rest.join("=").trim();
+      define[`process.env.${key}`] = JSON.stringify(value);
+      console.log(`🔹 Injected process.env.${key} = ${value}`);
+    }
+  });
+}
+
+// Add a catch-all for process.env if needed by libraries
+define["process.env"] = JSON.stringify({
+  NODE_ENV: mode === "development" ? "development" : "production",
+  ...Object.fromEntries(
+    Object.entries(define)
+      .filter(([k]) => k.startsWith("process.env.BUN_PUBLIC_"))
+      .map(([k, v]) => [k.replace("process.env.", ""), JSON.parse(v)])
+  )
+});
+
 const result = await Bun.build({
   entrypoints,
   outdir,
   plugins: [plugin],
-  minify: true,
+  minify: mode !== "development",
   target: "browser",
   sourcemap: "linked",
   define: {
-    "process.env.NODE_ENV": JSON.stringify("production"),
+    ...define,
+    ...(cliConfig.define || {}),
   },
   ...cliConfig,
 });
