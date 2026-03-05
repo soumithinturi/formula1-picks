@@ -7,10 +7,16 @@ import { Countdown } from "@/components/ui/countdown";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DriverSelector } from "@/components/racing/driver-selector";
 import { Progress } from "@/components/ui/progress";
-import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock } from "lucide-react";
+import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock, Copy } from "lucide-react";
 import { api, type Driver, type Race, type League } from "@/lib/api";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useNavigate, useSearchParams } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getTeamColor } from "@/components/racing/driver-info";
@@ -266,6 +272,38 @@ export function PicksScreen() {
     }
   };
 
+  const handleCopyPicks = async (sourceLeagueId: string) => {
+    if (!nextRace?.id) return;
+
+    try {
+      const data = await api.picks.get(nextRace.id, sourceLeagueId);
+      if (data) {
+        const findDriver = (id: string | null) => availableDrivers.find((d) => d.id === id) || null;
+
+        setSprintPredictions({
+          sprintQualifyingP1: findDriver(data.sprint_qualifying_p1),
+          sprintP1: findDriver(data.sprint_p1),
+          sprintP2: findDriver(data.sprint_p2),
+          sprintP3: findDriver(data.sprint_p3),
+          sprintFastestLap: findDriver(data.sprint_fastest_lap),
+        });
+
+        setRacePredictions({
+          raceQualifyingP1: findDriver(data.race_qualifying_p1),
+          raceP1: findDriver(data.race_p1),
+          raceP2: findDriver(data.race_p2),
+          raceP3: findDriver(data.race_p3),
+          fastestLap: findDriver(data.fastest_lap),
+          firstDnf: findDriver(data.first_dnf),
+        });
+
+        toast.success(`Copied picks from ${leagues.find((l) => l.id === sourceLeagueId)?.name}`);
+      }
+    } catch (error) {
+      toast.error("No picks found in that league to copy");
+    }
+  };
+
   const progress = useMemo(() => {
     let requiredPicks = 0;
     let completedPicks = 0;
@@ -388,6 +426,32 @@ export function PicksScreen() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+
+        {/* Copy Picks Utility */}
+        {leagues.length > 1 && (
+          <div className="w-full max-w-[340px] mx-auto flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[10px] uppercase tracking-widest font-bold text-primary hover:text-primary/80 gap-1.5 h-auto py-1 px-2">
+                  <Copy className="h-3 w-3" />
+                  Copy from...
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {leagues
+                  .filter((l) => l.id !== selectedLeagueId)
+                  .map((l) => (
+                    <DropdownMenuItem key={l.id} onClick={() => handleCopyPicks(l.id)} className="cursor-pointer">
+                      {l.name}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
 

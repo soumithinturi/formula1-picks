@@ -6,13 +6,27 @@ import { Leaderboard } from "@/components/racing/leaderboard";
 import { JoinLeagueDialog } from "../components/racing/join-league-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Trophy, Users, Copy, Check, Share2, Plus, UserPlus, Loader2, Pencil, X, MessageSquare } from "lucide-react";
+import {
+  Trophy,
+  Users,
+  Copy,
+  Check,
+  Share2,
+  Plus,
+  UserPlus,
+  Loader2,
+  Pencil,
+  X,
+  MessageSquare,
+  Info,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/page-container";
 import { api, type League } from "@/lib/api";
@@ -31,6 +45,62 @@ interface UILeague extends League {
     name: string;
     daysUntil: number;
   };
+}
+
+function RulesDialog({ scoringConfig }: { scoringConfig: any }) {
+  if (!scoringConfig) return null;
+
+  const rules = [
+    { key: "p1", label: "Race P1" },
+    { key: "p2", label: "Race P2" },
+    { key: "p3", label: "Race P3" },
+    { key: "quali", label: "Qualifying Pole" },
+    { key: "podium", label: "Podium Correct (Any order)" },
+    { key: "perfectOrder", label: "Perfect Podium Order" },
+    { key: "fastestLap", label: "Fastest Lap" },
+    { key: "firstDNF", label: "First DNF" },
+    { key: "sprintFastestLap", label: "Sprint Fastest Lap" },
+  ];
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
+          <Info className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="uppercase italic flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-primary" />
+            League Scoring Rules
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="grid gap-3">
+            {rules.map((rule) => {
+              const config = scoringConfig[rule.key];
+              if (!config?.enabled) return null;
+              return (
+                <div
+                  key={rule.key}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-white/5">
+                  <span className="font-medium text-sm">{rule.label}</span>
+                  <span className="font-bold text-primary">+{config.points} pts</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground italic text-center">
+            Points are awarded after each race session is finalized.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function LeaguesScreen() {
@@ -351,18 +421,21 @@ export function LeaguesScreen() {
                         <span className="hidden md:inline lg:hidden">{truncateName(activeLeague.name, 16)}</span>
                         <span className="hidden lg:inline">{truncateName(activeLeague.name, 26)}</span>
                       </CardTitle>
-                      {currentUser?.id === activeLeague.created_by && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setDraftName(activeLeague.name);
-                            setIsEditingName(true);
-                          }}
-                          className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        <RulesDialog scoringConfig={activeLeague.scoring_config} />
+                        {currentUser?.id === activeLeague.created_by && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setDraftName(activeLeague.name);
+                              setIsEditingName(true);
+                            }}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
