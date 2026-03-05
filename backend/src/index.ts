@@ -8,6 +8,7 @@ import { submitResults } from "./routes/admin.ts";
 import { updateProfile, getProfile, deleteProfile } from "./routes/users.ts";
 import { submitFeedback } from "./routes/feedback.ts";
 import { listNotifications, markAllRead } from "./routes/notifications.ts";
+import { getChatMessages, sendChatMessage } from "./routes/chat.ts";
 import { seedDatabase } from "./services/seed.ts";
 import { startCronJobs } from "./services/cron.ts";
 import { withAuth } from "./middleware/auth.ts";
@@ -157,6 +158,16 @@ const server = Bun.serve({
     },
     "/api/v1/notifications/read": {
       PUT: withCors(markAllRead),
+      OPTIONS: handleOptions,
+    },
+
+    // ─── Chat ──────────────────────────────────────────────────────────────
+    "/api/v1/chat": {
+      POST: withCors(withAuth(sendChatMessage)),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/chat/:leagueId": {
+      GET: withCors(withAuth(getChatMessages)),
       OPTIONS: handleOptions,
     },
 

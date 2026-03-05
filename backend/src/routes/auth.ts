@@ -27,7 +27,7 @@ function getCookieString(token: string) {
   const isProd = process.env.NODE_ENV === "production";
   const sameSite = isProd ? "None" : "Lax";
   const secure = isProd ? "Secure;" : "";
-  return `f1_auth_token=${token}; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=${60 * 60 * 24 * 30}; Partitioned`;
+  return `f1_auth_token=${token}; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=${60 * 60 * 24 * 7}; Partitioned`;
 }
 
 function getClearCookieString() {
@@ -139,6 +139,7 @@ export async function verifyOtp(req: Request): Promise<Response> {
 
   return Response.json({
     token: session.access_token,
+    refresh_token: session.refresh_token,
     user: userProfile,
   }, {
     headers: {
@@ -181,7 +182,9 @@ export async function syncAuth(req: Request): Promise<Response> {
     SELECT id, contact, display_name, full_name, avatar_url, role, preferences FROM users WHERE id = ${user.id}
   `;
   return Response.json({
-    user: userProfile
+    user: userProfile,
+    token: data.access_token,
+    refresh_token: undefined, // syncAuth doesn't have a refresh_token easily accessible
   }, {
     headers: {
       "Set-Cookie": getCookieString(data.access_token)

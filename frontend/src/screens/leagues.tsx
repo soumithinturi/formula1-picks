@@ -17,6 +17,7 @@ import {
   Loader2,
   Pencil,
   X,
+  MessageCircle,
   MessageSquare,
   Info,
 } from "lucide-react";
@@ -32,6 +33,8 @@ import { PageContainer } from "@/components/layout/page-container";
 import { api, type League } from "@/lib/api";
 import { TEAMS } from "@/context/theme-context";
 import { auth } from "@/lib/auth";
+import { safeStorage } from "@/lib/utils";
+import { LeagueChat } from "@/components/leagues/league-chat";
 
 const truncateName = (name: string, length: number = 16) => {
   if (!name) return "";
@@ -110,6 +113,8 @@ export function LeaguesScreen() {
   const [leagues, setLeagues] = useState<UILeague[]>([]);
   const [activeLeagueId, setActiveLeagueId] = useState<string>("");
   const [isJoinOpen, setJoinOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -151,6 +156,52 @@ export function LeaguesScreen() {
     const league = leagues.find((l) => l.id === activeLeagueId);
     setInviteMessage(league?.invite_message ?? "");
   }, [activeLeagueId, leagues]);
+
+  // ── Background polling for unread badge ─────────────────────────────────────
+  // Polls every 30s. Watermark is persisted in localStorage per league so
+  // unread state survives page refreshes and dev server restarts.
+  const chatWatermarkKey = (id: string) => `f1_chat_seen_${id}`;
+
+  useEffect(() => {
+    if (!activeLeagueId) return;
+
+    setUnreadCount(0);
+
+    // Immediately check for unread messages against the persisted watermark
+    api.chat
+      .list(activeLeagueId)
+      .then((msgs) => {
+        if (!msgs.length) return;
+        const watermark = safeStorage.getItem(chatWatermarkKey(activeLeagueId));
+        if (!watermark) {
+          // First time visiting this league — set baseline silently, no badge
+          safeStorage.setItem(chatWatermarkKey(activeLeagueId), msgs[msgs.length - 1]?.created_at ?? "");
+          return;
+        }
+        const newMsgs = msgs.filter((m) => m.created_at > watermark);
+        if (newMsgs.length > 0) setUnreadCount(newMsgs.length);
+      })
+      .catch(() => {});
+
+    const interval = setInterval(async () => {
+      if (isChatOpen) return;
+      try {
+        const msgs = await api.chat.list(activeLeagueId);
+        if (!msgs.length) return;
+        const watermark = safeStorage.getItem(chatWatermarkKey(activeLeagueId));
+        if (!watermark) {
+          safeStorage.setItem(chatWatermarkKey(activeLeagueId), msgs[msgs.length - 1]?.created_at ?? "");
+          return;
+        }
+        const newMsgs = msgs.filter((m) => m.created_at > watermark);
+        if (newMsgs.length > 0) setUnreadCount(newMsgs.length);
+      } catch {
+        /* Silent */
+      }
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [activeLeagueId, isChatOpen]);
 
   async function fetchLeagues() {
     try {
@@ -356,6 +407,14 @@ export function LeaguesScreen() {
   return (
     <PageContainer title="Leagues" subtitle="Compete with friends">
       <div className="space-y-4 pb-6">
+        <div className="flex justify-end gap-2 px-1">
+          <JoinLeagueDialog onLeagueJoined={handleLeagueJoined} />
+          <Button onClick={() => navigate("/leagues/create")} variant="secondary" className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" />
+            Create
+          </Button>
+        </div>
+
         {/* League Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
           {leagues.map((league) => (
@@ -531,29 +590,44 @@ export function LeaguesScreen() {
             )}
           </CardContent>
         </Card>
-        {/* FAB */}
+        {/* Chat FAB */}
         <div className="fixed bottom-24 right-4 z-50 md:bottom-8 md:right-8">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <Dialog
+            open={isChatOpen}
+            onOpenChange={(open) => {
+              setIsChatOpen(open);
+              if (open) {
+                setUnreadCount(0);
+                // Advance the watermark to now so these messages won't badge again on refresh
+                safeStorage.setItem(`f1_chat_seen_${activeLeagueId}`, new Date().toISOString());
+              }
+            }}>
+            <DialogTrigger asChild>
               <Button
                 size="icon"
-                className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Plus className="h-6 w-6" />
+                className="relative h-14 w-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:ring-0">
+                <MessageCircle className="h-6 w-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center shadow-md border-2 border-background leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" className="w-48 p-2 mb-2">
-              <DropdownMenuItem onClick={() => setJoinOpen(true)} className="gap-2 cursor-pointer py-3">
-                <UserPlus className="h-4 w-4" />
-                <span>Join League</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/leagues/create")} className="gap-2 cursor-pointer py-3">
-                <Plus className="h-4 w-4" />
-                <span>Create League</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <JoinLeagueDialog open={isJoinOpen} onOpenChange={setJoinOpen} onLeagueJoined={handleLeagueJoined} />
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md w-[calc(100%-2rem)] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden bg-background">
+              <DialogHeader className="p-4 border-b shrink-0 bg-card">
+                <DialogTitle className="flex items-center gap-2 text-lg">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                  {activeLeague.name} Chat
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+                {isChatOpen && (
+                  <LeagueChat leagueId={activeLeague.id} isOpen={isChatOpen} onUnreadChange={setUnreadCount} />
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </PageContainer>

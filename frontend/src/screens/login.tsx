@@ -167,12 +167,13 @@ export function LoginScreen() {
 
     setLoading(true);
     try {
-      const { token, user } = await api.auth.verifyOtp({
+      const { token, refresh_token, user } = await api.auth.verifyOtp({
         type: authType,
         contact: getCleanContact(),
         code,
       });
       auth.setToken(token);
+      if (refresh_token) auth.setRefreshToken(refresh_token);
       auth.setUser(user);
 
       if (!user.display_name) {

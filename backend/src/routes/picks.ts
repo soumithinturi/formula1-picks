@@ -1,6 +1,8 @@
 import { db } from "../db/index.ts";
 import { withAuth, parseBody } from "../middleware/auth.ts";
 import { PickSubmissionSchema, type PickRow, type RaceRow } from "../types/index.ts";
+import { supabase } from "../lib/supabase.ts";
+
 
 /**
  * GET /api/v1/picks/race/:raceId?leagueId=<uuid>
@@ -111,5 +113,48 @@ export const submitPick = withAuth(async (req) => {
     RETURNING *
   `;
 
+  // Fire system message to all league chats — non-blocking
+  const raceName = (race as any).name || `Race #${data.raceId}`;
+  queueMicrotask(() => broadcastPickSystemMessage(req.user.id, raceName));
+
   return Response.json(savedPick, { status: 201 });
 });
+
+/**
+ * Sends a system chat message to all leagues a user is a member of, announcing pick activity.
+ * Called after a pick is submitted/updated. Non-blocking — errors are logged but not thrown.
+ */
+export async function broadcastPickSystemMessage(
+  userId: string,
+  raceName: string
+): Promise<void> {
+  try {
+    const [userRow] = await db`
+      SELECT display_name, contact FROM users WHERE id = ${userId} LIMIT 1
+    `;
+    const displayName = (userRow as any)?.display_name || (userRow as any)?.contact || "Someone";
+
+    // Find all leagues this user belongs to
+    const leagues = await db`
+      SELECT league_id FROM league_members WHERE user_id = ${userId}
+      UNION
+      SELECT id AS league_id FROM leagues WHERE created_by = ${userId}
+    `;
+
+    if (!leagues.length) return;
+
+    const message = `🏎️ ${displayName} locked in their picks for ${raceName}`;
+
+    const rows = (leagues as any[]).map((l: any) => ({
+      league_id: l.league_id,
+      user_id: userId,
+      message,
+      type: 'system',
+    }));
+
+    const { error } = await supabase.from("chat_messages").insert(rows);
+    if (error) console.error("Failed to broadcast pick system messages:", error);
+  } catch (err) {
+    console.error("broadcastPickSystemMessage error:", err);
+  }
+}
