@@ -34,6 +34,7 @@ export async function getChatMessages(req: AuthedRequest): Promise<Response> {
       cm.user_id,
       cm.message,
       cm.created_at,
+      cm.type,
       u.display_name,
       u.avatar_url
     FROM chat_messages cm

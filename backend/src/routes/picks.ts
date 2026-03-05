@@ -113,9 +113,9 @@ export const submitPick = withAuth(async (req) => {
     RETURNING *
   `;
 
-  // Fire system message to all league chats — non-blocking
+  // Fire system message to the specific league chat — non-blocking
   const raceName = (race as any).name || `Race #${data.raceId}`;
-  queueMicrotask(() => broadcastPickSystemMessage(req.user.id, raceName));
+  queueMicrotask(() => broadcastPickSystemMessage(req.user.id, raceName, data.leagueId));
 
   return Response.json(savedPick, { status: 201 });
 });
@@ -126,7 +126,8 @@ export const submitPick = withAuth(async (req) => {
  */
 export async function broadcastPickSystemMessage(
   userId: string,
-  raceName: string
+  raceName: string,
+  leagueId?: string
 ): Promise<void> {
   try {
     const [userRow] = await db`
@@ -134,19 +135,25 @@ export async function broadcastPickSystemMessage(
     `;
     const displayName = (userRow as any)?.display_name || (userRow as any)?.contact || "Someone";
 
-    // Find all leagues this user belongs to
-    const leagues = await db`
-      SELECT league_id FROM league_members WHERE user_id = ${userId}
-      UNION
-      SELECT id AS league_id FROM leagues WHERE created_by = ${userId}
-    `;
+    let leagueIds: string[] = [];
+    if (leagueId) {
+      leagueIds = [leagueId];
+    } else {
+      // Fallback: Find all leagues this user belongs to (backward compatibility or global events)
+      const leagues = await db`
+        SELECT league_id FROM league_members WHERE user_id = ${userId}
+        UNION
+        SELECT id AS league_id FROM leagues WHERE created_by = ${userId}
+      `;
+      leagueIds = (leagues as any[]).map(l => l.league_id);
+    }
 
-    if (!leagues.length) return;
+    if (!leagueIds.length) return;
 
     const message = `🏎️ ${displayName} locked in their picks for ${raceName}`;
 
-    const rows = (leagues as any[]).map((l: any) => ({
-      league_id: l.league_id,
+    const rows = leagueIds.map((id: string) => ({
+      league_id: id,
       user_id: userId,
       message,
       type: 'system',

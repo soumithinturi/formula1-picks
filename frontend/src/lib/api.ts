@@ -310,6 +310,7 @@ export interface ChatMessage {
   user_id: string;
   message: string;
   created_at: string;
+  type?: "text" | "system";
   display_name?: string | null;
   avatar_url?: string | null;
 }

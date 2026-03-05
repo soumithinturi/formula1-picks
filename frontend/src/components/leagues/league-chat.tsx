@@ -298,10 +298,10 @@ export function LeagueChat({ leagueId, onUnreadChange, isOpen }: LeagueChatProps
                 );
               }
 
-              if ((msg as any).type === "system") {
+              if (msg.type === "system") {
                 nodes.push(
-                  <div key={msg.id} className="flex justify-center my-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs text-muted-foreground bg-muted/60 border border-white/5 italic">
+                  <div key={msg.id} className="flex justify-center my-4" style={{ width: "100%" }}>
+                    <span className="text-[13px] font-medium text-muted-foreground/80 px-4 text-center leading-relaxed">
                       {msg.message}
                     </span>
                   </div>,
@@ -314,7 +314,7 @@ export function LeagueChat({ leagueId, onUnreadChange, isOpen }: LeagueChatProps
               const isSequential =
                 idx > 0 &&
                 prevMsg?.user_id === msg.user_id &&
-                (prevMsg as any).type !== "system" &&
+                prevMsg?.type !== "system" &&
                 !dayLabelIndices.has(idx) &&
                 idx !== firstUnreadIdx;
               const author = msg.display_name || "Unknown";
