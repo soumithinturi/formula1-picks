@@ -130,6 +130,8 @@ console.log(`🌍 Loading environment for mode: ${mode} from ${envFile}`);
 
 const define: Record<string, string> = {
   "process.env.NODE_ENV": JSON.stringify(mode === "development" ? "development" : "production"),
+  "process.env": "{}",
+  "process": "({ env: {} })",
 };
 
 if (existsSync(envFile)) {
