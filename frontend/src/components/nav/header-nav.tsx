@@ -64,10 +64,15 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       )}
       {...props}>
       <div className="flex items-center gap-2 md:hidden mr-auto">
-        <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shrink-0">
-          <span className="text-primary-foreground font-bold text-lg">F1</span>
+        <div className="flex items-center gap-1.5 font-black uppercase italic tracking-tighter">
+          <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shrink-0 shadow-sm">
+            <span className="text-primary-foreground text-sm font-black not-italic">F1</span>
+          </div>
+          <span className="text-xl">Picks</span>
         </div>
-        <span className="text-xl font-bold tracking-tight">Picks</span>
+        <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
+          BETA
+        </span>
       </div>
 
       <div className="hidden md:flex flex-1 max-w-sm mr-4">
