@@ -21,6 +21,7 @@ import { ChangelogScreen } from "./screens/changelog";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
+import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { useTheme } from "@/context/theme-context";
 import { usePreferences } from "@/context/preferences-context";
@@ -81,28 +82,36 @@ function AppLayout() {
 }
 const OnboardingTrigger = () => {
   const { startTour, isTourCompleted, activeTour } = useTutorial();
+  const location = useLocation();
+  const user = auth.getUser();
 
   useEffect(() => {
-    if (!activeTour) {
-      const completed = isTourCompleted("onboarding");
-      if (!completed) {
-        // Fetch league count to customize the tour
-        api.leagues
-          .list()
-          .then((leagues: any[]) => {
-            // Small delay to ensure everything is mounted
-            const timer = setTimeout(() => startTour("onboarding", leagues.length), 1000);
-            return () => clearTimeout(timer);
-          })
-          .catch((err: Error) => {
-            console.error("[OnboardingTrigger] Failed to fetch leagues:", err);
-            // Fallback to onboarding with 0 leagues (most strict)
-            const timer = setTimeout(() => startTour("onboarding", 0), 1000);
-            return () => clearTimeout(timer);
-          });
-      }
+    // Only trigger if:
+    // 1. No tour is active
+    // 2. Onboarding haven't been completed
+    // 3. User is authenticated (auth.getUser() returns profile)
+    // 4. User has a display name (sign-in/up fully complete)
+    // 5. Not on an invite or login screen (let them finish those flows)
+    const isAuthenticating = location.pathname === "/login" || location.pathname === "/auth/callback";
+    const isJoiningLeague = location.pathname.startsWith("/invite/");
+
+    if (!activeTour && !isTourCompleted("onboarding") && user?.display_name && !isAuthenticating && !isJoiningLeague) {
+      // Fetch league count to customize the tour
+      api.leagues
+        .list()
+        .then((leagues: any[]) => {
+          // Small delay to ensure everything is mounted and animations finished
+          const timer = setTimeout(() => startTour("onboarding", leagues.length), 1500);
+          return () => clearTimeout(timer);
+        })
+        .catch((err: Error) => {
+          console.error("[OnboardingTrigger] Failed to fetch leagues:", err);
+          // Fallback to onboarding with 0 leagues (most strict)
+          const timer = setTimeout(() => startTour("onboarding", 0), 1000);
+          return () => clearTimeout(timer);
+        });
     }
-  }, [startTour, isTourCompleted, activeTour]);
+  }, [startTour, isTourCompleted, activeTour, location.pathname, user?.display_name]);
 
   return null;
 };
@@ -111,12 +120,17 @@ export function App() {
   return (
     <TutorialProvider>
       <NotificationProvider>
-        <OnboardingTrigger />
         <Routes>
           <Route path="/login" element={<LoginScreen />} />
 
           <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
+            <Route
+              element={
+                <>
+                  <OnboardingTrigger />
+                  <AppLayout />
+                </>
+              }>
               <Route index element={<HomeScreen />} />
               <Route path="leagues" element={<LeaguesScreen />} />
               <Route path="leagues/create" element={<CreateLeagueWizard />} />
