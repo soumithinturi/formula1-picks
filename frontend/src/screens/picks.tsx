@@ -7,7 +7,7 @@ import { Countdown } from "@/components/ui/countdown";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DriverSelector } from "@/components/racing/driver-selector";
 import { Progress } from "@/components/ui/progress";
-import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock, Copy } from "lucide-react";
+import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock, Copy, Trash2 } from "lucide-react";
 import { api, type Driver, type Race, type League } from "@/lib/api";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -231,6 +231,25 @@ export function PicksScreen() {
       ) as typeof prev;
       return { ...cleared, [key]: driver };
     });
+  };
+
+  const handleClear = () => {
+    setSprintPredictions({
+      sprintP1: null,
+      sprintP2: null,
+      sprintP3: null,
+      sprintFastestLap: null,
+      sprintQualifyingP1: null,
+    });
+    setRacePredictions({
+      raceP1: null,
+      raceP2: null,
+      raceP3: null,
+      fastestLap: null,
+      raceQualifyingP1: null,
+      firstDnf: null,
+    });
+    toast.success("Picks cleared locally. Save to persist.");
   };
 
   const handleSave = async () => {
@@ -466,11 +485,20 @@ export function PicksScreen() {
           </div>
           <Progress value={progress} className="h-2" />
         </div>
-        <div className="hidden md:flex w-full max-w-md mx-auto justify-center pt-4">
+        <div className="hidden md:flex w-full max-md mx-auto items-center gap-3 pt-4">
+          <Button
+            variant="outline"
+            size="lg"
+            className="flex-1 font-bold border-muted-foreground/20"
+            onClick={handleClear}
+            disabled={saving || !nextRace}>
+            <Trash2 className="w-5 h-5 mr-2" />
+            Clear
+          </Button>
           <Button
             id="save-picks-btn"
             size="lg"
-            className="shadow-lg text-lg font-bold bg-primary text-primary-foreground w-full"
+            className="flex-2 shadow-lg text-lg font-bold bg-primary text-primary-foreground"
             onClick={handleSave}
             disabled={saving || !nextRace}>
             {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
@@ -671,11 +699,20 @@ export function PicksScreen() {
         </Tabs>
       )}
 
-      <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
+      <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)] flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="lg"
+          className="flex-1 font-bold border-muted-foreground/20"
+          onClick={handleClear}
+          disabled={saving || !nextRace}>
+          <Trash2 className="w-5 h-5 mr-2" />
+          Clear
+        </Button>
         <Button
           id="save-picks-btn-mobile"
           size="lg"
-          className="w-full text-lg font-bold bg-primary text-primary-foreground"
+          className="flex-2 text-lg font-bold bg-primary text-primary-foreground"
           onClick={handleSave}
           disabled={saving || !nextRace}>
           {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
