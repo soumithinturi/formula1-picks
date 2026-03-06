@@ -38,6 +38,7 @@ export function SideNav({ className, ...props }: SideNavProps) {
             key={item.to}
             to={item.to}
             end={item.end}
+            id={item.to === "/leagues" ? "nav-leagues" : item.to === "/picks" ? "nav-picks" : undefined}
             className={({ isActive }) =>
               cn(
                 "flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md transition-colors",

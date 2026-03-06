@@ -407,7 +407,7 @@ export function LeaguesScreen() {
   return (
     <PageContainer title="Leagues" subtitle="Compete with friends">
       <div className="space-y-4 pb-6">
-        <div className="flex justify-end gap-2 px-1">
+        <div id="league-actions-container" className="flex justify-end gap-2 px-1">
           <JoinLeagueDialog onLeagueJoined={handleLeagueJoined} />
           <Button onClick={() => navigate("/leagues/create")} variant="secondary" className="gap-2 shadow-sm">
             <Plus className="h-4 w-4" />
@@ -416,7 +416,7 @@ export function LeaguesScreen() {
         </div>
 
         {/* League Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
+        <div id="league-tabs-scroll" className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
           {leagues.map((league) => (
             <button
               key={league.id}

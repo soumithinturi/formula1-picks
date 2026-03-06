@@ -26,6 +26,7 @@ export function MobileNav({ className, ...props }: MobileNavProps) {
           key={item.to}
           to={item.to}
           end={item.end}
+          id={item.to === "/leagues" ? "mobile-nav-leagues" : item.to === "/picks" ? "mobile-nav-picks" : undefined}
           className={({ isActive }) =>
             cn(
               "flex flex-col items-center justify-center gap-1 h-full w-full rounded-none transition-colors",

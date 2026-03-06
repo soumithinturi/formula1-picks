@@ -114,7 +114,7 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
         </Popover>
 
         {/* Desktop Profile Header */}
-        <Link to="/profile" className="hidden sm:block">
+        <Link to="/profile" className="hidden sm:block" id="profile-header-tour">
           <ProfileHeader
             name={displayName}
             team={userTeam.name}

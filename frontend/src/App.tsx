@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { Routes, Route, Outlet, useLocation, Navigate } from "react-router";
 import { NotificationProvider } from "@/context/notification-context";
+import { TutorialProvider, useTutorial } from "@/context/tutorial-context";
+import { TutorialOverlay } from "@/components/ui/tutorial-overlay";
 import { SideNav } from "@/components/nav/side-nav";
 import { MobileNav } from "@/components/nav/mobile-nav";
 import { HeaderNav } from "@/components/nav/header-nav";
@@ -77,32 +79,61 @@ function AppLayout() {
     </div>
   );
 }
+const OnboardingTrigger = () => {
+  const { startTour, isTourCompleted, activeTour } = useTutorial();
+
+  useEffect(() => {
+    if (!activeTour) {
+      const completed = isTourCompleted("onboarding");
+      if (!completed) {
+        // Fetch league count to customize the tour
+        api.leagues
+          .list()
+          .then((leagues: any[]) => {
+            // Small delay to ensure everything is mounted
+            const timer = setTimeout(() => startTour("onboarding", leagues.length), 1000);
+            return () => clearTimeout(timer);
+          })
+          .catch((err: Error) => {
+            console.error("[OnboardingTrigger] Failed to fetch leagues:", err);
+            // Fallback to onboarding with 0 leagues (most strict)
+            const timer = setTimeout(() => startTour("onboarding", 0), 1000);
+            return () => clearTimeout(timer);
+          });
+      }
+    }
+  }, [startTour, isTourCompleted, activeTour]);
+
+  return null;
+};
 
 export function App() {
   return (
-    <NotificationProvider>
-      <Routes>
-        <Route path="/login" element={<LoginScreen />} />
+    <TutorialProvider>
+      <NotificationProvider>
+        <OnboardingTrigger />
+        <Routes>
+          <Route path="/login" element={<LoginScreen />} />
 
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppLayout />}>
-            <Route index element={<HomeScreen />} />
-            <Route path="leagues" element={<LeaguesScreen />} />
-            <Route path="leagues/create" element={<CreateLeagueWizard />} />
-            <Route path="invite/:code" element={<InviteScreen />} />
-            <Route path="picks" element={<PicksScreen />} />
-            <Route path="profile" element={<ProfileScreen />} />
-            <Route path="schedule" element={<RaceSchedule />} />
-            <Route path="settings" element={<SettingsScreen />} />
-            <Route path="changelog" element={<ChangelogScreen />} />
-            {/* <Route path="more/race-winners-history" element={<RaceWinnersHistoryScreen />} /> */}
-            {/* <Route path="more/leagues-history" element={<LeaguesHistoryScreen />} /> */}
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<HomeScreen />} />
+              <Route path="leagues" element={<LeaguesScreen />} />
+              <Route path="leagues/create" element={<CreateLeagueWizard />} />
+              <Route path="invite/:code" element={<InviteScreen />} />
+              <Route path="picks" element={<PicksScreen />} />
+              <Route path="profile" element={<ProfileScreen />} />
+              <Route path="schedule" element={<RaceSchedule />} />
+              <Route path="settings" element={<SettingsScreen />} />
+              <Route path="changelog" element={<ChangelogScreen />} />
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
-      <Toaster />
-    </NotificationProvider>
+        </Routes>
+        <Toaster />
+        <TutorialOverlay />
+      </NotificationProvider>
+    </TutorialProvider>
   );
 }

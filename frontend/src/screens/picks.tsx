@@ -412,7 +412,9 @@ export function PicksScreen() {
 
         {/* League Selector */}
         {leagues.length > 0 && (
-          <div className="w-full max-w-[340px] mx-auto mt-4 space-y-1.5 flex flex-col items-start">
+          <div
+            id="league-select-container"
+            className="w-full max-w-[340px] mx-auto mt-4 space-y-1.5 flex flex-col items-start">
             <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">League</Label>
             <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
               <SelectTrigger className="w-full">
@@ -465,6 +467,7 @@ export function PicksScreen() {
         </div>
         <div className="hidden md:flex w-full max-w-md mx-auto justify-center pt-4">
           <Button
+            id="save-picks-btn"
             size="lg"
             className="shadow-lg text-lg font-bold bg-primary text-primary-foreground w-full"
             onClick={handleSave}
@@ -669,6 +672,7 @@ export function PicksScreen() {
 
       <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
         <Button
+          id="save-picks-btn-mobile"
           size="lg"
           className="w-full text-lg font-bold bg-primary text-primary-foreground"
           onClick={handleSave}

@@ -18,6 +18,7 @@ import { Bell, Globe, Bug, Trash2, LogOut, Loader2 } from "lucide-react";
 import { useTheme, TEAMS } from "@/context/theme-context";
 import { auth } from "@/lib/auth";
 import { usePreferences } from "@/context/preferences-context";
+import { useTutorial } from "@/context/tutorial-context";
 import { FeedbackModal } from "@/components/user/feedback-modal";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -29,6 +30,7 @@ export function SettingsScreen() {
   const navigate = useNavigate();
   const { currentTeam, setTeam } = useTheme();
   const { timezoneDisplay, setTimezoneDisplay } = usePreferences();
+  const { startTour } = useTutorial();
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
@@ -98,6 +100,17 @@ export function SettingsScreen() {
               </div>
             </CardContent>
           </Card>
+
+          <Button
+            variant="outline"
+            className="w-full mt-2 border-dashed border-primary/40 text-primary hover:bg-primary/5"
+            onClick={async () => {
+              const leagues = await api.leagues.list().catch(() => []);
+              startTour("onboarding", leagues.length);
+              navigate("/");
+            }}>
+            Restart Onboarding Tutorial
+          </Button>
         </section>
 
         {/* Beta Support */}
