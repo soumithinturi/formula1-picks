@@ -75,6 +75,17 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-4 shrink-0" id="profile-theme-group">
+        {/* What's New / Changelog Button (Mainly for Mobile) */}
+        <Link to="/changelog">
+          <Button
+            id="changelog-btn"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60">
+            <Megaphone className="h-4.5 w-4.5" />
+          </Button>
+        </Link>
+
         {/* Notification Bell */}
         <Popover open={notifOpen} onOpenChange={handleNotifOpen}>
           <PopoverTrigger asChild>
