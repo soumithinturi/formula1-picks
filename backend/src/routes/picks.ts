@@ -33,6 +33,82 @@ export const getPickForRace = withAuth(async (req) => {
 });
 
 /**
+ * GET /api/v1/picks/race/:raceId/user/:userId?leagueId=<uuid>
+ * Returns a specific user's pick for a specific race within a league.
+ * Applies visibility rules: if the deadline hasn't passed, scrub the picks.
+ */
+export const getUserPickForRace = withAuth(async (req) => {
+  const url = new URL(req.url);
+  const raceId = req.params.raceId;
+  const targetUserId = req.params.userId;
+  const leagueId = url.searchParams.get("leagueId");
+
+  if (!raceId || !targetUserId || !leagueId) {
+    return Response.json({ error: "raceId, userId, and leagueId are required" }, { status: 400 });
+  }
+
+  // --- Security Check: Ensure requesting user is a member of the league ---
+  const [membership] = await db`
+    SELECT 1 FROM league_members
+    WHERE league_id = ${leagueId} AND user_id = ${req.user.id}
+    LIMIT 1
+  `;
+
+  if (!membership) {
+    return Response.json({ error: "Forbidden: You are not a member of this league." }, { status: 403 });
+  }
+
+  // Fetch the target user's pick
+  const [pick] = await db<PickRow[]>`
+    SELECT * FROM picks
+    WHERE user_id = ${targetUserId}
+      AND race_id = ${parseInt(raceId)}
+      AND league_id = ${leagueId}
+    LIMIT 1
+  `;
+
+  if (!pick) {
+    return Response.json({ error: "Pick not found" }, { status: 404 });
+  }
+
+  // If requesting own picks, return as is
+  if (targetUserId === req.user.id) {
+    return Response.json(pick);
+  }
+
+  // Otherwise, apply visibility logic
+  const [race] = await db<RaceRow[]>`
+    SELECT * FROM races WHERE id = ${parseInt(raceId)} LIMIT 1
+  `;
+
+  if (!race) {
+    return Response.json(pick); // Fallback
+  }
+
+  const now = new Date();
+  const scrubbedPick = { ...pick };
+
+  if (race.sprint_deadline && now < new Date(race.sprint_deadline)) {
+    scrubbedPick.sprint_qualifying_p1 = null;
+    scrubbedPick.sprint_p1 = null;
+    scrubbedPick.sprint_p2 = null;
+    scrubbedPick.sprint_p3 = null;
+    scrubbedPick.sprint_fastest_lap = null;
+  }
+
+  if (race.race_deadline && now < new Date(race.race_deadline)) {
+    scrubbedPick.race_qualifying_p1 = null;
+    scrubbedPick.race_p1 = null;
+    scrubbedPick.race_p2 = null;
+    scrubbedPick.race_p3 = null;
+    scrubbedPick.fastest_lap = null;
+    scrubbedPick.first_dnf = null;
+  }
+
+  return Response.json(scrubbedPick);
+});
+
+/**
  * POST /api/v1/picks
  * Submits or updates a pick for a race within a league.
  * Enforces sprint and race deadlines.

@@ -290,6 +290,9 @@ export const api = {
     get: (raceId: string, leagueId: string) =>
       api.get<PickRow>(`/picks/race/${raceId}?leagueId=${leagueId}`),
 
+    getUser: (raceId: string, userId: string, leagueId: string) =>
+      api.get<PickRow>(`/picks/race/${raceId}/user/${userId}?leagueId=${leagueId}`),
+
     submit: (payload: { raceId: string; leagueId: string; selections: any }) =>
       api.post("/picks", payload),
   },

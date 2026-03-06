@@ -1,7 +1,7 @@
 import { requestOtp, verifyOtp, syncAuth } from "./routes/auth.ts";
 import { listRaces } from "./routes/races.ts";
 import { listDrivers } from "./routes/drivers.ts";
-import { getPickForRace, submitPick } from "./routes/picks.ts";
+import { getPickForRace, submitPick, getUserPickForRace } from "./routes/picks.ts";
 import { createLeague, listLeagues, joinLeague, previewLeague, updateLeague, leaveLeague, deleteLeague } from "./routes/leagues.ts";
 import { getLeaderboard } from "./routes/leaderboard.ts";
 import { submitResults } from "./routes/admin.ts";
@@ -105,6 +105,10 @@ const server = Bun.serve({
     // ─── Picks ─────────────────────────────────────────────────────────────
     "/api/v1/picks/race/:raceId": {
       GET: withCors(getPickForRace),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/picks/race/:raceId/user/:userId": {
+      GET: withCors(getUserPickForRace),
       OPTIONS: handleOptions,
     },
     "/api/v1/picks": {

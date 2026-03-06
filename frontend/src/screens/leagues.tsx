@@ -45,8 +45,10 @@ const truncateName = (name: string, length: number = 16) => {
 interface UILeague extends League {
   yourRank?: number;
   nextRace?: {
+    id: string;
     name: string;
     daysUntil: number;
+    has_sprint: boolean;
   };
 }
 
@@ -205,12 +207,24 @@ export function LeaguesScreen() {
 
   async function fetchLeagues() {
     try {
-      const data = await api.leagues.list();
+      const [leaguesData, racesData] = await Promise.all([api.leagues.list(), api.races.list()]);
+      const nextRaceData = racesData.find((r) => r.status === "UPCOMING" || r.status === "OPEN");
+
       // Map API data to UI data
-      const uiLeagues: UILeague[] = data.map((l) => ({
+      const uiLeagues: UILeague[] = leaguesData.map((l) => ({
         ...l,
         yourRank: 0, // Placeholder
-        nextRace: undefined, // Placeholder
+        nextRace: nextRaceData
+          ? {
+              id: nextRaceData.id,
+              name: nextRaceData.name,
+              daysUntil: Math.max(
+                0,
+                Math.floor((new Date(nextRaceData.date).getTime() - new Date().getTime()) / (1000 * 3600 * 24)),
+              ),
+              has_sprint: nextRaceData.has_sprint,
+            }
+          : undefined,
       }));
 
       setLeagues(uiLeagues);
@@ -582,7 +596,13 @@ export function LeaguesScreen() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Leaderboard entries={isExpanded ? leaderboard : leaderboard.slice(0, 5)} />
+            <Leaderboard
+              entries={isExpanded ? leaderboard : leaderboard.slice(0, 5)}
+              leagueId={activeLeague.id}
+              nextRaceId={activeLeague.nextRace?.id}
+              hasSprint={activeLeague.nextRace?.has_sprint}
+              scoringConfig={activeLeague.scoring_config}
+            />
             {leaderboard.length > 5 && (
               <Button variant="outline" className="w-full" onClick={() => setIsExpanded(!isExpanded)}>
                 {isExpanded ? "Collapse Standings" : "View Full Standings"}
