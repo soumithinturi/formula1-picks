@@ -74,11 +74,11 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
         {/* <Searchbar placeholder="Search..." className="w-full text-xs md:text-sm pl-8 md:pl-9 h-9" /> */}
       </div>
 
-      <div className="flex items-center gap-2 md:gap-4 shrink-0" id="profile-theme-group">
+      <div className="flex items-center gap-2 md:gap-4 shrink-0">
         {/* What's New / Changelog Button (Mainly for Mobile) */}
         <Link to="/changelog">
           <Button
-            id="changelog-btn"
+            id="header-changelog"
             variant="ghost"
             size="icon"
             className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60">
@@ -111,33 +111,35 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
           </PopoverContent>
         </Popover>
 
-        <TeamSwitcher />
+        <div className="flex items-center gap-2 md:gap-4 shrink-0" id="personalization-tour">
+          <TeamSwitcher />
 
-        <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
+          <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
 
-        {/* Desktop Profile Header */}
-        <Link to="/profile" className="hidden sm:block" id="profile-header-tour">
-          <ProfileHeader
-            name={displayName}
-            team={userTeam.name}
-            teamId={userTeam.id}
-            className="hover:opacity-80 transition-opacity cursor-pointer"
-            avatarData={user?.avatar_url}
-          />
-        </Link>
+          {/* Desktop Profile Header */}
+          <Link to="/profile" className="hidden sm:block" id="profile-header-tour">
+            <ProfileHeader
+              name={displayName}
+              team={userTeam.name}
+              teamId={userTeam.id}
+              className="hover:opacity-80 transition-opacity cursor-pointer"
+              avatarData={user?.avatar_url}
+            />
+          </Link>
 
-        {/* Mobile Profile Badge (Avatar Only) */}
-        <Link to="/profile" className="sm:hidden block" id="profile-header-tour-mobile">
-          {helmetColors ? (
-            <div className="h-8 w-8 aspect-square rounded-full shrink-0">
-              <F1HelmetAvatar helmetColor={helmetColors.helmetColor} bgColor={helmetColors.bgColor} />
-            </div>
-          ) : (
-            <Avatar className="h-8 w-8">
-              <AvatarFallback>{avatarChar}</AvatarFallback>
-            </Avatar>
-          )}
-        </Link>
+          {/* Mobile Profile Badge (Avatar Only) */}
+          <Link to="/profile" className="sm:hidden block" id="profile-header-tour-mobile">
+            {helmetColors ? (
+              <div className="h-8 w-8 aspect-square rounded-full shrink-0">
+                <F1HelmetAvatar helmetColor={helmetColors.helmetColor} bgColor={helmetColors.bgColor} />
+              </div>
+            ) : (
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>{avatarChar}</AvatarFallback>
+              </Avatar>
+            )}
+          </Link>
+        </div>
       </div>
     </header>
   );

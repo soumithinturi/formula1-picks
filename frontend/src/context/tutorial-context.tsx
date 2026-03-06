@@ -56,7 +56,7 @@ const ONBOARDING_STEPS: TutorialStep[] = [
     placement: "right",
   },
   {
-    targetId: "profile-theme-group", // Step 6
+    targetId: "personalization-tour", // Step 6
     title: "Personalization",
     content: "Customize your F1 helmet and pick your favorite team to theme the app in real-time.",
     placement: "bottom",
