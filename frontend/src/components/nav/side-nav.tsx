@@ -1,7 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
-import { Home, Trophy, Users, Calendar, Settings, LogOut, Flag, Archive } from "lucide-react";
+import { Home, Trophy, Users, Calendar, Settings, LogOut, Megaphone } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { Disclaimer } from "@/components/ui/disclaimer";
 
@@ -12,6 +12,7 @@ const navItems = [
   { to: "/leagues", label: "Leagues", icon: Trophy },
   { to: "/picks", label: "Picks", icon: Users },
   { to: "/schedule", label: "Schedule", icon: Calendar },
+  { to: "/changelog", label: "What's New", icon: Megaphone },
   // { to: "/more/race-winners-history", label: "Race History", icon: Flag },
   // { to: "/more/leagues-history", label: "League History", icon: Archive },
 ];

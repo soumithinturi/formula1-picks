@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { ProfileHeader } from "@/components/user/profile-header";
-import { Bell } from "lucide-react";
+import { Bell, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "react-router";
@@ -77,6 +77,16 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       <div className="flex items-center gap-2 md:gap-4 shrink-0">
         <TeamSwitcher />
         <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
+
+        {/* Changelog / What's New */}
+        <Link to="/changelog">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60">
+            <Megaphone className="h-4.5 w-4.5" />
+          </Button>
+        </Link>
 
         {/* Notification Bell */}
         <Popover open={notifOpen} onOpenChange={handleNotifOpen}>

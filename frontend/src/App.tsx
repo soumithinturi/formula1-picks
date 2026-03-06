@@ -15,6 +15,7 @@ import { CreateLeagueWizard } from "@/screens/create-league/wizard";
 import { InviteScreen } from "./screens/invite";
 import { SettingsScreen } from "@/screens/settings";
 import { ProfileScreen } from "@/screens/profile";
+import { ChangelogScreen } from "./screens/changelog";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
@@ -93,6 +94,7 @@ export function App() {
             <Route path="profile" element={<ProfileScreen />} />
             <Route path="schedule" element={<RaceSchedule />} />
             <Route path="settings" element={<SettingsScreen />} />
+            <Route path="changelog" element={<ChangelogScreen />} />
             {/* <Route path="more/race-winners-history" element={<RaceWinnersHistoryScreen />} /> */}
             {/* <Route path="more/leagues-history" element={<LeaguesHistoryScreen />} /> */}
             {/* Fallback */}
