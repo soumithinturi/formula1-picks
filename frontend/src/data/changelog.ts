@@ -9,6 +9,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.2.1",
+    date: "2026-03-05",
+    title: "Tutorial & Picks Update",
+    description: "Add tutorial for first time users and clear picks option.",
+    type: "improvement",
+    items: ["Tutorial: Add tutorial for first time users", "Picks: Add clear picks option"],
+  },
+  {
     version: "0.2.0",
     date: "2026-03-05",
     title: "Chat & UX Polish",
@@ -21,7 +29,7 @@ export const changelog: ChangelogEntry[] = [
     ],
   },
   {
-    version: "0.1.5",
+    version: "0.1.1",
     date: "2026-03-03",
     title: "League Management Updates",
     description: "New ways to share and manage your private leagues.",
