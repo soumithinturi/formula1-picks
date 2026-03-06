@@ -24,7 +24,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Disclaimer } from "@/components/ui/disclaimer";
-import pkg from "../../package.json";
+import packageJson from "../../package.json";
 
 export function SettingsScreen() {
   const navigate = useNavigate();
@@ -134,7 +134,7 @@ export function SettingsScreen() {
               <FeedbackModal />
               <div className="text-center pt-2">
                 <p className="text-xs text-muted-foreground font-mono">
-                  App Version: v{pkg.version}
+                  App Version: v{packageJson.version}
                   <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ml-1 mt-1">
                     BETA
                   </span>
