@@ -38,34 +38,34 @@ const ONBOARDING_STEPS: TutorialStep[] = [
     placement: "bottom",
   },
   {
-    targetId: "league-tabs-scroll", // Step 3
-    title: "Switch Leagues",
-    content: "Easily jump between different leagues you're participating in.",
-    placement: "bottom",
-  },
-  {
-    targetId: "nav-picks", // Step 4
+    targetId: "nav-picks", // Step 3
     title: "Make Your Picks",
     content: "This is where the magic happens. Submit your predictions for the next race.",
     placement: "right",
   },
   {
-    targetId: "league-select-container", // Step 5
-    title: "League Specific Picks",
-    content: "Some leagues have different scoring rules. Make sure you select the right league before saving.",
-    placement: "bottom",
-  },
-  {
-    targetId: "save-picks-btn", // Step 6
-    title: "Lock It In",
-    content: "Don't forget to save! You can update your picks until the session starts.",
+    targetId: "copy-picks-btn", // Step 4
+    title: "Copy Picks",
+    content: "Already filled out picks for another league? Save time by copying them over with one click.",
     placement: "top",
   },
   {
-    targetId: "profile-header-tour",
-    title: "Your Profile",
-    content: "Customize your F1 helmet and track your global rank across all leagues.",
+    targetId: "nav-schedule", // Step 5
+    title: "Race Schedule",
+    content: "Plan your weekend. Check all race session times in your local timezone.",
+    placement: "right",
+  },
+  {
+    targetId: "profile-theme-group", // Step 6
+    title: "Personalization",
+    content: "Customize your F1 helmet and pick your favorite team to theme the app in real-time.",
     placement: "bottom",
+  },
+  {
+    targetId: "nav-changelog", // Step 7
+    title: "What's New",
+    content: "Keep track of the latest app updates and feature releases here.",
+    placement: "right",
   },
 ];
 
@@ -76,6 +76,8 @@ const getResponsiveSteps = (steps: TutorialStep[]): TutorialStep[] => {
     if (isMobile) {
       if (step.targetId === "nav-leagues") return { ...step, targetId: "mobile-nav-leagues", placement: "top" };
       if (step.targetId === "nav-picks") return { ...step, targetId: "mobile-nav-picks", placement: "top" };
+      if (step.targetId === "nav-schedule") return { ...step, targetId: "mobile-nav-schedule", placement: "top" };
+      if (step.targetId === "nav-changelog") return { ...step, targetId: "header-changelog", placement: "bottom" };
     }
     return step;
   });
@@ -91,14 +93,9 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const startTour = (tourId: TourId, leaguesCount: number = 0) => {
     if (tourId === "onboarding") {
       let filteredSteps = [...ONBOARDING_STEPS];
-      if (leaguesCount === 0) {
-        // Skip steps 3, 5, and 6
-        filteredSteps = filteredSteps.filter(
-          (step) =>
-            step.targetId !== "league-tabs-scroll" &&
-            step.targetId !== "league-select-container" &&
-            step.targetId !== "save-picks-btn",
-        );
+      if (leaguesCount <= 1) {
+        // Skip step 4 (Copy Picks) if only one (or zero) league
+        filteredSteps = filteredSteps.filter((step) => step.targetId !== "copy-picks-btn");
       }
       setSteps(getResponsiveSteps(filteredSteps));
     }

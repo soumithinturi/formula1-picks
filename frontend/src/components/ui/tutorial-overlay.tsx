@@ -39,16 +39,17 @@ export function TutorialOverlay() {
     const checkNavigation = (targetId: string) => {
       if (targetId.startsWith("nav-")) return;
 
-      if (
-        (targetId === "league-actions-container" || targetId === "league-tabs-scroll") &&
-        location.pathname !== "/leagues"
-      ) {
+      if (targetId === "league-actions-container" && location.pathname !== "/leagues") {
         navigate("/leagues");
       } else if (
-        (targetId === "save-picks-btn" || targetId === "league-select-container") &&
+        (targetId === "copy-picks-btn" || targetId === "league-select-container") &&
         location.pathname !== "/picks"
       ) {
         navigate("/picks");
+      } else if (targetId === "nav-schedule" && location.pathname !== "/schedule") {
+        navigate("/schedule");
+      } else if (targetId === "nav-changelog" && location.pathname !== "/changelog") {
+        navigate("/changelog");
       }
     };
 
@@ -76,11 +77,11 @@ export function TutorialOverlay() {
 
   if (!mounted || !activeTour || !step || !targetRect) return null;
 
-  const cardPosition = calculateCardPosition(targetRect, step.placement || "bottom");
+  const { top, left, bottom, arrowOffset } = calculateCardPosition(targetRect, step.placement || "bottom");
 
   return (
     <div className="fixed inset-0 z-100 pointer-events-none">
-      {/* Dimmed Background with Hole */}
+      {/* ... (existing SVG and spotlight pulser) ... */}
       <svg className="absolute inset-0 w-full h-full pointer-events-auto">
         <defs>
           <mask id="hole">
@@ -104,7 +105,6 @@ export function TutorialOverlay() {
         />
       </svg>
 
-      {/* Spotlight highlight (pulser) */}
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -121,7 +121,6 @@ export function TutorialOverlay() {
         }}
       />
 
-      {/* Instruction Card */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentStepIndex}
@@ -130,9 +129,7 @@ export function TutorialOverlay() {
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
           className="absolute bg-card border border-border shadow-2xl p-5 rounded-xl w-[280px] sm:w-[320px] pointer-events-auto"
-          style={{
-            ...cardPosition,
-          }}>
+          style={{ top, left, bottom }}>
           <div className="flex justify-between items-start mb-2">
             <span className="text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded">
               Step {currentStepIndex + 1} of {steps.length}
@@ -172,9 +169,10 @@ export function TutorialOverlay() {
 
           {/* Arrow */}
           <div
-            className={`absolute w-3 h-3 bg-card border-l border-t border-border transform rotate-45 ${getArrowPosition(
+            className={`absolute w-3 h-3 bg-card border-l border-t border-border transform rotate-45 ${getArrowPlacementClasses(
               step.placement || "bottom",
             )}`}
+            style={arrowOffset}
           />
         </motion.div>
       </AnimatePresence>
@@ -202,32 +200,42 @@ function calculateCardPosition(rect: DOMRect, placement: string) {
     top = rect.top + rect.height / 2 - 80;
     left = rect.left - gap - cardWidth;
   } else {
-    // Default fallback
     top = rect.bottom + gap;
   }
 
   // Viewport constraints for horizontal
-  if (left < 10) left = 10;
-  if (left + cardWidth > window.innerWidth - 10) left = window.innerWidth - cardWidth - 10;
+  const finalLeft = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
 
   // Viewport constraints for vertical
   if (top !== undefined) {
     if (top < 10) top = 10;
-    if (top + 200 > window.innerHeight - 10) top = window.innerHeight - 210;
+    if (top + 210 > window.innerHeight - 10) top = window.innerHeight - 220;
   }
   if (bottom !== undefined) {
     if (bottom < 10) bottom = 10;
     if (window.innerHeight - bottom < 10) bottom = window.innerHeight - 10;
   }
 
-  return { top, left, bottom };
+  // Calculate arrow offset relative to the card's final position
+  let arrowOffset: React.CSSProperties = {};
+  if (placement === "top" || placement === "bottom") {
+    const targetCenter = rect.left + rect.width / 2;
+    const offset = targetCenter - finalLeft;
+    arrowOffset = { left: Math.max(20, Math.min(cardWidth - 20, offset)) };
+  } else if (placement === "left" || placement === "right") {
+    const targetCenter = rect.top + rect.height / 2;
+    const finalTop = top || window.innerHeight - (bottom || 0) - 200; // rough estimate if bottom is used
+    const offset = targetCenter - (finalTop as number);
+    arrowOffset = { top: Math.max(20, Math.min(180, offset)) };
+  }
+
+  return { top, left: finalLeft, bottom, arrowOffset };
 }
 
-function getArrowPosition(placement: string) {
-  const isMobile = window.innerWidth < 640;
-  if (placement === "bottom" || isMobile) return "-top-1.5 left-1/2 -translate-x-1/2";
-  if (placement === "top") return "-bottom-1.5 left-1/2 -translate-x-1/2 rotate-[225deg]";
-  if (placement === "right") return "-left-1.5 top-1/2 -translate-y-1/2 -rotate-45";
-  if (placement === "left") return "-right-1.5 top-1/2 -translate-y-1/2 rotate-[135deg]";
-  return "-top-1.5 left-1/2 -translate-x-1/2";
+function getArrowPlacementClasses(placement: string) {
+  if (placement === "top") return "-bottom-1.5 rotate-[225deg]";
+  if (placement === "bottom") return "-top-1.5";
+  if (placement === "right") return "-left-1.5 -rotate-45";
+  if (placement === "left") return "-right-1.5 rotate-[135deg]";
+  return "-top-1.5";
 }

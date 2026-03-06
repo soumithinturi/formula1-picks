@@ -437,6 +437,7 @@ export function PicksScreen() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
+                  id="copy-picks-btn"
                   variant="ghost"
                   size="sm"
                   className="text-[10px] uppercase tracking-widest font-bold text-primary hover:text-primary/80 gap-1.5 h-auto py-1 px-2">

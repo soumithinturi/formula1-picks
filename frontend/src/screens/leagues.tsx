@@ -393,7 +393,7 @@ export function LeaguesScreen() {
               <p className="text-sm text-muted-foreground mb-6 max-w-sm">
                 Create your own league or join an existing one to compete with friends!
               </p>
-              <div className="flex gap-2">
+              <div id="league-actions-container" className="flex gap-2">
                 <JoinLeagueDialog onLeagueJoined={handleLeagueJoined} />
                 <Button onClick={() => navigate("/leagues/create")}>Create League</Button>
               </div>

@@ -74,20 +74,7 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
         {/* <Searchbar placeholder="Search..." className="w-full text-xs md:text-sm pl-8 md:pl-9 h-9" /> */}
       </div>
 
-      <div className="flex items-center gap-2 md:gap-4 shrink-0">
-        <TeamSwitcher />
-        <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
-
-        {/* Changelog / What's New */}
-        <Link to="/changelog">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60">
-            <Megaphone className="h-4.5 w-4.5" />
-          </Button>
-        </Link>
-
+      <div className="flex items-center gap-2 md:gap-4 shrink-0" id="profile-theme-group">
         {/* Notification Bell */}
         <Popover open={notifOpen} onOpenChange={handleNotifOpen}>
           <PopoverTrigger asChild>
@@ -113,6 +100,10 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
           </PopoverContent>
         </Popover>
 
+        <TeamSwitcher />
+
+        <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
+
         {/* Desktop Profile Header */}
         <Link to="/profile" className="hidden sm:block" id="profile-header-tour">
           <ProfileHeader
@@ -125,7 +116,7 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
         </Link>
 
         {/* Mobile Profile Badge (Avatar Only) */}
-        <Link to="/profile" className="sm:hidden block">
+        <Link to="/profile" className="sm:hidden block" id="profile-header-tour-mobile">
           {helmetColors ? (
             <div className="h-8 w-8 aspect-square rounded-full shrink-0">
               <F1HelmetAvatar helmetColor={helmetColors.helmetColor} bgColor={helmetColors.bgColor} />
