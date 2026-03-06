@@ -210,3 +210,74 @@ export const updateLeague = withAuth(async (req) => {
     return Response.json({ error: "Failed to update league" }, { status: 500 });
   }
 });
+
+/**
+ * POST /api/v1/leagues/:id/leave
+ * Removes the current user from the league.
+ */
+export const leaveLeague = withAuth(async (req) => {
+  const url = new URL(req.url);
+  const id = url.pathname.split("/")[4]; // /api/v1/leagues/:id/leave
+
+  if (!id) {
+    return Response.json({ error: "Missing league ID" }, { status: 400 });
+  }
+
+  try {
+    // Check if league exists
+    const [league] = await db`SELECT 1 FROM leagues WHERE id = ${id}`;
+    if (!league) {
+      return Response.json({ error: "League not found" }, { status: 404 });
+    }
+
+    // Delete membership
+    await db`
+      DELETE FROM league_members
+      WHERE league_id = ${id} AND user_id = ${req.user.id}
+    `;
+
+    return Response.json({ success: true });
+  } catch (err: any) {
+    console.error("Leave league error:", err);
+    return Response.json({ error: "Failed to leave league" }, { status: 500 });
+  }
+});
+
+/**
+ * DELETE /api/v1/leagues/:id
+ * Deletes the league and all associated data.
+ * Only the creator can perform this action.
+ */
+export const deleteLeague = withAuth(async (req) => {
+  const url = new URL(req.url);
+  const id = url.pathname.split("/").pop();
+
+  if (!id) {
+    return Response.json({ error: "Missing league ID" }, { status: 400 });
+  }
+
+  try {
+    const [league] = await db`
+      SELECT created_by FROM leagues WHERE id = ${id} LIMIT 1
+    `;
+
+    if (!league) {
+      return Response.json({ error: "League not found" }, { status: 404 });
+    }
+
+    if (league.created_by !== req.user.id) {
+      return Response.json({ error: "Only the league creator can delete the league" }, { status: 403 });
+    }
+
+    // Delete picks first (due to NO ACTION constraint on league_id)
+    await db`DELETE FROM picks WHERE league_id = ${id}`;
+
+    // Delete the league (cascades to league_members and chat_messages)
+    await db`DELETE FROM leagues WHERE id = ${id}`;
+
+    return Response.json({ success: true });
+  } catch (err: any) {
+    console.error("Delete league error:", err);
+    return Response.json({ error: "Failed to delete league" }, { status: 500 });
+  }
+});

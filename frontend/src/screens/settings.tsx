@@ -35,6 +35,7 @@ export function SettingsScreen() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [betaTapCount, setBetaTapCount] = useState(0);
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmationText.toLowerCase() !== "delete my account") return;
@@ -114,12 +115,21 @@ export function SettingsScreen() {
         </section>
 
         {/* Beta Support */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 mb-2">
+        <section
+          className="space-y-3"
+          onClick={() => {
+            const nextCount = betaTapCount + 1;
+            setBetaTapCount(nextCount);
+            if (nextCount >= 10) {
+              navigate("/dev-mode");
+              setBetaTapCount(0);
+            }
+          }}>
+          <div className="flex items-center gap-2 mb-2 select-none pointer-events-none">
             <Bug className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Beta Support</h2>
           </div>
-          <Card>
+          <Card className="cursor-default">
             <CardContent className="p-4 space-y-3">
               <FeedbackModal />
               <div className="text-center pt-2">

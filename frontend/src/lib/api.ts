@@ -278,6 +278,12 @@ export const api = {
 
     join: (inviteCode: string) =>
       api.post<League>(`/leagues/join`, { inviteCode }),
+
+    leave: (id: string) =>
+      api.post<{ success: boolean }>(`/leagues/${id}/leave`, {}),
+
+    delete: (id: string) =>
+      api.delete<{ success: boolean }>(`/leagues/${id}`),
   },
 
   picks: {

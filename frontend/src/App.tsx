@@ -18,6 +18,7 @@ import { InviteScreen } from "./screens/invite";
 import { SettingsScreen } from "@/screens/settings";
 import { ProfileScreen } from "@/screens/profile";
 import { ChangelogScreen } from "./screens/changelog";
+import { DevModeScreen } from "./screens/dev-mode";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
@@ -140,6 +141,7 @@ export function App() {
               <Route path="schedule" element={<RaceSchedule />} />
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="changelog" element={<ChangelogScreen />} />
+              <Route path="dev-mode" element={<DevModeScreen />} />
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
