@@ -26,15 +26,19 @@ function getCookieString(token: string) {
   // 1 week expiry. Use SameSite=None and Secure for cross-origin in production.
   const isProd = process.env.NODE_ENV === "production";
   const sameSite = isProd ? "None" : "Lax";
-  const secure = isProd ? "Secure;" : "";
-  return `f1_auth_token=${token}; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=${60 * 60 * 24 * 7}; Partitioned`;
+  const secure = isProd ? "Secure" : "";
+  const partitioned = isProd ? "Partitioned" : "";
+
+  return `f1_auth_token=${token}; HttpOnly; ${secure}; SameSite=${sameSite}; Path=/; Max-Age=${60 * 60 * 24 * 7}; ${partitioned}`.replace(/; ;/g, ";").replace(/; $/g, "");
 }
 
 function getClearCookieString() {
   const isProd = process.env.NODE_ENV === "production";
   const sameSite = isProd ? "None" : "Lax";
-  const secure = isProd ? "Secure;" : "";
-  return `f1_auth_token=; HttpOnly; ${secure} SameSite=${sameSite}; Path=/; Max-Age=0; Partitioned`;
+  const secure = isProd ? "Secure" : "";
+  const partitioned = isProd ? "Partitioned" : "";
+
+  return `f1_auth_token=; HttpOnly; ${secure}; SameSite=${sameSite}; Path=/; Max-Age=0; ${partitioned}`.replace(/; ;/g, ";").replace(/; $/g, "");
 }
 
 /**
