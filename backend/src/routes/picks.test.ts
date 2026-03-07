@@ -30,6 +30,8 @@ describe("Picks Integration Tests", () => {
   let leagueId: string;
   let openRaceId = 99991;
   let closedRaceId = 99992;
+  let midEventRaceId = 99993;
+  let sprintWeekendRaceId = 99994;
 
   beforeAll(async () => {
     member = await createMockUser({ display_name: "Member User" } as any);
@@ -75,12 +77,44 @@ describe("Picks Integration Tests", () => {
       )
       ON CONFLICT (id) DO NOTHING
     `;
+
+    // Create a race where Qualifying has passed but Race hasn't
+    await db`
+      INSERT INTO races (id, name, date, has_sprint, status, race_quali_date, race_deadline)
+      VALUES (
+        ${midEventRaceId}, 
+        'Mid Event Race', 
+        NOW() + INTERVAL '2 days', 
+        false, 
+        'UPCOMING', 
+        NOW() - INTERVAL '1 hours', 
+        NOW() + INTERVAL '1 days'
+      )
+      ON CONFLICT (id) DO NOTHING
+    `;
+
+    // Create a Sprint Weekend Race for 4-step sequence verification
+    await db`
+      INSERT INTO races (id, name, date, has_sprint, status, sprint_quali_date, sprint_deadline, race_quali_date, race_deadline)
+      VALUES (
+        ${sprintWeekendRaceId}, 
+        'Sprint Weekend Race', 
+        NOW() + INTERVAL '10 days', 
+        true, 
+        'UPCOMING', 
+        NOW() + INTERVAL '1 days', 
+        NOW() + INTERVAL '2 days', 
+        NOW() + INTERVAL '3 days', 
+        NOW() + INTERVAL '4 days'
+      )
+      ON CONFLICT (id) DO NOTHING
+    `;
   });
 
   afterAll(async () => {
     // Cleanup
-    await db`DELETE FROM picks WHERE race_id IN (${openRaceId}, ${closedRaceId})`;
-    await db`DELETE FROM races WHERE id IN (${openRaceId}, ${closedRaceId})`;
+    await db`DELETE FROM picks WHERE race_id IN (${openRaceId}, ${closedRaceId}, ${midEventRaceId}, ${sprintWeekendRaceId})`;
+    await db`DELETE FROM races WHERE id IN (${openRaceId}, ${closedRaceId}, ${midEventRaceId}, ${sprintWeekendRaceId})`;
     await db`DELETE FROM league_members WHERE league_id = ${leagueId}`;
     await db`DELETE FROM leagues WHERE id = ${leagueId}`;
   });
@@ -209,5 +243,162 @@ describe("Picks Integration Tests", () => {
 
     const data: any = await res.json();
     expect(data.race_p1).toBe("VER");
+  });
+
+  test("submitPick allows race picks but rejects quali picks when quali has passed", async () => {
+    mockUserContext = member;
+
+    // 1. Try to submit both -> should fail because of quali
+    const req1 = new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: midEventRaceId,
+        leagueId,
+        selections: {
+          raceQualifyingP1: "VER",
+          raceP1: "LEC"
+        }
+      })
+    });
+    const res1 = await submitPick(req1);
+    expect(res1.status).toBe(422);
+    const data1: any = await res1.json();
+    expect(data1.error).toBe("The deadline for qualifying picks has passed.");
+
+    // 2. Try to submit only race picks -> should succeed
+    const req2 = new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: midEventRaceId,
+        leagueId,
+        selections: {
+          raceP1: "LEC",
+          raceP2: "SAI",
+          raceP3: "HAM"
+        }
+      })
+    });
+    const res2 = await submitPick(req2);
+    expect(res2.status).toBe(201);
+    const data2: any = await res2.json();
+    expect(data2.race_p1).toBe("LEC");
+    expect(data2.race_qualifying_p1).toBeNull();
+  });
+
+  test("submitPick follows 4-step sprint weekend sequence with smart enforcement", async () => {
+    mockUserContext = member;
+
+    // Step 0: All open - submit Sprint Quali
+    const res0 = await submitPick(new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: sprintWeekendRaceId,
+        leagueId,
+        selections: { sprintQualifyingP1: "VER" }
+      })
+    }));
+    expect(res0.status).toBe(201);
+
+    // Step 1: Sprint Quali passes. 
+    // Modify race data to make sprint_quali_date in the past
+    await db`UPDATE races SET sprint_quali_date = NOW() - INTERVAL '1 hours' WHERE id = ${sprintWeekendRaceId}`;
+
+    // Submitting unchanged Sprint Quali + new Sprint Pick should WORK (Smart Enforcement)
+    const res1 = await submitPick(new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: sprintWeekendRaceId,
+        leagueId,
+        selections: {
+          sprintQualifyingP1: "VER", // Unchanged, locked
+          sprintP1: "LEC" // New, open
+        }
+      })
+    }));
+    expect(res1.status).toBe(201);
+
+    // Submitting CHANGED Sprint Quali should FAIL
+    const res2 = await submitPick(new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: sprintWeekendRaceId,
+        leagueId,
+        selections: { sprintQualifyingP1: "HAM" }
+      })
+    }));
+    expect(res2.status).toBe(422);
+    expect(((await res2.json()) as any).error).toContain("sprint qualifying");
+
+    // Step 2: Sprint deadline passes
+    await db`UPDATE races SET sprint_deadline = NOW() - INTERVAL '1 hours' WHERE id = ${sprintWeekendRaceId}`;
+
+    // Changing Sprint P1 should FAIL
+    const res3 = await submitPick(new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: sprintWeekendRaceId,
+        leagueId,
+        selections: { sprintP1: "VER" }
+      })
+    }));
+    expect(res3.status).toBe(422);
+    expect(((await res3.json()) as any).error).toContain("sprint picks");
+
+    // Adding Race Quali should WORK (even if sending existing locked sprint picks)
+    const res4 = await submitPick(new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: sprintWeekendRaceId,
+        leagueId,
+        selections: {
+          sprintQualifyingP1: "VER",
+          sprintP1: "LEC",
+          raceQualifyingP1: "NOR"
+        }
+      })
+    }));
+    expect(res4.status).toBe(201);
+
+    // Step 3: Race Quali passes
+    await db`UPDATE races SET race_quali_date = NOW() - INTERVAL '1 hours' WHERE id = ${sprintWeekendRaceId}`;
+
+    // Changing Race Quali should FAIL
+    const res5 = await submitPick(new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: sprintWeekendRaceId,
+        leagueId,
+        selections: { raceQualifyingP1: "VER" }
+      })
+    }));
+    expect(res5.status).toBe(422);
+
+    // Updating Race P1 should WORK
+    const res6 = await submitPick(new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: sprintWeekendRaceId,
+        leagueId,
+        selections: {
+          raceQualifyingP1: "NOR",
+          raceP1: "HAM"
+        }
+      })
+    }));
+    expect(res6.status).toBe(201);
+
+    // Step 4: Race Deadline passes
+    await db`UPDATE races SET race_deadline = NOW() - INTERVAL '1 hours' WHERE id = ${sprintWeekendRaceId}`;
+
+    // Changing Race P1 should FAIL
+    const res7 = await submitPick(new Request("http://localhost/api/v1/picks", {
+      method: "POST",
+      body: JSON.stringify({
+        raceId: sprintWeekendRaceId,
+        leagueId,
+        selections: { raceP1: "VER" }
+      })
+    }));
+    expect(res7.status).toBe(422);
   });
 });
