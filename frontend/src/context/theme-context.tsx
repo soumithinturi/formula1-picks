@@ -67,7 +67,13 @@ export const TEAMS: Team[] = [
     primaryColor: CONSTRUCTOR_COLORS.WILLIAMS,
     primaryForeground: "#ffffff",
   },
-  { id: "rb", themeName: "RB Blue", name: "RB", primaryColor: CONSTRUCTOR_COLORS.RB, primaryForeground: "#000000" },
+  {
+    id: "rb",
+    themeName: "RB Blue",
+    name: "Racing Bulls",
+    primaryColor: CONSTRUCTOR_COLORS.RB,
+    primaryForeground: "#000000",
+  },
   {
     id: "audi",
     themeName: "Audi Orange",

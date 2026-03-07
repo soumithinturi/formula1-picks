@@ -6,8 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const CONSTRUCTOR_COLORS = {
-  RED_BULL: "#3671C6",
-  FERRARI: "#5c0012",
+  RED_BULL: "#3671c6",
+  FERRARI: "#7a120c",
   MCLAREN: "#ff8000",
   MERCEDES: "#27f4d2",
   ASTON_MARTIN: "#229971",
