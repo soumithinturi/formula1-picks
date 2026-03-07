@@ -100,14 +100,9 @@ async function seedRaces(): Promise<void> {
 
       const hasSprint = !!race.Sprint;
 
-      // Lock picks effectively slightly before Qualifying starts generally. 
-      // If Jolpi has `Qualifying` data, use it. Otherwise guess based on race day.
+      // Lock picks effectively at the start of the session.
+      // Race picks lock at race_deadline.
       let raceDeadline = new Date(raceDate);
-      if (race.Qualifying) {
-        raceDeadline = new Date(`${race.Qualifying.date}T${race.Qualifying.time || "12:00:00Z"}`);
-      } else {
-        raceDeadline.setHours(raceDeadline.getHours() - 24); // Day before 
-      }
 
       let sprintDeadline = null;
       let sprintDate = null;
