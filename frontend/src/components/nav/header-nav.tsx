@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { ProfileHeader } from "@/components/user/profile-header";
-import { Bell } from "lucide-react";
+import { Bell, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "react-router";
@@ -64,10 +64,15 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       )}
       {...props}>
       <div className="flex items-center gap-2 md:hidden mr-auto">
-        <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shrink-0">
-          <span className="text-primary-foreground font-bold text-lg">F1</span>
+        <div className="flex items-center gap-1.5 font-black uppercase italic tracking-tighter">
+          <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shrink-0 shadow-sm">
+            <span className="text-primary-foreground text-sm font-black not-italic">F1</span>
+          </div>
+          <span className="text-xl">Picks</span>
         </div>
-        <span className="text-xl font-bold tracking-tight">Picks</span>
+        <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
+          BETA
+        </span>
       </div>
 
       <div className="hidden md:flex flex-1 max-w-sm mr-4">
@@ -75,8 +80,16 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-4 shrink-0">
-        <TeamSwitcher />
-        <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
+        {/* What's New / Changelog Button (Mainly for Mobile) */}
+        <Link to="/changelog">
+          <Button
+            id="header-changelog"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60">
+            <Megaphone className="h-4.5 w-4.5" />
+          </Button>
+        </Link>
 
         {/* Notification Bell */}
         <Popover open={notifOpen} onOpenChange={handleNotifOpen}>
@@ -103,29 +116,35 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
           </PopoverContent>
         </Popover>
 
-        {/* Desktop Profile Header */}
-        <Link to="/profile" className="hidden sm:block">
-          <ProfileHeader
-            name={displayName}
-            team={userTeam.name}
-            teamId={userTeam.id}
-            className="hover:opacity-80 transition-opacity cursor-pointer"
-            avatarData={user?.avatar_url}
-          />
-        </Link>
+        <div className="flex items-center gap-2 md:gap-4 shrink-0" id="personalization-tour">
+          <TeamSwitcher />
 
-        {/* Mobile Profile Badge (Avatar Only) */}
-        <Link to="/profile" className="sm:hidden block">
-          {helmetColors ? (
-            <div className="h-8 w-8 aspect-square rounded-full shrink-0">
-              <F1HelmetAvatar helmetColor={helmetColors.helmetColor} bgColor={helmetColors.bgColor} />
-            </div>
-          ) : (
-            <Avatar className="h-8 w-8">
-              <AvatarFallback>{avatarChar}</AvatarFallback>
-            </Avatar>
-          )}
-        </Link>
+          <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
+
+          {/* Desktop Profile Header */}
+          <Link to="/profile" className="hidden sm:block" id="profile-header-tour">
+            <ProfileHeader
+              name={displayName}
+              team={userTeam.name}
+              teamId={userTeam.id}
+              className="hover:opacity-80 transition-opacity cursor-pointer"
+              avatarData={user?.avatar_url}
+            />
+          </Link>
+
+          {/* Mobile Profile Badge (Avatar Only) */}
+          <Link to="/profile" className="sm:hidden block" id="profile-header-tour-mobile">
+            {helmetColors ? (
+              <div className="h-8 w-8 aspect-square rounded-full shrink-0">
+                <F1HelmetAvatar helmetColor={helmetColors.helmetColor} bgColor={helmetColors.bgColor} />
+              </div>
+            ) : (
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>{avatarChar}</AvatarFallback>
+              </Avatar>
+            )}
+          </Link>
+        </div>
       </div>
     </header>
   );

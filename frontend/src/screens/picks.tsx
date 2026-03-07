@@ -7,10 +7,16 @@ import { Countdown } from "@/components/ui/countdown";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DriverSelector } from "@/components/racing/driver-selector";
 import { Progress } from "@/components/ui/progress";
-import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock } from "lucide-react";
+import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock, Copy, Trash2 } from "lucide-react";
 import { api, type Driver, type Race, type League } from "@/lib/api";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useNavigate, useSearchParams } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getTeamColor } from "@/components/racing/driver-info";
@@ -227,6 +233,25 @@ export function PicksScreen() {
     });
   };
 
+  const handleClear = () => {
+    setSprintPredictions({
+      sprintP1: null,
+      sprintP2: null,
+      sprintP3: null,
+      sprintFastestLap: null,
+      sprintQualifyingP1: null,
+    });
+    setRacePredictions({
+      raceP1: null,
+      raceP2: null,
+      raceP3: null,
+      fastestLap: null,
+      raceQualifyingP1: null,
+      firstDnf: null,
+    });
+    toast.success("Picks cleared locally. Save to persist.");
+  };
+
   const handleSave = async () => {
     if (!selectedLeagueId || !nextRace) return;
     setSaving(true);
@@ -263,6 +288,38 @@ export function PicksScreen() {
       toast.error("Failed to save picks");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCopyPicks = async (sourceLeagueId: string) => {
+    if (!nextRace?.id) return;
+
+    try {
+      const data = await api.picks.get(nextRace.id, sourceLeagueId);
+      if (data) {
+        const findDriver = (id: string | null) => availableDrivers.find((d) => d.id === id) || null;
+
+        setSprintPredictions({
+          sprintQualifyingP1: findDriver(data.sprint_qualifying_p1),
+          sprintP1: findDriver(data.sprint_p1),
+          sprintP2: findDriver(data.sprint_p2),
+          sprintP3: findDriver(data.sprint_p3),
+          sprintFastestLap: findDriver(data.sprint_fastest_lap),
+        });
+
+        setRacePredictions({
+          raceQualifyingP1: findDriver(data.race_qualifying_p1),
+          raceP1: findDriver(data.race_p1),
+          raceP2: findDriver(data.race_p2),
+          raceP3: findDriver(data.race_p3),
+          fastestLap: findDriver(data.fastest_lap),
+          firstDnf: findDriver(data.first_dnf),
+        });
+
+        toast.success(`Copied picks from ${leagues.find((l) => l.id === sourceLeagueId)?.name}`);
+      }
+    } catch (error) {
+      toast.error("No picks found in that league to copy");
     }
   };
 
@@ -366,15 +423,46 @@ export function PicksScreen() {
         </StatusPill>
         <h1 className="text-3xl font-black text-center uppercase italic">{nextRace?.name || "No Upcoming Race"}</h1>
         {nextRace && (
-          <div className="flex items-center text-muted-foreground text-sm gap-2">
-            <span>{format(new Date(nextRace.date), "MMM d, yyyy")}</span>
+          <div className="flex flex-col items-center gap-6 mt-2">
+            {(() => {
+              const now = new Date();
+              const isSprintActive =
+                nextRace.has_sprint && nextRace.sprint_date && now < new Date(nextRace.sprint_date);
+
+              const topLabel = isSprintActive ? "Sprint Quali" : "Qualifying";
+              const topDate = isSprintActive ? nextRace.sprint_quali_date : nextRace.race_quali_date;
+              const bottomLabel = isSprintActive ? "Sprint Starts In" : "Race Starts In";
+              const bottomDate = isSprintActive ? nextRace.sprint_date : nextRace.date;
+
+              const showTop = topDate && now < new Date(topDate);
+
+              return (
+                <>
+                  {showTop && (
+                    <div className="flex flex-col items-center space-y-1 opacity-80 scale-90">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                        {topLabel}
+                      </span>
+                      <Countdown targetDate={new Date(topDate)} />
+                    </div>
+                  )}
+                  <div className="flex flex-col items-center space-y-1">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">
+                      {bottomLabel}
+                    </span>
+                    <Countdown targetDate={new Date(bottomDate!)} />
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
-        {nextRace && <Countdown targetDate={new Date(nextRace.date)} />}
 
         {/* League Selector */}
         {leagues.length > 0 && (
-          <div className="w-full max-w-[340px] mx-auto mt-4 space-y-1.5 flex flex-col items-start">
+          <div
+            id="league-select-container"
+            className="w-full max-w-[340px] mx-auto mt-4 space-y-1.5 flex flex-col items-start">
             <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-1">League</Label>
             <Select value={selectedLeagueId} onValueChange={setSelectedLeagueId}>
               <SelectTrigger className="w-full">
@@ -391,6 +479,33 @@ export function PicksScreen() {
           </div>
         )}
 
+        {/* Copy Picks Utility */}
+        {leagues.length > 1 && (
+          <div className="w-full max-w-[340px] mx-auto flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  id="copy-picks-btn"
+                  variant="ghost"
+                  size="sm"
+                  className="text-[10px] uppercase tracking-widest font-bold text-primary hover:text-primary/80 gap-1.5 h-auto py-1 px-2">
+                  <Copy className="h-3 w-3" />
+                  Copy from...
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {leagues
+                  .filter((l) => l.id !== selectedLeagueId)
+                  .map((l) => (
+                    <DropdownMenuItem key={l.id} onClick={() => handleCopyPicks(l.id)} className="cursor-pointer">
+                      {l.name}
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
         {/* Progress Bar */}
         <div className="w-full max-w-md space-y-2 pt-2">
           <div className="flex justify-between text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -399,10 +514,20 @@ export function PicksScreen() {
           </div>
           <Progress value={progress} className="h-2" />
         </div>
-        <div className="hidden md:flex w-full max-w-md mx-auto justify-center pt-4">
+        <div className="hidden md:flex w-full max-md mx-auto items-center gap-3 pt-4">
           <Button
+            variant="outline"
             size="lg"
-            className="shadow-lg text-lg font-bold bg-primary text-primary-foreground w-full"
+            className="flex-1 font-bold border-muted-foreground/20"
+            onClick={handleClear}
+            disabled={saving || !nextRace}>
+            <Trash2 className="w-5 h-5 mr-2" />
+            Clear
+          </Button>
+          <Button
+            id="save-picks-btn"
+            size="lg"
+            className="flex-2 shadow-lg text-lg font-bold bg-primary text-primary-foreground"
             onClick={handleSave}
             disabled={saving || !nextRace}>
             {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
@@ -603,10 +728,20 @@ export function PicksScreen() {
         </Tabs>
       )}
 
-      <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
+      <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)] flex items-center gap-3">
         <Button
+          variant="outline"
           size="lg"
-          className="w-full text-lg font-bold bg-primary text-primary-foreground"
+          className="flex-1 font-bold border-muted-foreground/20"
+          onClick={handleClear}
+          disabled={saving || !nextRace}>
+          <Trash2 className="w-5 h-5 mr-2" />
+          Clear
+        </Button>
+        <Button
+          id="save-picks-btn-mobile"
+          size="lg"
+          className="flex-2 text-lg font-bold bg-primary text-primary-foreground"
           onClick={handleSave}
           disabled={saving || !nextRace}>
           {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}

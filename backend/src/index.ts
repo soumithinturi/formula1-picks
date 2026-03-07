@@ -1,13 +1,14 @@
 import { requestOtp, verifyOtp, syncAuth } from "./routes/auth.ts";
 import { listRaces } from "./routes/races.ts";
 import { listDrivers } from "./routes/drivers.ts";
-import { getPickForRace, submitPick } from "./routes/picks.ts";
-import { createLeague, listLeagues, joinLeague, previewLeague, updateLeague } from "./routes/leagues.ts";
+import { getPickForRace, submitPick, getUserPickForRace } from "./routes/picks.ts";
+import { createLeague, listLeagues, joinLeague, previewLeague, updateLeague, leaveLeague, deleteLeague } from "./routes/leagues.ts";
 import { getLeaderboard } from "./routes/leaderboard.ts";
 import { submitResults } from "./routes/admin.ts";
 import { updateProfile, getProfile, deleteProfile } from "./routes/users.ts";
 import { submitFeedback } from "./routes/feedback.ts";
 import { listNotifications, markAllRead } from "./routes/notifications.ts";
+import { getChatMessages, sendChatMessage } from "./routes/chat.ts";
 import { seedDatabase } from "./services/seed.ts";
 import { startCronJobs } from "./services/cron.ts";
 import { withAuth } from "./middleware/auth.ts";
@@ -106,6 +107,10 @@ const server = Bun.serve({
       GET: withCors(getPickForRace),
       OPTIONS: handleOptions,
     },
+    "/api/v1/picks/race/:raceId/user/:userId": {
+      GET: withCors(getUserPickForRace),
+      OPTIONS: handleOptions,
+    },
     "/api/v1/picks": {
       POST: withCors(submitPick),
       OPTIONS: handleOptions,
@@ -123,6 +128,11 @@ const server = Bun.serve({
     },
     "/api/v1/leagues/:id": {
       PATCH: withCors(updateLeague),
+      DELETE: withCors(deleteLeague),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/leagues/:id/leave": {
+      POST: withCors(leaveLeague),
       OPTIONS: handleOptions,
     },
     "/api/v1/leagues/invite/:code": {
@@ -157,6 +167,16 @@ const server = Bun.serve({
     },
     "/api/v1/notifications/read": {
       PUT: withCors(markAllRead),
+      OPTIONS: handleOptions,
+    },
+
+    // ─── Chat ──────────────────────────────────────────────────────────────
+    "/api/v1/chat": {
+      POST: withCors(withAuth(sendChatMessage)),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/chat/:leagueId": {
+      GET: withCors(withAuth(getChatMessages)),
       OPTIONS: handleOptions,
     },
 

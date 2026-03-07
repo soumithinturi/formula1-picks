@@ -1,8 +1,9 @@
 import * as React from "react";
 import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
-import { Home, Trophy, Users, Calendar, Settings, LogOut, Flag, Archive } from "lucide-react";
+import { Home, Trophy, Users, Calendar, Settings, LogOut, Megaphone } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { Disclaimer } from "@/components/ui/disclaimer";
 
 interface SideNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -11,6 +12,7 @@ const navItems = [
   { to: "/leagues", label: "Leagues", icon: Trophy },
   { to: "/picks", label: "Picks", icon: Users },
   { to: "/schedule", label: "Schedule", icon: Calendar },
+  { to: "/changelog", label: "What's New", icon: Megaphone },
   // { to: "/more/race-winners-history", label: "Race History", icon: Flag },
   // { to: "/more/leagues-history", label: "League History", icon: Archive },
 ];
@@ -19,13 +21,13 @@ export function SideNav({ className, ...props }: SideNavProps) {
   return (
     <div className={cn("flex flex-col h-full w-64 bg-card border-r border-border p-4", className)} {...props}>
       <div className="flex items-center gap-2 mb-8 px-2">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">F1</span>
+        <div className="flex items-center gap-1.5 font-black uppercase italic tracking-tighter">
+          <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center shrink-0 shadow-sm">
+            <span className="text-primary-foreground text-sm font-black not-italic">F1</span>
           </div>
-          <span className="text-xl font-bold tracking-tight">Picks</span>
+          <span className="text-xl">Picks</span>
         </div>
-        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ml-1 mt-1">
+        <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
           BETA
         </span>
       </div>
@@ -36,6 +38,17 @@ export function SideNav({ className, ...props }: SideNavProps) {
             key={item.to}
             to={item.to}
             end={item.end}
+            id={
+              item.to === "/leagues"
+                ? "nav-leagues"
+                : item.to === "/picks"
+                  ? "nav-picks"
+                  : item.to === "/schedule"
+                    ? "nav-schedule"
+                    : item.to === "/changelog"
+                      ? "nav-changelog"
+                      : undefined
+            }
             className={({ isActive }) =>
               cn(
                 "flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md transition-colors",
@@ -70,6 +83,10 @@ export function SideNav({ className, ...props }: SideNavProps) {
           <LogOut className="mr-3 h-5 w-5" />
           Log Out
         </button>
+      </div>
+
+      <div className="mt-6 px-2">
+        <Disclaimer variant="small" />
       </div>
     </div>
   );

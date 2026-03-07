@@ -1,13 +1,28 @@
 import { auth } from "./auth";
 
-// In Bun frontend setups, `import.meta.env` corresponds to server/build environment variables.
-// If not explicitly provided via a `.env` file or export, `NODE_ENV` is implicitly 'development' when running `bun dev`.
-const isDev = process.env.NODE_ENV !== 'production';
+const getApiUrl = () => {
+  // If in browser, detect environment by hostname for seamless dev/staging/prod experience
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return "http://localhost:8080/api/v1";
+    }
+    if (hostname.includes("-staging")) {
+      return "https://formula1-picks-staging.up.railway.app/api/v1";
+    }
+    if (hostname.includes("formula1-picks")) {
+      return "https://formula1-picks-production.up.railway.app/api/v1";
+    }
+  }
 
-// Use the explicit env variable first, fallback to context-aware defaults
-const BASE_URL = import.meta.env?.BUN_PUBLIC_API_URL || (isDev
-  ? "http://localhost:8080/api/v1"
-  : "https://formula1-picks-production.up.railway.app/api/v1");
+  const url = process.env.BUN_PUBLIC_API_URL || import.meta.env?.BUN_PUBLIC_API_URL;
+  if (!url || url === "undefined") {
+    return "https://formula1-picks-production.up.railway.app/api/v1";
+  }
+  return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
+};
+
+const BASE_URL = getApiUrl();
 
 export interface ApiResponse<T> {
   data?: T;
@@ -133,19 +148,24 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
-      // Token is invalid/expired/from old project. Force logout.
+    // If we get a 401 Unauthorized, and it's NOT an auth endpoint, trigger a global logout.
+    // We exclude /auth endpoints so that things like 'Invalid code' toasts on the login screen still work.
+    if (response.status === 401 && !endpoint.startsWith("/auth")) {
       auth.logout();
-      throw new Error("Session expired. Please log in again.");
     }
 
-    let errorMessage = "An unexpected error occurred";
+    let errorMessage = response.statusText || "An unexpected error occurred";
+    let errorBody: any = null;
+
     try {
-      const errorBody = await response.json();
-      errorMessage = errorBody.error || errorBody.message || errorMessage;
+      errorBody = await response.json();
+      if (errorBody) {
+        errorMessage = errorBody.error || errorBody.message || errorMessage;
+      }
     } catch {
-      errorMessage = response.statusText;
+      // Not JSON, use statusText
     }
+
     throw new Error(errorMessage);
   }
 
@@ -204,7 +224,7 @@ export const api = {
       api.post("/auth/request", payload),
 
     verifyOtp: (payload: { type: "email" | "phone"; contact: string; code: string }) =>
-      api.post<{ token: string; user: any }>("/auth/verify", payload),
+      api.post<{ token: string; refresh_token?: string; user: any }>("/auth/verify", payload),
 
     sync: (payload: { access_token: string }) =>
       api.post<{ user: any }>("/auth/sync", payload),
@@ -258,11 +278,20 @@ export const api = {
 
     join: (inviteCode: string) =>
       api.post<League>(`/leagues/join`, { inviteCode }),
+
+    leave: (id: string) =>
+      api.post<{ success: boolean }>(`/leagues/${id}/leave`, {}),
+
+    delete: (id: string) =>
+      api.delete<{ success: boolean }>(`/leagues/${id}`),
   },
 
   picks: {
     get: (raceId: string, leagueId: string) =>
       api.get<PickRow>(`/picks/race/${raceId}?leagueId=${leagueId}`),
+
+    getUser: (raceId: string, userId: string, leagueId: string) =>
+      api.get<PickRow>(`/picks/race/${raceId}/user/${userId}?leagueId=${leagueId}`),
 
     submit: (payload: { raceId: string; leagueId: string; selections: any }) =>
       api.post("/picks", payload),
@@ -272,12 +301,28 @@ export const api = {
     get: (leagueId: string) => api.get<LeaderboardEntry[]>(`/leaderboard/${leagueId}`),
   },
 
+  chat: {
+    list: (leagueId: string) => api.get<ChatMessage[]>(`/chat/${leagueId}`),
+    send: (payload: { leagueId: string; message: string }) => api.post<{ id: string }>("/chat", payload),
+  },
+
   notifications: {
     list: () =>
       api.get<{ notifications: Notification[]; unreadCount: number }>("/notifications"),
     markAllRead: () => api.put<{ updated: number }>("/notifications/read", {}),
   },
 };
+
+export interface ChatMessage {
+  id: string;
+  league_id: string;
+  user_id: string;
+  message: string;
+  created_at: string;
+  type?: "text" | "system";
+  display_name?: string | null;
+  avatar_url?: string | null;
+}
 
 export interface LeaderboardEntry {
   userId: string;

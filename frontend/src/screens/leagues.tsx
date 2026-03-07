@@ -6,18 +6,35 @@ import { Leaderboard } from "@/components/racing/leaderboard";
 import { JoinLeagueDialog } from "../components/racing/join-league-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Trophy, Users, Copy, Check, Share2, Plus, UserPlus, Loader2, Pencil, X, MessageSquare } from "lucide-react";
+import {
+  Trophy,
+  Users,
+  Copy,
+  Check,
+  Share2,
+  Plus,
+  UserPlus,
+  Loader2,
+  Pencil,
+  X,
+  MessageCircle,
+  MessageSquare,
+  Info,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/page-container";
 import { api, type League } from "@/lib/api";
 import { TEAMS } from "@/context/theme-context";
 import { auth } from "@/lib/auth";
+import { safeStorage } from "@/lib/utils";
+import { LeagueChat } from "@/components/leagues/league-chat";
 
 const truncateName = (name: string, length: number = 16) => {
   if (!name) return "";
@@ -28,9 +45,67 @@ const truncateName = (name: string, length: number = 16) => {
 interface UILeague extends League {
   yourRank?: number;
   nextRace?: {
+    id: string;
     name: string;
     daysUntil: number;
+    has_sprint: boolean;
   };
+}
+
+function RulesDialog({ scoringConfig }: { scoringConfig: any }) {
+  if (!scoringConfig) return null;
+
+  const rules = [
+    { key: "p1", label: "Race P1" },
+    { key: "p2", label: "Race P2" },
+    { key: "p3", label: "Race P3" },
+    { key: "quali", label: "Qualifying Pole" },
+    { key: "podium", label: "Podium Correct (Any order)" },
+    { key: "perfectOrder", label: "Perfect Podium Order" },
+    { key: "fastestLap", label: "Fastest Lap" },
+    { key: "firstDNF", label: "First DNF" },
+    { key: "sprintFastestLap", label: "Sprint Fastest Lap" },
+  ];
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
+          <Info className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="uppercase italic flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-primary" />
+            League Scoring Rules
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="grid gap-3">
+            {rules.map((rule) => {
+              const config = scoringConfig[rule.key];
+              if (!config?.enabled) return null;
+              return (
+                <div
+                  key={rule.key}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-white/5">
+                  <span className="font-medium text-sm">{rule.label}</span>
+                  <span className="font-bold text-primary">+{config.points} pts</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground italic text-center">
+            Points are awarded after each race session is finalized.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function LeaguesScreen() {
@@ -40,6 +115,8 @@ export function LeaguesScreen() {
   const [leagues, setLeagues] = useState<UILeague[]>([]);
   const [activeLeagueId, setActiveLeagueId] = useState<string>("");
   const [isJoinOpen, setJoinOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -82,14 +159,72 @@ export function LeaguesScreen() {
     setInviteMessage(league?.invite_message ?? "");
   }, [activeLeagueId, leagues]);
 
+  // ── Background polling for unread badge ─────────────────────────────────────
+  // Polls every 30s. Watermark is persisted in localStorage per league so
+  // unread state survives page refreshes and dev server restarts.
+  const chatWatermarkKey = (id: string) => `f1_chat_seen_${id}`;
+
+  useEffect(() => {
+    if (!activeLeagueId) return;
+
+    setUnreadCount(0);
+
+    // Immediately check for unread messages against the persisted watermark
+    api.chat
+      .list(activeLeagueId)
+      .then((msgs) => {
+        if (!msgs.length) return;
+        const watermark = safeStorage.getItem(chatWatermarkKey(activeLeagueId));
+        if (!watermark) {
+          // First time visiting this league — set baseline silently, no badge
+          safeStorage.setItem(chatWatermarkKey(activeLeagueId), msgs[msgs.length - 1]?.created_at ?? "");
+          return;
+        }
+        const newMsgs = msgs.filter((m) => m.created_at > watermark);
+        if (newMsgs.length > 0) setUnreadCount(newMsgs.length);
+      })
+      .catch(() => {});
+
+    const interval = setInterval(async () => {
+      if (isChatOpen) return;
+      try {
+        const msgs = await api.chat.list(activeLeagueId);
+        if (!msgs.length) return;
+        const watermark = safeStorage.getItem(chatWatermarkKey(activeLeagueId));
+        if (!watermark) {
+          safeStorage.setItem(chatWatermarkKey(activeLeagueId), msgs[msgs.length - 1]?.created_at ?? "");
+          return;
+        }
+        const newMsgs = msgs.filter((m) => m.created_at > watermark);
+        if (newMsgs.length > 0) setUnreadCount(newMsgs.length);
+      } catch {
+        /* Silent */
+      }
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [activeLeagueId, isChatOpen]);
+
   async function fetchLeagues() {
     try {
-      const data = await api.leagues.list();
+      const [leaguesData, racesData] = await Promise.all([api.leagues.list(), api.races.list()]);
+      const nextRaceData = racesData.find((r) => r.status === "UPCOMING" || r.status === "OPEN");
+
       // Map API data to UI data
-      const uiLeagues: UILeague[] = data.map((l) => ({
+      const uiLeagues: UILeague[] = leaguesData.map((l) => ({
         ...l,
         yourRank: 0, // Placeholder
-        nextRace: undefined, // Placeholder
+        nextRace: nextRaceData
+          ? {
+              id: nextRaceData.id,
+              name: nextRaceData.name,
+              daysUntil: Math.max(
+                0,
+                Math.floor((new Date(nextRaceData.date).getTime() - new Date().getTime()) / (1000 * 3600 * 24)),
+              ),
+              has_sprint: nextRaceData.has_sprint,
+            }
+          : undefined,
       }));
 
       setLeagues(uiLeagues);
@@ -272,7 +407,7 @@ export function LeaguesScreen() {
               <p className="text-sm text-muted-foreground mb-6 max-w-sm">
                 Create your own league or join an existing one to compete with friends!
               </p>
-              <div className="flex gap-2">
+              <div id="league-actions-container" className="flex gap-2">
                 <JoinLeagueDialog onLeagueJoined={handleLeagueJoined} />
                 <Button onClick={() => navigate("/leagues/create")}>Create League</Button>
               </div>
@@ -286,8 +421,16 @@ export function LeaguesScreen() {
   return (
     <PageContainer title="Leagues" subtitle="Compete with friends">
       <div className="space-y-4 pb-6">
+        <div id="league-actions-container" className="flex justify-end gap-2 px-1">
+          <JoinLeagueDialog onLeagueJoined={handleLeagueJoined} />
+          <Button onClick={() => navigate("/leagues/create")} variant="secondary" className="gap-2 shadow-sm">
+            <Plus className="h-4 w-4" />
+            Create
+          </Button>
+        </div>
+
         {/* League Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
+        <div id="league-tabs-scroll" className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
           {leagues.map((league) => (
             <button
               key={league.id}
@@ -351,18 +494,21 @@ export function LeaguesScreen() {
                         <span className="hidden md:inline lg:hidden">{truncateName(activeLeague.name, 16)}</span>
                         <span className="hidden lg:inline">{truncateName(activeLeague.name, 26)}</span>
                       </CardTitle>
-                      {currentUser?.id === activeLeague.created_by && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setDraftName(activeLeague.name);
-                            setIsEditingName(true);
-                          }}
-                          className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        <RulesDialog scoringConfig={activeLeague.scoring_config} />
+                        {currentUser?.id === activeLeague.created_by && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setDraftName(activeLeague.name);
+                              setIsEditingName(true);
+                            }}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary transition-colors">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
@@ -450,7 +596,13 @@ export function LeaguesScreen() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Leaderboard entries={isExpanded ? leaderboard : leaderboard.slice(0, 5)} />
+            <Leaderboard
+              entries={isExpanded ? leaderboard : leaderboard.slice(0, 5)}
+              leagueId={activeLeague.id}
+              nextRaceId={activeLeague.nextRace?.id}
+              hasSprint={activeLeague.nextRace?.has_sprint}
+              scoringConfig={activeLeague.scoring_config}
+            />
             {leaderboard.length > 5 && (
               <Button variant="outline" className="w-full" onClick={() => setIsExpanded(!isExpanded)}>
                 {isExpanded ? "Collapse Standings" : "View Full Standings"}
@@ -458,29 +610,44 @@ export function LeaguesScreen() {
             )}
           </CardContent>
         </Card>
-        {/* FAB */}
+        {/* Chat FAB */}
         <div className="fixed bottom-24 right-4 z-50 md:bottom-8 md:right-8">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <Dialog
+            open={isChatOpen}
+            onOpenChange={(open) => {
+              setIsChatOpen(open);
+              if (open) {
+                setUnreadCount(0);
+                // Advance the watermark to now so these messages won't badge again on refresh
+                safeStorage.setItem(`f1_chat_seen_${activeLeagueId}`, new Date().toISOString());
+              }
+            }}>
+            <DialogTrigger asChild>
               <Button
                 size="icon"
-                className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground">
-                <Plus className="h-6 w-6" />
+                className="relative h-14 w-14 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:ring-0">
+                <MessageCircle className="h-6 w-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center shadow-md border-2 border-background leading-none">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" className="w-48 p-2 mb-2">
-              <DropdownMenuItem onClick={() => setJoinOpen(true)} className="gap-2 cursor-pointer py-3">
-                <UserPlus className="h-4 w-4" />
-                <span>Join League</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/leagues/create")} className="gap-2 cursor-pointer py-3">
-                <Plus className="h-4 w-4" />
-                <span>Create League</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <JoinLeagueDialog open={isJoinOpen} onOpenChange={setJoinOpen} onLeagueJoined={handleLeagueJoined} />
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md w-[calc(100%-2rem)] h-[80vh] flex flex-col p-0 gap-0 overflow-hidden bg-background">
+              <DialogHeader className="p-4 border-b shrink-0 bg-card">
+                <DialogTitle className="flex items-center gap-2 text-lg">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                  {activeLeague.name} Chat
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+                {isChatOpen && (
+                  <LeagueChat leagueId={activeLeague.id} isOpen={isChatOpen} onUnreadChange={setUnreadCount} />
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </PageContainer>

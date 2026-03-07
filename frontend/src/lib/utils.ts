@@ -6,17 +6,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const CONSTRUCTOR_COLORS = {
-  RED_BULL: "#3671C6",
-  FERRARI: "#E80020",
-  MCLAREN: "#FF8000",
-  MERCEDES: "#27F4D2",
+  RED_BULL: "#3671c6",
+  FERRARI: "#7a120c",
+  MCLAREN: "#ff8000",
+  MERCEDES: "#27f4d2",
   ASTON_MARTIN: "#229971",
-  ALPINE: "#FF87BC",
-  WILLIAMS: "#64C4FF",
-  RB: "#6692FF",
-  SAUBER: "#F9004B",
-  HAAS: "#B6BABD",
-  CADILLAC: "#FEAA00",
+  ALPINE: "#ff87bc",
+  WILLIAMS: "#1868db",
+  RB: "#6692ff",
+  AUDI: "#ff2d00",
+  HAAS: "#667175",
+  CADILLAC: "#feaa00",
 } as const;
 
 export const safeStorage = {
