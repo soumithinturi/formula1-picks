@@ -109,9 +109,9 @@ export function PicksScreen() {
           toast.info("Join or create a league to make picks!", { id: "no-leagues-toast" });
           navigate("/leagues");
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to load picks data:", error);
-        toast.error("Failed to load data");
+        toast.error(error.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
@@ -284,8 +284,8 @@ export function PicksScreen() {
     try {
       await api.picks.submit(payload);
       toast.success("Picks saved!");
-    } catch (e) {
-      toast.error("Failed to save picks");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save picks");
     } finally {
       setSaving(false);
     }
