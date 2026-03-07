@@ -423,11 +423,40 @@ export function PicksScreen() {
         </StatusPill>
         <h1 className="text-3xl font-black text-center uppercase italic">{nextRace?.name || "No Upcoming Race"}</h1>
         {nextRace && (
-          <div className="flex items-center text-muted-foreground text-sm gap-2">
-            <span>{format(new Date(nextRace.date), "MMM d, yyyy")}</span>
+          <div className="flex flex-col items-center gap-6 mt-2">
+            {(() => {
+              const now = new Date();
+              const isSprintActive =
+                nextRace.has_sprint && nextRace.sprint_date && now < new Date(nextRace.sprint_date);
+
+              const topLabel = isSprintActive ? "Sprint Quali" : "Qualifying";
+              const topDate = isSprintActive ? nextRace.sprint_quali_date : nextRace.race_quali_date;
+              const bottomLabel = isSprintActive ? "Sprint Starts In" : "Race Starts In";
+              const bottomDate = isSprintActive ? nextRace.sprint_date : nextRace.date;
+
+              const showTop = topDate && now < new Date(topDate);
+
+              return (
+                <>
+                  {showTop && (
+                    <div className="flex flex-col items-center space-y-1 opacity-80 scale-90">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                        {topLabel}
+                      </span>
+                      <Countdown targetDate={new Date(topDate)} />
+                    </div>
+                  )}
+                  <div className="flex flex-col items-center space-y-1">
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">
+                      {bottomLabel}
+                    </span>
+                    <Countdown targetDate={new Date(bottomDate!)} />
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
-        {nextRace && <Countdown targetDate={new Date(nextRace.date)} />}
 
         {/* League Selector */}
         {leagues.length > 0 && (

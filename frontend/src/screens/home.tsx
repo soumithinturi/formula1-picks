@@ -366,10 +366,53 @@ export function HomeScreen() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">Race Starts In</p>
+              {(() => {
+                const now = new Date();
+                let label = "Race Starts In";
+                let targetDate = new Date(nextRace.date);
+
+                if (nextRace.has_sprint) {
+                  if (nextRace.sprint_quali_date && now < new Date(nextRace.sprint_quali_date)) {
+                    label = "Sprint Quali Starts In";
+                    targetDate = new Date(nextRace.sprint_quali_date);
+                  } else if (nextRace.sprint_date && now < new Date(nextRace.sprint_date)) {
+                    label = "Sprint Starts In";
+                    targetDate = new Date(nextRace.sprint_date);
+                  } else if (nextRace.race_quali_date && now < new Date(nextRace.race_quali_date)) {
+                    label = "Qualifying Starts In";
+                    targetDate = new Date(nextRace.race_quali_date);
+                  }
+                } else if (nextRace.race_quali_date && now < new Date(nextRace.race_quali_date)) {
+                  label = "Qualifying Starts In";
+                  targetDate = new Date(nextRace.race_quali_date);
+                }
+
+                return (
+                  <>
+                    <p className="text-sm text-muted-foreground">{label}</p>
+                  </>
+                );
+              })()}
             </CardHeader>
             <CardContent>
-              <Countdown targetDate={new Date(nextRace.date)} />
+              {(() => {
+                const now = new Date();
+                let targetDate = new Date(nextRace.date);
+
+                if (nextRace.has_sprint) {
+                  if (nextRace.sprint_quali_date && now < new Date(nextRace.sprint_quali_date)) {
+                    targetDate = new Date(nextRace.sprint_quali_date);
+                  } else if (nextRace.sprint_date && now < new Date(nextRace.sprint_date)) {
+                    targetDate = new Date(nextRace.sprint_date);
+                  } else if (nextRace.race_quali_date && now < new Date(nextRace.race_quali_date)) {
+                    targetDate = new Date(nextRace.race_quali_date);
+                  }
+                } else if (nextRace.race_quali_date && now < new Date(nextRace.race_quali_date)) {
+                  targetDate = new Date(nextRace.race_quali_date);
+                }
+
+                return <Countdown targetDate={targetDate} />;
+              })()}
             </CardContent>
           </Card>
         ) : (
