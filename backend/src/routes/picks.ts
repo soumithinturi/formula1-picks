@@ -71,9 +71,13 @@ export const getUserPickForRace = withAuth(async (req) => {
     return Response.json({ error: "Pick not found" }, { status: 404 });
   }
 
-  // If requesting own picks, return as is
+  const [results] = await db`
+    SELECT * FROM race_results WHERE race_id = ${parseInt(raceId)} LIMIT 1
+  `;
+
+  // If requesting own picks, return as is (with results attached)
   if (targetUserId === req.user.id) {
-    return Response.json(pick);
+    return Response.json({ ...pick, results: results || null });
   }
 
   // Otherwise, apply visibility logic
@@ -111,7 +115,7 @@ export const getUserPickForRace = withAuth(async (req) => {
     scrubbedPick.first_dnf = null;
   }
 
-  return Response.json(scrubbedPick);
+  return Response.json({ ...scrubbedPick, results: results || null });
 });
 
 /**

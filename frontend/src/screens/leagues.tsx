@@ -30,7 +30,8 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/page-container";
-import { api, type League } from "@/lib/api";
+import { api, type League, type Race } from "@/lib/api";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TEAMS } from "@/context/theme-context";
 import { auth } from "@/lib/auth";
 import { safeStorage } from "@/lib/utils";
@@ -126,6 +127,14 @@ export function LeaguesScreen() {
   const selectedLeagueRef = useRef<HTMLButtonElement>(null);
 
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [races, setRaces] = useState<Race[]>([]);
+  const [selectedRaceId, setSelectedRaceId] = useState<string>("all");
+
+  useEffect(() => {
+    if (activeLeagueId) {
+      fetchLeaderboard(activeLeagueId, selectedRaceId === "all" ? undefined : selectedRaceId);
+    }
+  }, [activeLeagueId, selectedRaceId]);
 
   useEffect(() => {
     if (selectedLeagueRef.current) {
@@ -149,7 +158,6 @@ export function LeaguesScreen() {
   useEffect(() => {
     if (activeLeagueId) {
       setIsExpanded(false); // Reset expansion state when changing leagues
-      fetchLeaderboard(activeLeagueId);
     }
   }, [activeLeagueId]);
 
@@ -208,7 +216,16 @@ export function LeaguesScreen() {
   async function fetchLeagues() {
     try {
       const [leaguesData, racesData] = await Promise.all([api.leagues.list(), api.races.list()]);
-      const nextRaceData = racesData.find((r) => r.status === "UPCOMING" || r.status === "OPEN");
+
+      const nextRaceIdx = racesData.findIndex((r) => r.status === "UPCOMING" || r.status === "OPEN");
+      const filterIdx = nextRaceIdx === -1 ? racesData.length : nextRaceIdx + 1;
+      const filteredRaces = racesData.slice(0, filterIdx);
+
+      setRaces(filteredRaces);
+      const nextRaceData = nextRaceIdx !== -1 ? racesData[nextRaceIdx] : null;
+      if (nextRaceData && (selectedRaceId === "all" || !selectedRaceId)) {
+        setSelectedRaceId(nextRaceData.id.toString());
+      }
 
       // Map API data to UI data
       const uiLeagues: UILeague[] = leaguesData.map((l) => ({
@@ -247,9 +264,9 @@ export function LeaguesScreen() {
       setLoading(false);
     }
   }
-  async function fetchLeaderboard(leagueId: string) {
+  async function fetchLeaderboard(leagueId: string, raceId?: string) {
     try {
-      const data = await api.leaderboard.get(leagueId);
+      const data = await api.leaderboard.get<any[]>(leagueId, raceId);
       // Map to Leaderboard component format
       const mapped = data.map((entry, index) => {
         let teamName = "Independent";
@@ -593,14 +610,35 @@ export function LeaguesScreen() {
                 <Trophy className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg font-semibold">Standings</CardTitle>
               </div>
+              <div className="w-[180px] sm:w-[220px] shrink-0 ml-auto">
+                <Select value={selectedRaceId} onValueChange={setSelectedRaceId}>
+                  <SelectTrigger className="w-full h-8 text-[11px] sm:text-xs [&>span]:w-full [&>span]:text-right [&>span]:mr-2">
+                    <SelectValue placeholder="All Races" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Races</SelectItem>
+                    {races.map((race) => (
+                      <SelectItem key={race.id} value={race.id.toString()}>
+                        {race.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <Leaderboard
               entries={isExpanded ? leaderboard : leaderboard.slice(0, 5)}
-              leagueId={activeLeague.id}
+              leagueId={activeLeagueId}
               nextRaceId={activeLeague.nextRace?.id}
-              hasSprint={activeLeague.nextRace?.has_sprint}
+              selectedRaceId={selectedRaceId === "all" ? undefined : selectedRaceId}
+              disableExpansion={selectedRaceId === "all"}
+              hasSprint={
+                selectedRaceId === "all"
+                  ? activeLeague.nextRace?.has_sprint
+                  : races.find((r) => r.id === selectedRaceId)?.has_sprint
+              }
               scoringConfig={activeLeague.scoring_config}
             />
             {leaderboard.length > 5 && (

@@ -28,6 +28,7 @@ interface DriverSelectorProps {
   drivers: Driver[];
   showPosition?: boolean;
   onSelect: (driver: Driver) => void;
+  disabled?: boolean;
   children?: React.ReactNode;
 }
 
@@ -37,6 +38,7 @@ export function DriverSelector({
   drivers,
   showPosition = true,
   onSelect,
+  disabled = false,
   children,
 }: DriverSelectorProps) {
   const [open, setOpen] = React.useState(false);
@@ -48,8 +50,8 @@ export function DriverSelector({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Dialog open={open} onOpenChange={(v) => !disabled && setOpen(v)}>
+      <DialogTrigger asChild disabled={disabled}>
         {children ? (
           children
         ) : (

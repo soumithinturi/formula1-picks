@@ -26,6 +26,9 @@ export const getLeaderboard = withAuth(async (req) => {
   }
   // ----------------------------------
 
+  const url = new URL(req.url);
+  const raceId = url.searchParams.get("raceId");
+
   // Aggregate total points per user for this league
   const standings = await db`
     SELECT
@@ -39,7 +42,9 @@ export const getLeaderboard = withAuth(async (req) => {
       COALESCE(SUM(p.total_points), 0)::int AS "totalPoints"
     FROM league_members lm
     INNER JOIN users u ON u.id = lm.user_id
-    LEFT JOIN picks p ON p.user_id = lm.user_id AND p.league_id = ${leagueId}
+    LEFT JOIN picks p ON p.user_id = lm.user_id 
+      AND p.league_id = ${leagueId}
+      ${raceId ? db`AND p.race_id = ${raceId}` : db``}
     WHERE lm.league_id = ${leagueId}
     GROUP BY u.id, u.display_name, u.contact, u.avatar_url
     ORDER BY "totalPoints" DESC

@@ -7,7 +7,19 @@ import { Countdown } from "@/components/ui/countdown";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DriverSelector } from "@/components/racing/driver-selector";
 import { Progress } from "@/components/ui/progress";
-import { Timer, AlertTriangle, Car, Save, Loader2, Plus, Lock, Copy, Trash2 } from "lucide-react";
+import {
+  Timer,
+  AlertTriangle,
+  Car,
+  Save,
+  Loader2,
+  Plus,
+  Lock,
+  Copy,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { api, type Driver, type Race, type League } from "@/lib/api";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,7 +49,7 @@ export function PicksScreen() {
   const [races, setRaces] = useState<Race[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
-  const [nextRace, setNextRace] = useState<Race | null>(null);
+  const [currentRace, setCurrentRace] = useState<Race | null>(null);
 
   type DriverSelection = { id: string; name: string; team: string; rank: number; avatarUrl?: string } | null;
 
@@ -92,15 +104,15 @@ export function PicksScreen() {
           api.leagues.list(),
         ]);
 
-        setRaces(racesData);
+        const nextRaceIdx = racesData.findIndex((r) => r.status === "UPCOMING" || r.status === "OPEN");
+        const nextRace = nextRaceIdx !== -1 ? racesData[nextRaceIdx] : null;
+
+        const filterIdx = nextRaceIdx === -1 ? racesData.length : nextRaceIdx + 1;
+        setRaces(racesData.slice(0, filterIdx));
         setDrivers(driversData);
         setLeagues(leaguesData);
 
-        // Find next race
-        const next = racesData.find((r) => r.status === "UPCOMING" || r.status === "OPEN");
-        setNextRace(next || null);
-
-        // Pre-select the league from the URL param, falling back to the first league
+        setCurrentRace(nextRace || racesData[0] || null);
         const targetLeague = initialLeagueId ? leaguesData.find((l) => l.id === initialLeagueId) : undefined;
         const firstLeague = targetLeague || leaguesData[0];
         if (firstLeague) {
@@ -121,11 +133,11 @@ export function PicksScreen() {
 
   // Fetch Existing Picks for Selected League & Race
   useEffect(() => {
-    if (!selectedLeagueId || !nextRace?.id) return;
+    if (!selectedLeagueId || !currentRace?.id) return;
 
     async function fetchPicks() {
       try {
-        const data = await api.picks.get(nextRace!.id, selectedLeagueId);
+        const data = await api.picks.get(currentRace!.id, selectedLeagueId);
         if (data) {
           // Map backend driver IDs to driver selector objects
           const findDriver = (id: string | null) => availableDrivers.find((d) => d.id === id) || null;
@@ -168,21 +180,21 @@ export function PicksScreen() {
       }
     }
     fetchPicks();
-  }, [selectedLeagueId, nextRace, availableDrivers]);
+  }, [selectedLeagueId, currentRace, availableDrivers]);
 
   // Compute current league scoring config
   const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
   const scoringConfig = selectedLeague?.scoring_config;
 
   const staticRaceData = useMemo(() => {
-    if (!nextRace) return null;
+    if (!currentRace) return null;
     return races2026.find(
       (r) =>
-        nextRace.name.includes(r.circuitId) ||
-        nextRace.name.toLowerCase().includes(r.name.split(" ")[0]?.toLowerCase() ?? "") ||
-        r.name.includes(nextRace.name),
+        currentRace.name.includes(r.circuitId) ||
+        currentRace.name.toLowerCase().includes(r.name.split(" ")[0]?.toLowerCase() ?? "") ||
+        r.name.includes(currentRace.name),
     );
-  }, [nextRace]);
+  }, [currentRace]);
 
   const formatSessionTime = (dateStr: string | null | undefined) => {
     if (!dateStr) return null;
@@ -253,7 +265,7 @@ export function PicksScreen() {
   };
 
   const handleSave = async () => {
-    if (!selectedLeagueId || !nextRace) return;
+    if (!selectedLeagueId || !currentRace) return;
     setSaving(true);
 
     // Construct payload
@@ -264,7 +276,7 @@ export function PicksScreen() {
 
     // Quick save implementation
     const payload = {
-      raceId: nextRace.id,
+      raceId: currentRace.id,
       leagueId: selectedLeagueId,
       selections: {
         sprintQualifyingP1: sprintPredictions.sprintQualifyingP1?.id || null,
@@ -292,10 +304,10 @@ export function PicksScreen() {
   };
 
   const handleCopyPicks = async (sourceLeagueId: string) => {
-    if (!nextRace?.id) return;
+    if (!currentRace?.id) return;
 
     try {
-      const data = await api.picks.get(nextRace.id, sourceLeagueId);
+      const data = await api.picks.get(currentRace.id, sourceLeagueId);
       if (data) {
         const findDriver = (id: string | null) => availableDrivers.find((d) => d.id === id) || null;
 
@@ -344,7 +356,7 @@ export function PicksScreen() {
     if (scoringConfig.firstDNF?.enabled) checkPick(racePredictions.firstDnf);
 
     // Sprint Picks (Only if race has sprint)
-    if (nextRace?.has_sprint) {
+    if (currentRace?.has_sprint) {
       if (scoringConfig.quali?.enabled) checkPick(sprintPredictions.sprintQualifyingP1);
       if (scoringConfig.p1?.enabled) checkPick(sprintPredictions.sprintP1);
       if (scoringConfig.p2?.enabled) checkPick(sprintPredictions.sprintP2);
@@ -354,7 +366,7 @@ export function PicksScreen() {
 
     if (requiredPicks === 0) return 0;
     return (completedPicks / requiredPicks) * 100;
-  }, [sprintPredictions, racePredictions, scoringConfig, nextRace?.has_sprint]);
+  }, [sprintPredictions, racePredictions, scoringConfig, currentRace?.has_sprint]);
 
   const renderPodiumGroup = (type: "sprint" | "race") => {
     const predictions = type === "sprint" ? sprintPredictions : racePredictions;
@@ -414,25 +426,70 @@ export function PicksScreen() {
     );
   };
 
+  const handlePrevRace = () => {
+    const idx = races.findIndex((r) => r.id === currentRace?.id);
+    if (idx > 0) setCurrentRace(races[idx - 1] || null);
+  };
+
+  const handleNextRace = () => {
+    const idx = races.findIndex((r) => r.id === currentRace?.id);
+    if (idx < races.length - 1) setCurrentRace(races[idx + 1] || null);
+  };
+
+  const isPrevDisabled = !currentRace || races.findIndex((r) => r.id === currentRace.id) <= 0;
+  const isNextDisabled = !currentRace || races.findIndex((r) => r.id === currentRace.id) >= races.length - 1;
+
   return (
     <div className="space-y-6 pb-32 md:pb-8 relative">
       {/* Header */}
       <div className="flex flex-col items-center justify-center space-y-4 pt-4">
-        <StatusPill variant={nextRace?.status === "OPEN" ? "success" : "neutral"} className="uppercase tracking-wider">
-          {nextRace?.status === "OPEN" ? "Picks Open" : "Next Race"}
+        <StatusPill
+          variant={
+            currentRace?.status === "OPEN" || currentRace?.status === "UPCOMING"
+              ? "success"
+              : currentRace?.status === "COMPLETED"
+                ? "neutral"
+                : "neutral"
+          }
+          className="uppercase tracking-wider">
+          {currentRace?.status === "OPEN" || currentRace?.status === "UPCOMING"
+            ? "Picks Open"
+            : currentRace?.status === "COMPLETED"
+              ? "Finished"
+              : "Locked"}
         </StatusPill>
-        <h1 className="text-3xl font-black text-center uppercase italic">{nextRace?.name || "No Upcoming Race"}</h1>
-        {nextRace && (
+        <div className="grid grid-cols-[48px_1fr_48px] items-center w-full px-4 max-w-[500px]">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePrevRace}
+            disabled={isPrevDisabled}
+            className="text-muted-foreground hover:text-primary transition-colors justify-self-start">
+            <ChevronLeft className="h-8 w-8" />
+          </Button>
+          <h1 className="text-2xl sm:text-3xl font-black text-center uppercase italic wrap-break-word leading-tight px-2">
+            {currentRace?.name || "No Upcoming Race"}
+          </h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleNextRace}
+            disabled={isNextDisabled}
+            className="text-muted-foreground hover:text-primary transition-colors justify-self-end">
+            <ChevronRight className="h-8 w-8" />
+          </Button>
+        </div>
+        {currentRace && currentRace.status !== "COMPLETED" && (
           <div className="flex flex-col items-center gap-6 mt-2">
             {(() => {
               const now = new Date();
               const isSprintActive =
-                nextRace.has_sprint && nextRace.sprint_date && now < new Date(nextRace.sprint_date);
+                currentRace.has_sprint && currentRace.sprint_date && now < new Date(currentRace.sprint_date);
 
               const topLabel = isSprintActive ? "Sprint Quali" : "Qualifying";
-              const topDate = isSprintActive ? nextRace.sprint_quali_date : nextRace.race_quali_date;
+              const topDate = isSprintActive ? currentRace.sprint_quali_date : currentRace.race_quali_date;
               const bottomLabel = isSprintActive ? "Sprint Starts In" : "Race Starts In";
-              const bottomDate = isSprintActive ? nextRace.sprint_date : nextRace.date;
+              const bottomDate = isSprintActive ? currentRace.sprint_date : currentRace.date;
 
               const showTop = topDate && now < new Date(topDate);
 
@@ -520,7 +577,7 @@ export function PicksScreen() {
             size="lg"
             className="flex-1 font-bold border-muted-foreground/20"
             onClick={handleClear}
-            disabled={saving || !nextRace}>
+            disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
             <Trash2 className="w-5 h-5 mr-2" />
             Clear
           </Button>
@@ -529,18 +586,18 @@ export function PicksScreen() {
             size="lg"
             className="flex-2 shadow-lg text-lg font-bold bg-primary text-primary-foreground"
             onClick={handleSave}
-            disabled={saving || !nextRace}>
+            disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
             {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
             Save Picks
           </Button>
         </div>
       </div>
 
-      {!nextRace ? (
-        <div className="text-center py-10 opacity-50">No upcoming races found.</div>
+      {!currentRace ? (
+        <div className="text-center py-10 opacity-50">No races found.</div>
       ) : (
         <Tabs defaultValue="race" className="w-full">
-          {nextRace.has_sprint && (
+          {currentRace.has_sprint && (
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="sprint">Sprint</TabsTrigger>
               <TabsTrigger value="race">Race</TabsTrigger>
@@ -548,7 +605,7 @@ export function PicksScreen() {
           )}
 
           {/* SPRINT TAB */}
-          {nextRace.has_sprint && (
+          {currentRace.has_sprint && (
             <TabsContent value="sprint" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Sprint Qualifying */}
               <section className="space-y-3">
@@ -557,9 +614,9 @@ export function PicksScreen() {
                     <div className="h-4 w-1 bg-primary rounded-full" />
                     <h2 className="text-lg font-bold uppercase">Sprint Qualifying</h2>
                   </div>
-                  {nextRace.sprint_quali_date && (
+                  {currentRace.sprint_quali_date && (
                     <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
-                      {formatSessionTime(nextRace.sprint_quali_date)}
+                      {formatSessionTime(currentRace.sprint_quali_date)}
                     </span>
                   )}
                 </div>
@@ -576,6 +633,7 @@ export function PicksScreen() {
                       drivers={availableDrivers}
                       selectedDriver={sprintPredictions.sprintQualifyingP1}
                       showPosition={false}
+                      disabled={currentRace.status === "COMPLETED"}
                       onSelect={(d) => handleSprintSelect("sprintQualifyingP1", d)}
                     />
                   </CardContent>
@@ -589,9 +647,9 @@ export function PicksScreen() {
                     <div className="h-4 w-1 bg-primary rounded-full" />
                     <h2 className="text-lg font-bold uppercase">Sprint Podium</h2>
                   </div>
-                  {nextRace.sprint_date && (
+                  {currentRace.sprint_date && (
                     <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
-                      {formatSessionTime(nextRace.sprint_date)}
+                      {formatSessionTime(currentRace.sprint_date)}
                     </span>
                   )}
                 </div>
@@ -630,9 +688,9 @@ export function PicksScreen() {
                   <div className="h-4 w-1 bg-primary rounded-full" />
                   <h2 className="text-lg font-bold uppercase">Qualifying</h2>
                 </div>
-                {nextRace.race_quali_date && (
+                {currentRace.race_quali_date && (
                   <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
-                    {formatSessionTime(nextRace.race_quali_date)}
+                    {formatSessionTime(currentRace.race_quali_date)}
                   </span>
                 )}
               </div>
@@ -649,6 +707,7 @@ export function PicksScreen() {
                     drivers={availableDrivers}
                     selectedDriver={racePredictions.raceQualifyingP1}
                     showPosition={false}
+                    disabled={currentRace.status === "COMPLETED"}
                     onSelect={(d) => handleRaceSelect("raceQualifyingP1", d)}
                   />
                 </CardContent>
@@ -663,9 +722,9 @@ export function PicksScreen() {
                     <div className="h-4 w-1 bg-primary rounded-full" />
                     <h2 className="text-lg font-bold uppercase">The Podium</h2>
                   </div>
-                  {nextRace.date && (
+                  {currentRace.date && (
                     <span className="text-xs text-muted-foreground font-medium bg-muted/50 px-2 py-1 rounded-md">
-                      {formatSessionTime(nextRace.date)}
+                      {formatSessionTime(currentRace.date)}
                     </span>
                   )}
                 </div>
@@ -734,7 +793,7 @@ export function PicksScreen() {
           size="lg"
           className="flex-1 font-bold border-muted-foreground/20"
           onClick={handleClear}
-          disabled={saving || !nextRace}>
+          disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
           <Trash2 className="w-5 h-5 mr-2" />
           Clear
         </Button>
@@ -743,7 +802,7 @@ export function PicksScreen() {
           size="lg"
           className="flex-2 text-lg font-bold bg-primary text-primary-foreground"
           onClick={handleSave}
-          disabled={saving || !nextRace}>
+          disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
           {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
           Save Picks
         </Button>

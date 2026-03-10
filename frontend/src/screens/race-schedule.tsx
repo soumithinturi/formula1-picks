@@ -99,7 +99,7 @@ export default function RaceSchedule() {
             const formattedDate = formatSessionDate(race.date, staticData?.timezone);
 
             // Derive simpler status for UI
-            const isNext = index === 0 && race.status === "UPCOMING"; // Naive "next" check for demo
+            const isNext = race.status === "UPCOMING" && races.slice(0, index).every((r) => r.status === "COMPLETED");
 
             const isExpanded = expandedRaceId === race.id;
 

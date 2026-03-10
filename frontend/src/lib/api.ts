@@ -94,6 +94,19 @@ export interface PickRow {
   race_p3: string | null;
   fastest_lap: string | null;
   first_dnf: string | null;
+  results?: {
+    sprint_qualifying_p1: string | null;
+    sprint_p1: string | null;
+    sprint_p2: string | null;
+    sprint_p3: string | null;
+    sprint_fastest_lap: string | null;
+    race_qualifying_p1: string | null;
+    race_p1: string | null;
+    race_p2: string | null;
+    race_p3: string | null;
+    fastest_lap: string | null;
+    first_dnf: string | null;
+  } | null;
 }
 
 export interface League {
@@ -298,7 +311,8 @@ export const api = {
   },
 
   leaderboard: {
-    get: (leagueId: string) => api.get<LeaderboardEntry[]>(`/leaderboard/${leagueId}`),
+    get: <T = LeaderboardEntry[]>(leagueId: string, raceId?: string) =>
+      api.get<T>(`/leaderboard/${leagueId}${raceId ? `?raceId=${raceId}` : ""}`),
   },
 
   chat: {
@@ -310,6 +324,11 @@ export const api = {
     list: () =>
       api.get<{ notifications: Notification[]; unreadCount: number }>("/notifications"),
     markAllRead: () => api.put<{ updated: number }>("/notifications/read", {}),
+  },
+
+  admin: {
+    submitResults: (payload: { raceId: number; results: PickSelections }) =>
+      api.post("/admin/results", payload),
   },
 };
 
