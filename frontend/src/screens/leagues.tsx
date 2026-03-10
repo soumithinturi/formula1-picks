@@ -637,7 +637,7 @@ export function LeaguesScreen() {
               hasSprint={
                 selectedRaceId === "all"
                   ? activeLeague.nextRace?.has_sprint
-                  : races.find((r) => r.id === selectedRaceId)?.has_sprint
+                  : races.find((r) => r.id.toString() === selectedRaceId)?.has_sprint
               }
               scoringConfig={activeLeague.scoring_config}
             />
