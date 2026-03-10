@@ -22,6 +22,8 @@ import { DevModeScreen } from "./screens/dev-mode";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
+import { AdminRoute } from "@/components/layout/admin-route";
+import { AdminResultsScreen } from "./screens/admin/results";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { useTheme } from "@/context/theme-context";
@@ -142,6 +144,12 @@ export function App() {
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="changelog" element={<ChangelogScreen />} />
               <Route path="dev-mode" element={<DevModeScreen />} />
+
+              {/* Admin Routes */}
+              <Route element={<AdminRoute />}>
+                <Route path="admin/results" element={<AdminResultsScreen />} />
+              </Route>
+
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
