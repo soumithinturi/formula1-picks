@@ -9,6 +9,14 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.2.2",
+    date: "2026-03-10",
+    title: "Results & Scoring Update",
+    description: "Fixes to the results and scoring logic.",
+    type: "fix",
+    items: ["Results: Fixes to the results page", "Scoring: Fixes to the scoring logic"],
+  },
+  {
     version: "0.2.1",
     date: "2026-03-05",
     title: "Tutorial & Picks Update",
