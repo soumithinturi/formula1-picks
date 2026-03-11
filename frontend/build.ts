@@ -167,7 +167,14 @@ const result = await Bun.build({
 });
 
 // Copy PWA assets to outdir
-const pwaAssets = ["manifest.json", "sw.js", "icon-192x192.png", "icon-512x512.png"];
+const pwaAssets = [
+  "manifest.json", 
+  "sw.js", 
+  "assets/icon-192x192.png", 
+  "assets/icon-512x512.png",
+  "assets/screenshot-wide.png",
+  "assets/screenshot-mobile.png"
+];
 for (const asset of pwaAssets) {
   const assetPath = path.join("src", asset);
   if (existsSync(assetPath)) {
