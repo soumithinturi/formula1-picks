@@ -242,9 +242,7 @@ export function LoginScreen() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/40 p-4">
       <div className="flex items-center gap-3 mb-10">
         <div className="flex items-center gap-2">
-          <div className="h-10 w-10 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
-            <span className="text-primary-foreground font-black text-xl italic">F1</span>
-          </div>
+          <img src="/assets/icon-192x192.png" alt="F1 Picks" className="h-10 w-10 shrink-0 object-contain" />
           <span className="text-3xl font-black tracking-tighter uppercase italic leading-none">Picks</span>
         </div>
         <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1.5">

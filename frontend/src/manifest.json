@@ -1,0 +1,37 @@
+{
+  "id": "/",
+  "name": "Formula 1 Picks",
+  "short_name": "F1 Picks",
+  "description": "F1 fantasy picks and race rankings.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#e10600",
+  "icons": [
+    {
+      "src": "assets/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshot-wide.png",
+      "sizes": "1758x1028",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "assets/screenshot-mobile.png",
+      "sizes": "374x665",
+      "type": "image/png"
+    }
+  ]
+}
