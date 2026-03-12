@@ -9,6 +9,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.2.3",
+    date: "2026-03-12",
+    title: "PWA & UX Polish",
+    description: "Add PWA support and general app improvements.",
+    type: "improvement",
+    items: [
+      "PWA: Add PWA support",
+      "UX: General app improvements",
+    ],
+  },
+  {
     version: "0.2.2",
     date: "2026-03-10",
     title: "Results & Scoring Update",
