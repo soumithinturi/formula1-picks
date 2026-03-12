@@ -19,6 +19,7 @@ import { SettingsScreen } from "@/screens/settings";
 import { ProfileScreen } from "@/screens/profile";
 import { ChangelogScreen } from "./screens/changelog";
 import { DevModeScreen } from "./screens/dev-mode";
+import { LandingScreen } from "./screens/landing";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
@@ -124,6 +125,7 @@ export function App() {
     <TutorialProvider>
       <NotificationProvider>
         <Routes>
+          <Route path="/welcome" element={<LandingScreen />} />
           <Route path="/login" element={<LoginScreen />} />
 
           <Route element={<ProtectedRoute />}>
