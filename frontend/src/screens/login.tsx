@@ -390,6 +390,12 @@ export function LoginScreen() {
           )}
         </CardContent>
       </Card>
+
+      <div className="mt-8 text-center">
+        <Button variant="link" onClick={() => navigate("/welcome")} className="text-muted-foreground hover:text-primary transition-colors">
+          What is F1 Picks? Explore features <ArrowRight className="inline-flex w-4 h-4 ml-1" />
+        </Button>
+      </div>
     </div>
   );
 }
