@@ -48,10 +48,10 @@ export function calculatePoints(
   };
 
   // Sprint picks
-  checkPick(userPick.sprintQualifyingP1, officialResults.sprintQualifyingP1, { enabled: false, points: 0 }); // config has no sprint quali, just count it
-  checkPick(userPick.sprintP1, officialResults.sprintP1, { enabled: false, points: 0 }); // config has no sprint podium explicit rules yet, just count it
-  checkPick(userPick.sprintP2, officialResults.sprintP2, { enabled: false, points: 0 });
-  checkPick(userPick.sprintP3, officialResults.sprintP3, { enabled: false, points: 0 });
+  checkPick(userPick.sprintQualifyingP1, officialResults.sprintQualifyingP1, config.quali);
+  checkPick(userPick.sprintP1, officialResults.sprintP1, config.p1);
+  checkPick(userPick.sprintP2, officialResults.sprintP2, config.p2);
+  checkPick(userPick.sprintP3, officialResults.sprintP3, config.p3);
   checkPick(userPick.sprintFastestLap, officialResults.sprintFastestLap, config.sprintFastestLap);
 
   // Race picks
@@ -75,6 +75,19 @@ export function calculatePoints(
     score += config.perfectOrder.points;
   }
 
+  const hasSprintPerfectOrder =
+    hasSprint &&
+    userPick.sprintP1 &&
+    userPick.sprintP2 &&
+    userPick.sprintP3 &&
+    userPick.sprintP1 === officialResults.sprintP1 &&
+    userPick.sprintP2 === officialResults.sprintP2 &&
+    userPick.sprintP3 === officialResults.sprintP3;
+
+  if (config.perfectOrder.enabled && hasSprintPerfectOrder) {
+    score += config.perfectOrder.points;
+  }
+
   // Bonus: Podium (Any driver in top 3 predicted in any top 3 position)
   // Already counted in the "correct" counts above if exactly matching, but podium awards points for being in the top 3 at all
   if (config.podium.enabled) {
@@ -89,6 +102,19 @@ export function calculatePoints(
     }
     // E.g. 1 point for each correct podium driver, or flat bonus? The UI implies points per driver since it's "Points awarded for any driver who finishes in the top 3"
     score += podiumMatches * config.podium.points;
+
+    if (hasSprint) {
+      const officialSprintTop3 = [officialResults.sprintP1, officialResults.sprintP2, officialResults.sprintP3].filter(Boolean);
+      const userSprintTop3 = [userPick.sprintP1, userPick.sprintP2, userPick.sprintP3].filter(Boolean);
+
+      let sprintPodiumMatches = 0;
+      for (const driver of userSprintTop3) {
+        if (driver && officialSprintTop3.includes(driver)) {
+          sprintPodiumMatches++;
+        }
+      }
+      score += sprintPodiumMatches * config.podium.points;
+    }
   }
 
   return { score, correct, total };

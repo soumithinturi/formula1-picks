@@ -69,6 +69,7 @@ export const submitResults = withAdmin(async (req) => {
         sprintP1: pick.sprint_p1,
         sprintP2: pick.sprint_p2,
         sprintP3: pick.sprint_p3,
+        sprintFastestLap: pick.sprint_fastest_lap,
         raceQualifyingP1: pick.race_qualifying_p1,
         raceP1: pick.race_p1,
         raceP2: pick.race_p2,

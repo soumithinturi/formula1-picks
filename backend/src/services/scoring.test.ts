@@ -83,4 +83,28 @@ describe("Scoring Logic", () => {
     const score = calculatePoints(pick, defaultResults, customConfig);
     expect(score.score).toBe(0);
   });
+
+  test("calculates sprint perfect score correctly", () => {
+    const sprintResults: PickSelections = {
+      ...defaultResults,
+      sprintQualifyingP1: "VER",
+      sprintP1: "VER",
+      sprintP2: "NOR",
+      sprintP3: "LEC",
+      sprintFastestLap: "VER",
+    };
+    const pick = { ...sprintResults };
+    const score = calculatePoints(pick, sprintResults, DEFAULT_SCORING_CONFIG);
+
+    // Race perfect: 60
+    // Sprint perfect:
+    // Sprint Quali: 1
+    // Sprint P1: 5, P2: 3, P3: 1
+    // Sprint FL: 5
+    // Sprint Podium Bonus: 3 * 10 = 30
+    // Sprint Perfect Order: 15
+    // Sprint Total = 1 + 5 + 3 + 1 + 5 + 30 + 15 = 60
+    // Overall = 120
+    expect(score.score).toBe(120);
+  });
 });
