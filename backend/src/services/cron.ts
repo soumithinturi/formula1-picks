@@ -365,6 +365,18 @@ export async function fetchAndUpdateSchedule() {
         ? r.SprintQualifying.date + (r.SprintQualifying.time ? `T${r.SprintQualifying.time}` : "T00:00:00Z")
         : null;
 
+      const fp1_date = r.FirstPractice
+        ? r.FirstPractice.date + (r.FirstPractice.time ? `T${r.FirstPractice.time}` : "T00:00:00Z")
+        : null;
+
+      const fp2_date = r.SecondPractice
+        ? r.SecondPractice.date + (r.SecondPractice.time ? `T${r.SecondPractice.time}` : "T00:00:00Z")
+        : null;
+
+      const fp3_date = r.ThirdPractice
+        ? r.ThirdPractice.date + (r.ThirdPractice.time ? `T${r.ThirdPractice.time}` : "T00:00:00Z")
+        : null;
+
       const sprint_deadline = sprint_quali_date;
       const race_deadline = race_quali_date;
 
@@ -372,11 +384,13 @@ export async function fetchAndUpdateSchedule() {
         INSERT INTO races (
           id, name, date, has_sprint, status,
           sprint_deadline, race_deadline,
-          sprint_date, sprint_quali_date, race_quali_date
+          sprint_date, sprint_quali_date, race_quali_date,
+          fp1_date, fp2_date, fp3_date
         ) VALUES (
           ${raceId}, ${name}, ${date}, ${has_sprint}, 'UPCOMING',
           ${sprint_deadline}, ${race_deadline},
-          ${sprint_date}, ${sprint_quali_date}, ${race_quali_date}
+          ${sprint_date}, ${sprint_quali_date}, ${race_quali_date},
+          ${fp1_date}, ${fp2_date}, ${fp3_date}
         )
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
@@ -388,7 +402,10 @@ export async function fetchAndUpdateSchedule() {
           race_deadline = EXCLUDED.race_deadline,
           sprint_date = EXCLUDED.sprint_date,
           sprint_quali_date = EXCLUDED.sprint_quali_date,
-          race_quali_date = EXCLUDED.race_quali_date
+          race_quali_date = EXCLUDED.race_quali_date,
+          fp1_date = EXCLUDED.fp1_date,
+          fp2_date = EXCLUDED.fp2_date,
+          fp3_date = EXCLUDED.fp3_date
       `;
     }
 

@@ -40,6 +40,9 @@ export interface Race {
   sprint_date: string | null;
   sprint_quali_date: string | null;
   race_quali_date: string | null;
+  fp1_date: string | null;
+  fp2_date: string | null;
+  fp3_date: string | null;
 }
 
 export interface Driver {

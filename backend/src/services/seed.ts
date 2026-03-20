@@ -122,8 +122,26 @@ async function seedRaces(): Promise<void> {
         qualiDate = new Date(`${race.Qualifying.date}T${race.Qualifying.time || "12:00:00Z"}`);
       }
 
+      let fp1Date = null;
+      if (race.FirstPractice) {
+        // @ts-ignore
+        fp1Date = new Date(`${race.FirstPractice.date}T${race.FirstPractice.time || "12:00:00Z"}`);
+      }
+
+      let fp2Date = null;
+      if (race.SecondPractice) {
+        // @ts-ignore
+        fp2Date = new Date(`${race.SecondPractice.date}T${race.SecondPractice.time || "12:00:00Z"}`);
+      }
+
+      let fp3Date = null;
+      if (race.ThirdPractice) {
+        // @ts-ignore
+        fp3Date = new Date(`${race.ThirdPractice.date}T${race.ThirdPractice.time || "12:00:00Z"}`);
+      }
+
       await db`
-        INSERT INTO races(name, date, has_sprint, status, race_deadline, sprint_deadline, sprint_date, sprint_quali_date, race_quali_date)
+        INSERT INTO races(name, date, has_sprint, status, race_deadline, sprint_deadline, sprint_date, sprint_quali_date, race_quali_date, fp1_date, fp2_date, fp3_date)
       VALUES(
         ${race.raceName},
         ${raceDate.toISOString()},
@@ -133,7 +151,10 @@ async function seedRaces(): Promise<void> {
         ${sprintDeadline?.toISOString() ?? null},
           ${sprintDate?.toISOString() ?? null},
           ${sprintQualiDate?.toISOString() ?? null},
-          ${qualiDate?.toISOString() ?? null}
+          ${qualiDate?.toISOString() ?? null},
+          ${fp1Date?.toISOString() ?? null},
+          ${fp2Date?.toISOString() ?? null},
+          ${fp3Date?.toISOString() ?? null}
         )
     `;
       await Bun.sleep(20);

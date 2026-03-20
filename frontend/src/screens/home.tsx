@@ -368,28 +368,28 @@ export function HomeScreen() {
               </div>
               {(() => {
                 const now = new Date();
-                let label = "Race Starts In";
-                let targetDate = new Date(nextRace.date);
+                
+                const events = [
+                  { label: "Free Practice 1", date: nextRace.fp1_date },
+                  { label: "Free Practice 2", date: nextRace.fp2_date },
+                  { label: "Free Practice 3", date: nextRace.fp3_date },
+                  { label: "Sprint Qualifying", date: nextRace.sprint_quali_date },
+                  { label: "Sprint", date: nextRace.sprint_date },
+                  { label: "Qualifying", date: nextRace.race_quali_date },
+                  { label: "Race", date: nextRace.date },
+                ].filter(e => e.date) as { label: string; date: string }[];
 
-                if (nextRace.has_sprint) {
-                  if (nextRace.sprint_quali_date && now < new Date(nextRace.sprint_quali_date)) {
-                    label = "Sprint Quali Starts In";
-                    targetDate = new Date(nextRace.sprint_quali_date);
-                  } else if (nextRace.sprint_date && now < new Date(nextRace.sprint_date)) {
-                    label = "Sprint Starts In";
-                    targetDate = new Date(nextRace.sprint_date);
-                  } else if (nextRace.race_quali_date && now < new Date(nextRace.race_quali_date)) {
-                    label = "Qualifying Starts In";
-                    targetDate = new Date(nextRace.race_quali_date);
-                  }
-                } else if (nextRace.race_quali_date && now < new Date(nextRace.race_quali_date)) {
-                  label = "Qualifying Starts In";
-                  targetDate = new Date(nextRace.race_quali_date);
-                }
+                // Find the first event that is in the future
+                let targetEvent = events.find(e => now < new Date(e.date));
+
+                // If all events are in the past (edge case just before status=COMPLETED), point to the Race
+                if (!targetEvent) targetEvent = events[events.length - 1] || { label: "Race", date: nextRace.date };
+
+                const targetDate = new Date(targetEvent.date);
 
                 return (
                   <>
-                    <p className="text-sm text-muted-foreground">{label}</p>
+                    <p className="text-sm text-muted-foreground">{targetEvent.label} Starts In</p>
                   </>
                 );
               })()}
@@ -397,19 +397,21 @@ export function HomeScreen() {
             <CardContent>
               {(() => {
                 const now = new Date();
-                let targetDate = new Date(nextRace.date);
+                
+                const events = [
+                  { label: "Free Practice 1", date: nextRace.fp1_date },
+                  { label: "Free Practice 2", date: nextRace.fp2_date },
+                  { label: "Free Practice 3", date: nextRace.fp3_date },
+                  { label: "Sprint Qualifying", date: nextRace.sprint_quali_date },
+                  { label: "Sprint", date: nextRace.sprint_date },
+                  { label: "Qualifying", date: nextRace.race_quali_date },
+                  { label: "Race", date: nextRace.date },
+                ].filter(e => e.date) as { label: string; date: string }[];
 
-                if (nextRace.has_sprint) {
-                  if (nextRace.sprint_quali_date && now < new Date(nextRace.sprint_quali_date)) {
-                    targetDate = new Date(nextRace.sprint_quali_date);
-                  } else if (nextRace.sprint_date && now < new Date(nextRace.sprint_date)) {
-                    targetDate = new Date(nextRace.sprint_date);
-                  } else if (nextRace.race_quali_date && now < new Date(nextRace.race_quali_date)) {
-                    targetDate = new Date(nextRace.race_quali_date);
-                  }
-                } else if (nextRace.race_quali_date && now < new Date(nextRace.race_quali_date)) {
-                  targetDate = new Date(nextRace.race_quali_date);
-                }
+                let targetEvent = events.find(e => now < new Date(e.date));
+                if (!targetEvent) targetEvent = events[events.length - 1] || { label: "Race", date: nextRace.date };
+
+                const targetDate = new Date(targetEvent.date);
 
                 return <Countdown targetDate={targetDate} />;
               })()}

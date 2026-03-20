@@ -223,14 +223,42 @@ export default function RaceSchedule() {
 
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-0">
+                    {/* Expanded Info container */}
                     <div className="flex flex-col gap-2 pt-3 border-t border-border/50 animate-in fade-in slide-in-from-top-1">
+                      {/* Practice Sessions */}
+                      {(race.fp1_date || race.fp2_date || race.fp3_date) && (
+                        <div className="bg-muted/20 rounded-md p-3 text-sm flex flex-col gap-2 relative z-10 border border-border/30">
+                          <div className="font-semibold text-muted-foreground flex items-center justify-between mb-1">
+                            Practice Sessions
+                          </div>
+                          {race.fp1_date && (
+                            <div className="flex justify-between items-center text-muted-foreground text-xs">
+                              <span>Free Practice 1</span>
+                              <span>{formatSessionTime(race.fp1_date, staticData?.timezone)}</span>
+                            </div>
+                          )}
+                          {race.fp2_date && (
+                            <div className="flex justify-between items-center text-muted-foreground text-xs">
+                              <span>Free Practice 2</span>
+                              <span>{formatSessionTime(race.fp2_date, staticData?.timezone)}</span>
+                            </div>
+                          )}
+                          {race.fp3_date && (
+                            <div className="flex justify-between items-center text-muted-foreground text-xs">
+                              <span>Free Practice 3</span>
+                              <span>{formatSessionTime(race.fp3_date, staticData?.timezone)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Sprint Info (if applicable) */}
                       {race.has_sprint && (
-                        <div className="bg-muted/30 rounded-md p-3 text-sm flex flex-col gap-2 relative z-10">
-                          <div className="font-semibold flex items-center justify-between">
+                        <div className="bg-muted/30 rounded-md p-3 text-sm flex flex-col gap-2 relative z-10 border border-primary/10">
+                          <div className="font-semibold flex items-center justify-between text-brand text-xs uppercase tracking-wide">
                             Sprint Weekend
                             {race.sprint_deadline && (
-                              <span className="text-xs text-brand font-medium flex items-center gap-1">
+                              <span className="text-[10px] text-brand/80 font-bold flex items-center gap-1">
                                 <ShieldAlert className="h-3 w-3" />
                                 Picks Due: {formatSessionTime(race.sprint_deadline, staticData?.timezone)}
                               </span>
@@ -238,15 +266,18 @@ export default function RaceSchedule() {
                           </div>
 
                           {race.sprint_quali_date && (
-                            <div className="flex justify-between items-center text-muted-foreground text-xs">
+                            <div className="flex justify-between items-center text-foreground text-xs font-medium">
                               <span>Sprint Qualifying</span>
                               <span>{formatSessionTime(race.sprint_quali_date, staticData?.timezone)}</span>
                             </div>
                           )}
 
                           {race.sprint_date && (
-                            <div className="flex justify-between items-center text-foreground text-xs font-medium">
-                              <span>Sprint Race</span>
+                            <div className="flex justify-between items-center text-foreground text-xs font-bold bg-primary/10 p-1.5 -mx-1.5 rounded">
+                              <span className="flex items-center gap-1.5">
+                                <Trophy className="h-3.5 w-3.5 text-primary" />
+                                Sprint Race
+                              </span>
                               <span>{formatSessionTime(race.sprint_date, staticData?.timezone)}</span>
                             </div>
                           )}
@@ -254,11 +285,11 @@ export default function RaceSchedule() {
                       )}
 
                       {/* Race Info */}
-                      <div className="bg-muted/30 rounded-md p-3 text-sm flex flex-col gap-2 relative z-10">
-                        <div className="font-semibold flex items-center justify-between">
+                      <div className="bg-card shadow-sm rounded-md p-3 text-sm flex flex-col gap-2 relative z-10 border border-primary/20">
+                        <div className="font-semibold flex items-center justify-between text-primary text-xs uppercase tracking-wide">
                           Main Event
                           {race.race_deadline && (
-                            <span className="text-xs text-brand font-medium flex items-center gap-1">
+                            <span className="text-[10px] text-primary/80 font-bold flex items-center gap-1">
                               <ShieldAlert className="h-3 w-3" />
                               Picks Due: {formatSessionTime(race.race_deadline, staticData?.timezone)}
                             </span>
@@ -266,15 +297,18 @@ export default function RaceSchedule() {
                         </div>
 
                         {race.race_quali_date && (
-                          <div className="flex justify-between items-center text-muted-foreground text-xs">
+                          <div className="flex justify-between items-center text-foreground text-xs font-medium">
                             <span>Race Qualifying</span>
                             <span>{formatSessionTime(race.race_quali_date, staticData?.timezone)}</span>
                           </div>
                         )}
 
                         {race.date && (
-                          <div className="flex justify-between items-center text-foreground text-xs font-medium">
-                            <span>Grand Prix</span>
+                          <div className="flex justify-between items-center text-foreground text-xs font-bold bg-primary/10 p-1.5 -mx-1.5 rounded mt-0.5">
+                            <span className="flex items-center gap-1.5">
+                              <Trophy className="h-3.5 w-3.5 text-primary" />
+                              Grand Prix
+                            </span>
                             <span>{formatSessionTime(race.date, staticData?.timezone)}</span>
                           </div>
                         )}
