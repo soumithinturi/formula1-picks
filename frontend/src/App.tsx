@@ -18,7 +18,7 @@ import { InviteScreen } from "./screens/invite";
 import { SettingsScreen } from "@/screens/settings";
 import { ProfileScreen } from "@/screens/profile";
 import { ChangelogScreen } from "./screens/changelog";
-import { DevModeScreen } from "./screens/dev-mode";
+import { AdminLeaguesScreen } from "./screens/admin/leagues";
 import { LandingScreen } from "./screens/landing";
 
 import { LoginScreen } from "./screens/login";
@@ -146,12 +146,12 @@ export function App() {
               <Route path="schedule" element={<RaceSchedule />} />
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="changelog" element={<ChangelogScreen />} />
-              <Route path="dev-mode" element={<DevModeScreen />} />
 
               {/* Admin Routes */}
               <Route element={<AdminRoute />}>
                 <Route path="admin/results" element={<AdminResultsScreen />} />
                 <Route path="admin/notifications" element={<AdminNotificationsScreen />} />
+                <Route path="admin/leagues" element={<AdminLeaguesScreen />} />
               </Route>
 
               {/* Fallback */}

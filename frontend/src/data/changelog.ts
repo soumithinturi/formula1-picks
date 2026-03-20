@@ -17,6 +17,8 @@ export const changelog: ChangelogEntry[] = [
     items: [
       "Notifications: Add notifications for upcoming sessions, results, and league activity.",
       "UI: Update mobile navigation bar with glassmorphism and layout.",
+      "Free Practice: Display Free Practice sessions in the race schedule.",
+      "Upcoming Events: Display upcoming events in the race schedule.",
     ],
   },
   {

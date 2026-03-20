@@ -90,6 +90,19 @@ export function SideNav({ className, ...props }: SideNavProps) {
                 <Bell className="mr-3 h-4 w-4" />
                 Notification Test
               </NavLink>
+              <NavLink
+                to="/admin/leagues"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )
+                }>
+                <Trophy className="mr-3 h-4 w-4" />
+                Manage Leagues
+              </NavLink>
             </div>
           </div>
         )}

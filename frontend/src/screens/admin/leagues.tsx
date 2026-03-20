@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-export function DevModeScreen() {
+export function AdminLeaguesScreen() {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -73,7 +73,7 @@ export function DevModeScreen() {
   const selectedLeague = leagues.find((l) => l.id === selectedLeagueId);
 
   return (
-    <PageContainer title="Dev Mode" subtitle="Internal maintenance and debugging tools">
+    <PageContainer title="League Management" subtitle="Manage and monitor all application leagues">
       <div className="space-y-6">
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>

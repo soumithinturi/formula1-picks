@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Bell, Globe, Bug, Trash2, LogOut, Loader2 } from "lucide-react";
+import { Bell, Globe, Bug, Trash2, LogOut, Loader2, ShieldCheck, Trophy } from "lucide-react";
 import { useTheme, TEAMS } from "@/context/theme-context";
 import { auth } from "@/lib/auth";
 import { usePreferences } from "@/context/preferences-context";
@@ -36,7 +36,6 @@ export function SettingsScreen() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [betaTapCount, setBetaTapCount] = useState(0);
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmationText.toLowerCase() !== "delete my account") return;
@@ -127,16 +126,7 @@ export function SettingsScreen() {
         </section>
 
         {/* Beta Support */}
-        <section
-          className="space-y-3"
-          onClick={() => {
-            const nextCount = betaTapCount + 1;
-            setBetaTapCount(nextCount);
-            if (nextCount >= 10) {
-              navigate("/dev-mode");
-              setBetaTapCount(0);
-            }
-          }}>
+        <section className="space-y-3">
           <div className="flex items-center gap-2 mb-2 select-none pointer-events-none">
             <Bug className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Beta Support</h2>
@@ -147,15 +137,36 @@ export function SettingsScreen() {
               <div className="text-center pt-2">
                 <p className="text-xs text-muted-foreground font-mono">
                   App Version: v{packageJson.version}
-                  <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ml-1 mt-1">
-                    BETA
-                  </span>
                 </p>
               </div>
               <Disclaimer className="mt-4 pt-4 border-t border-border/50 text-center" variant="muted" />
             </CardContent>
           </Card>
         </section>
+
+        {/* Admin Tools (Mobile Only) */}
+        {auth.getUser()?.role === "ADMIN" && (
+          <section className="space-y-3 pt-6 border-t border-border/10 md:hidden">
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Admin Tools</h2>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button variant="outline" className="w-full text-foreground justify-start" onClick={() => navigate("/admin/results")}>
+                <ShieldCheck className="mr-2 h-4 w-4 text-primary" />
+                Submit Results
+              </Button>
+              <Button variant="outline" className="w-full text-foreground justify-start" onClick={() => navigate("/admin/notifications")}>
+                <Bell className="mr-2 h-4 w-4 text-primary" />
+                Notification Test
+              </Button>
+              <Button variant="outline" className="w-full text-foreground justify-start" onClick={() => navigate("/admin/leagues")}>
+                <Trophy className="mr-2 h-4 w-4 text-primary" />
+                Manage Leagues
+              </Button>
+            </div>
+          </section>
+        )}
 
         {/* Account Management */}
         <section className="space-y-3 pt-6 border-t border-border/10">
