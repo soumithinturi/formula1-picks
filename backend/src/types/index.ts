@@ -126,6 +126,14 @@ export const ResultSubmissionSchema = z.object({
 });
 
 export type ResultSubmission = z.infer<typeof ResultSubmissionSchema>;
+export const TestNotificationSchema = z.object({
+  type: z.enum(["RESULTS_IN", "PICKS_DUE", "LEAGUE_ACTIVITY", "UPCOMING_SESSION", "GENERAL"]),
+  title: z.string().min(1),
+  body: z.string().min(1),
+  metadata: z.record(z.unknown()).optional(),
+  broadcast: z.boolean().optional().default(false),
+});
+export type TestNotification = z.infer<typeof TestNotificationSchema>;
 
 // ─── Leagues ─────────────────────────────────────────────────────────────────
 

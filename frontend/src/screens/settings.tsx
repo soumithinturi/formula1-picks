@@ -20,6 +20,7 @@ import { auth } from "@/lib/auth";
 import { usePreferences } from "@/context/preferences-context";
 import { useTutorial } from "@/context/tutorial-context";
 import { FeedbackModal } from "@/components/user/feedback-modal";
+import { NotificationSettingsCard } from "@/components/user/notification-settings";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -101,10 +102,21 @@ export function SettingsScreen() {
               </div>
             </CardContent>
           </Card>
+        </section>
 
+        {/* Notifications */}
+        <section className="space-y-3 pt-6 border-t border-border/10">
+          <div className="flex items-center gap-2 mb-2">
+            <Bell className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Notifications</h2>
+          </div>
+          <NotificationSettingsCard />
+        </section>
+
+        <section className="pt-6">
           <Button
             variant="outline"
-            className="w-full mt-2 border-dashed border-primary/40 text-primary hover:bg-primary/5"
+            className="w-full border-dashed border-primary/40 text-primary hover:bg-primary/5"
             onClick={async () => {
               const leagues = await api.leagues.list().catch(() => []);
               startTour("onboarding", leagues.length);

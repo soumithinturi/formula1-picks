@@ -3,6 +3,7 @@ import { db } from "../db/index.ts";
 import type { RaceRow, PickRow, LeagueRow, ScoringConfig, PickSelections } from "../types/index.ts";
 import { calculatePoints } from "./scoring.ts";
 import { createNotificationsForAllPicksInRace } from "./notifications.ts";
+import { sendPushNotification } from "./pushService.ts";
 
 const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
 
@@ -25,6 +26,82 @@ export function startCronJobs() {
     console.log("⏰ Running Sunday Cron: Scoring Race Results");
     await fetchRaceResults();
   });
+
+  // Run every minute to check for upcoming sessions and trigger PWA notifications
+  cron.schedule("* * * * *", async () => {
+    await checkUpcomingSessionsForNotifications();
+  });
+}
+
+/**
+ * Checks upcoming sessions and users' notification cadences to send push notifications.
+ */
+async function checkUpcomingSessionsForNotifications() {
+  try {
+    const upcomingRaces = await db<RaceRow[]>`
+      SELECT * FROM races 
+      WHERE status = 'UPCOMING'
+      AND date <= (NOW() + interval '7 days')
+      ORDER BY date ASC LIMIT 1
+    `;
+
+    if (upcomingRaces.length === 0) return;
+    const race = upcomingRaces[0];
+
+    // Array of sessions we track
+    const sessions = [
+      { name: "Sprint Quali", time: race.sprint_quali_date, column: "notify_sprint_quali_cadence" },
+      { name: "Sprint", time: race.sprint_date, column: "notify_sprint_cadence" },
+      { name: "Race Quali", time: race.race_quali_date, column: "notify_race_quali_cadence" },
+      { name: "Race", time: race.race_deadline, column: "notify_race_cadence" }
+    ];
+
+    const nowMs = Date.now();
+
+    for (const session of sessions) {
+      if (!session.time) continue;
+
+      const sessionTimeMs = new Date(session.time).getTime();
+      const diffMinutes = Math.floor((sessionTimeMs - nowMs) / 60000);
+
+      // We only care if it's within a timeframe users might have set
+      if (diffMinutes < 0 || diffMinutes > 24 * 60) continue;
+
+      // Find users whose notification cadence matches this exact minute (with a small buffer in case of cron delay)
+      // Since this runs every minute, we check if diffMinutes matches their cadence.
+      
+      const subscriptions = await db`
+        SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${db(session.column)} as cadence
+        FROM user_notification_settings uns
+        JOIN user_push_subscriptions ups ON uns.user_id = ups.user_id
+        WHERE uns.${db(session.column)} IS NOT NULL
+          AND uns.${db(session.column)} = ${diffMinutes}
+      `;
+
+      if (subscriptions.length > 0) {
+        console.log(`Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
+        const payload = {
+          title: "Session Starting Soon!",
+          body: `${race.name} ${session.name} begins in ${diffMinutes} minutes. Lock in your picks now!`,
+          url: "/"
+        };
+
+        const promises = subscriptions.map((sub: any) => 
+          sendPushNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            payload
+          ).catch(async (err) => {
+            if (err?.statusCode === 410) {
+              await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
+            }
+          })
+        );
+        await Promise.all(promises);
+      }
+    }
+  } catch (err) {
+    console.error("Failed notification cron:", err);
+  }
 }
 
 /**
