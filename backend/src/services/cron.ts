@@ -27,6 +27,12 @@ export function startCronJobs() {
     await fetchRaceResults();
   });
 
+  // Run every Monday at midnight UTC to fetch the races in the current season and update the schedule
+  cron.schedule("0 0 * * 1", async () => {
+    console.log("⏰ Running Monday Cron: Fetching and Updating Season Schedule");
+    await fetchAndUpdateSchedule();
+  });
+
   // Run every minute to check for upcoming sessions and trigger PWA notifications
   cron.schedule("* * * * *", async () => {
     await checkUpcomingSessionsForNotifications();
@@ -318,5 +324,80 @@ export async function fetchRaceResults() {
 
   } catch (err) {
     console.error("Failed Sunday cron:", err);
+  }
+}
+
+/**
+ * Fetches the current season's race schedule and updates the database.
+ */
+export async function fetchAndUpdateSchedule() {
+  try {
+    console.log("Fetching latest season schedule from Ergast API...");
+    const res = await fetch(`${JOLPI_API_BASE}/races.json`);
+    if (!res.ok) {
+      console.error(`Ergast API failed with status ${res.status}`);
+      return;
+    }
+
+    const data: any = await res.json();
+    const races = data?.MRData?.RaceTable?.Races;
+
+    if (!races || races.length === 0) {
+      console.log("⚠️ No races found in schedule payload.");
+      return;
+    }
+
+    for (const r of races) {
+      const raceId = parseInt(r.round);
+      const name = r.raceName;
+      const date = r.date + (r.time ? `T${r.time}` : "T00:00:00Z");
+      const has_sprint = !!r.Sprint;
+
+      const race_quali_date = r.Qualifying
+        ? r.Qualifying.date + (r.Qualifying.time ? `T${r.Qualifying.time}` : "T00:00:00Z")
+        : null;
+
+      const sprint_date = r.Sprint
+        ? r.Sprint.date + (r.Sprint.time ? `T${r.Sprint.time}` : "T00:00:00Z")
+        : null;
+
+      const sprint_quali_date = r.SprintQualifying
+        ? r.SprintQualifying.date + (r.SprintQualifying.time ? `T${r.SprintQualifying.time}` : "T00:00:00Z")
+        : null;
+
+      const sprint_deadline = sprint_quali_date;
+      const race_deadline = race_quali_date;
+
+      await db`
+        INSERT INTO races (
+          id, name, date, has_sprint, status,
+          sprint_deadline, race_deadline,
+          sprint_date, sprint_quali_date, race_quali_date
+        ) VALUES (
+          ${raceId}, ${name}, ${date}, ${has_sprint}, 'UPCOMING',
+          ${sprint_deadline}, ${race_deadline},
+          ${sprint_date}, ${sprint_quali_date}, ${race_quali_date}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          date = EXCLUDED.date,
+          has_sprint = EXCLUDED.has_sprint,
+          -- preserve existing status if completed, otherwise update
+          status = CASE WHEN races.status = 'COMPLETED' THEN 'COMPLETED' ELSE 'UPCOMING' END,
+          sprint_deadline = EXCLUDED.sprint_deadline,
+          race_deadline = EXCLUDED.race_deadline,
+          sprint_date = EXCLUDED.sprint_date,
+          sprint_quali_date = EXCLUDED.sprint_quali_date,
+          race_quali_date = EXCLUDED.race_quali_date
+      `;
+    }
+
+    // Clean up any extraneous races in case the payload shrunk (e.g., from 24 to 22 rounds)
+    const maxRound = Math.max(...races.map((r: any) => parseInt(r.round)));
+    await db`DELETE FROM races WHERE id > ${maxRound}`;
+
+    console.log("✅ Successfully updated season schedule.");
+  } catch (err) {
+    console.error("Failed to update season schedule:", err);
   }
 }

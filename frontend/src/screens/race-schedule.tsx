@@ -34,6 +34,24 @@ export default function RaceSchedule() {
 
   // Helper to find static assets (track map, location) by fuzzy name match
   const getStaticData = (apiRaceName: string) => {
+    // Explicit mapping for Aliases from Ergast to our static ids
+    const aliasMap: Record<string, string> = {
+      "Emilia Romagna Grand Prix": "monza", // fallback if imola is missing in races-2026
+      "Spanish Grand Prix": "madring", // Ergast uses Spanish for Madrid/Catalunya
+      "Brazilian Grand Prix": "interlagos",
+      "São Paulo Grand Prix": "interlagos",
+      "United States Grand Prix": "austin",
+      "Mexico City Grand Prix": "mexico-city",
+      "Las Vegas Grand Prix": "las-vegas",
+      "Dutch Grand Prix": "zandvoort"
+    };
+
+    const directMatchId = aliasMap[apiRaceName];
+    if (directMatchId) {
+      const manual = races2026.find(r => r.circuitId === directMatchId);
+      if (manual) return manual;
+    }
+
     return races2026.find(
       (r) =>
         apiRaceName.includes(r.circuitId) ||
@@ -41,6 +59,7 @@ export default function RaceSchedule() {
         r.name.includes(apiRaceName),
     );
   };
+
 
   const formatSessionTime = (dateStr: string, timezone?: string) => {
     const d = new Date(dateStr);
