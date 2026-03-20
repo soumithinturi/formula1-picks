@@ -31,6 +31,16 @@ const TYPE_CONFIG: Record<Notification["type"], { icon: React.ElementType; color
     color: "text-blue-400",
     bg: "bg-blue-400/10",
   },
+  UPCOMING_SESSION: {
+    icon: Clock,
+    color: "text-rose-500",
+    bg: "bg-rose-500/10",
+  },
+  GENERAL: {
+    icon: Bell,
+    color: "text-slate-400",
+    bg: "bg-slate-400/10",
+  },
 };
 
 interface NotificationItemProps {
@@ -38,7 +48,11 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ notification }: NotificationItemProps) {
-  const config = TYPE_CONFIG[notification.type];
+  const config = TYPE_CONFIG[notification.type] || {
+    icon: Bell,
+    color: "text-muted-foreground",
+    bg: "bg-muted",
+  };
   const Icon = config.icon;
 
   return (

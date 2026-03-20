@@ -121,7 +121,7 @@ export interface League {
 
 export interface Notification {
   id: string;
-  type: "RESULTS_IN" | "PICKS_DUE" | "LEAGUE_ACTIVITY";
+  type: "RESULTS_IN" | "PICKS_DUE" | "LEAGUE_ACTIVITY" | "UPCOMING_SESSION" | "GENERAL";
   title: string;
   body: string;
   metadata: Record<string, unknown>;

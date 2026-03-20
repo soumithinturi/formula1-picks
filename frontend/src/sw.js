@@ -28,21 +28,36 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // Skip Bun internal assets, hot-reloading, and chrome extensions
-  if (url.pathname.includes('_bun') || url.pathname.includes('chrome-extension') || url.hostname !== 'localhost') {
+  // Skip Bun internal assets, hot-reloading, chrome extensions, and the index page during dev
+  if (
+    url.pathname.includes('_bun') || 
+    url.pathname.includes('chrome-extension') || 
+    url.hostname !== 'localhost' ||
+    url.pathname === '/' ||
+    url.pathname.endsWith('index.html')
+  ) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).catch(() => {
-        // Return a fallback or just let it fail gracefully if offline
-        return new Response('Network error occurred', { status: 408, headers: { 'Content-Type': 'text/plain' } });
-      });
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Update the cache with the fresh response
+        if (networkResponse.ok && event.request.method === 'GET') {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Fallback to cache if network fails
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          return new Response('Offline and not cached', { status: 503 });
+        });
+      })
   );
 });
 

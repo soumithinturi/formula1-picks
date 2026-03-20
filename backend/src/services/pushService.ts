@@ -5,11 +5,17 @@ import { db } from "../db/index.ts";
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY!;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!;
 
-webpush.setVapidDetails(
-  "mailto:your-email@example.com",
-  vapidPublicKey,
-  vapidPrivateKey
-);
+// Ensure keys are present
+if (!vapidPublicKey || !vapidPrivateKey) {
+  console.error("❌ VAPID keys are missing from environment variables!");
+} else {
+  console.log("✅ VAPID Public Key loaded:", vapidPublicKey.substring(0, 10) + "...");
+  webpush.setVapidDetails(
+    "mailto:your-email@example.com",
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+}
 
 export const sendPushNotification = async (
   subscription: webpush.PushSubscription,
