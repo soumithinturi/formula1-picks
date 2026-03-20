@@ -38,7 +38,7 @@ const TypeBadge = ({ type }: { type: ChangelogEntry["type"] }) => {
 
 export function ChangelogScreen() {
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-4xl mx-auto px-6 py-6 md:py-12 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-4">
         <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
           What&apos;s New

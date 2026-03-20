@@ -511,7 +511,7 @@ export function LeaguesScreen() {
                         <span className="hidden md:inline lg:hidden">{truncateName(activeLeague.name, 16)}</span>
                         <span className="hidden lg:inline">{truncateName(activeLeague.name, 26)}</span>
                       </CardTitle>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 whitespace-nowrap">
                         <RulesDialog scoringConfig={activeLeague.scoring_config} />
                         {currentUser?.id === activeLeague.created_by && (
                           <Button
@@ -535,7 +535,7 @@ export function LeaguesScreen() {
                 </div>
               </div>
               {activeLeague.nextRace && (
-                <div className="text-right shrink-0">
+                <div className="text-right min-w-0 max-w-[120px] sm:max-w-none">
                   <p className="text-xs text-muted-foreground uppercase">Next:</p>
                   <p className="font-bold">{activeLeague.nextRace.name}</p>
                   <p className="text-2xl font-bold text-primary">{activeLeague.nextRace.daysUntil}d</p>
@@ -649,7 +649,7 @@ export function LeaguesScreen() {
           </CardContent>
         </Card>
         {/* Chat FAB */}
-        <div className="fixed bottom-24 right-4 z-50 md:bottom-8 md:right-8">
+        <div className="fixed bottom-28 right-4 z-50 md:bottom-8 md:right-8">
           <Dialog
             open={isChatOpen}
             onOpenChange={(open) => {

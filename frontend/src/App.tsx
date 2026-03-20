@@ -72,16 +72,16 @@ function AppLayout() {
       {/* Desktop Sidebar - Hidden on mobile */}
       <SideNav className="hidden md:flex shrink-0" />
 
-      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0">
         <HeaderNav />
 
-        <main className={`flex-1 overflow-y-auto ${isCreateLeague ? "" : "p-4 md:p-8"}`}>
+        <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      {/* Mobile Bottom Navigation - Hidden on Create League Wizard */}
+      {!isCreateLeague && <MobileNav />}
     </div>
   );
 }

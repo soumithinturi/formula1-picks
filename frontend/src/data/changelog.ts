@@ -9,6 +9,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.2.4",
+    date: "2026-03-20",
+    title: "Notifications",
+    description: "Add push notifications and UI improvements.",
+    type: "improvement",
+    items: [
+      "Notifications: Add notifications for upcoming sessions, results, and league activity.",
+      "UI: Update mobile navigation bar with glassmorphism and layout.",
+    ],
+  },
+  {
     version: "0.2.3",
     date: "2026-03-12",
     title: "PWA & UX Polish",

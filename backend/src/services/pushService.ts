@@ -11,7 +11,7 @@ if (!vapidPublicKey || !vapidPrivateKey) {
 } else {
   console.log("✅ VAPID Public Key loaded:", vapidPublicKey.substring(0, 10) + "...");
   webpush.setVapidDetails(
-    "mailto:your-email@example.com",
+    `mailto:${process.env.VAPID_EMAIL || "your-email@example.com"}`,
     vapidPublicKey,
     vapidPrivateKey
   );
@@ -56,7 +56,7 @@ export const notifyLeagueJoin = async (leagueId: string, joinerId: string, joine
       body: `${joinerName} just joined your league: ${league.name}!`
     };
 
-    const promises = subscriptions.map((sub: any) => 
+    const promises = subscriptions.map((sub: any) =>
       sendPushNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         payload

@@ -172,12 +172,35 @@ export function Step3({ league, rules, onFinish, onBack }: Step3Props) {
         </div>
       </div>
 
-      <div className="fixed bottom-16 md:bottom-0 left-0 md:left-64 right-0 z-40 bg-background border-t p-4 px-4 md:px-8">
-        <div className="max-w-5xl mx-auto flex items-center justify-end">
+      {/* Desktop Navigation Bar */}
+      <div className="hidden md:block fixed bottom-0 left-0 md:left-64 right-0 z-40 bg-background border-t p-4 px-4 md:px-8">
+        <div className="max-w-5xl mx-auto flex items-center justify-end gap-3">
+          <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+            Back
+          </Button>
           <Button onClick={onFinish}>
             Go to League Dashboard <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
+      </div>
+
+      {/* Mobile Floating Actions */}
+      <div className="md:hidden fixed bottom-6 left-0 right-0 z-40 px-6 flex items-center gap-3 pointer-events-none">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="h-12 px-6 shrink-0 font-bold border border-white/10 bg-black/70 backdrop-blur-xl rounded-full pointer-events-auto shadow-2xl text-muted-foreground hover:bg-black/80"
+          onClick={onBack}>
+          Back
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          onClick={onFinish}
+          className="flex-1 shadow-2xl text-lg font-bold bg-primary/85 backdrop-blur-xl border-t border-white/20 text-primary-foreground rounded-full pointer-events-auto">
+          Finish <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
       </div>
     </>
   );
