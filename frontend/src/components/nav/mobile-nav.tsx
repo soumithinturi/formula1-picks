@@ -91,20 +91,16 @@ export function MobileNav({ className, ...props }: MobileNavProps) {
           style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)", borderRadius: 999 }}
         />
 
-        {/* Drag handle — invisible overlay that captures drag events */}
+        {/* Nav items wrapper that captures drag events and allows clicks to pass through */}
         <motion.div
-          className="absolute inset-0 z-30 cursor-grab active:cursor-grabbing"
-          style={{ borderRadius: 999 }}
+          className="relative z-20 flex items-center cursor-grab active:cursor-grabbing"
           drag="x"
           dragElastic={0.05}
           dragConstraints={{ left: 0, right: 0 }}
           onDragStart={() => setIsDragging(true)}
           onDrag={(e, info) => handleDrag(e as unknown as PointerEvent, info)}
           onDragEnd={handleDragEnd}
-        />
-
-        {/* Nav items */}
-        <div className="relative z-20 flex items-center">
+        >
           {navItems.map((item, index) => {
             const isActive = currentDisplayIndex === index;
 
@@ -169,7 +165,7 @@ export function MobileNav({ className, ...props }: MobileNavProps) {
               </NavLink>
             );
           })}
-        </div>
+        </motion.div>
       </nav>
     </div>
   );
