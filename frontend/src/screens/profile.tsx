@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { F1HelmetAvatar } from "@/components/user/f1-helmet-avatar";
 import type { UserProfile } from "@/lib/auth";
 import { auth } from "@/lib/auth";
-import { api } from "@/lib/api";
+import { api, type Driver } from "@/lib/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TEAMS } from "@/context/theme-context";
+import { Save, Loader2, User } from "lucide-react";
 
 const PRESET_COLORS = [
   "#dc2626", // Red
@@ -34,6 +35,8 @@ export function ProfileScreen() {
   const [helmetColor, setHelmetColor] = React.useState("#dc2626");
   const [bgColor, setBgColor] = React.useState("#1e293b");
   const [teamId, setTeamId] = React.useState("default");
+  const [favoriteDriverId, setFavoriteDriverId] = React.useState("none");
+  const [drivers, setDrivers] = React.useState<Driver[]>([]);
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -52,16 +55,27 @@ export function ProfileScreen() {
         if (parsed.helmetColor) setHelmetColor(parsed.helmetColor);
         if (parsed.bgColor) setBgColor(parsed.bgColor);
         if (parsed.teamId) setTeamId(parsed.teamId);
+        if (parsed.favoriteDriverId) setFavoriteDriverId(parsed.favoriteDriverId);
       } catch (e) {
         // ignore JSON parse errors
       }
     }
+
+    const fetchDrivers = async () => {
+      try {
+        const data = await api.drivers.list();
+        setDrivers(data);
+      } catch (e) {
+        // ignore driver fetch errors
+      }
+    };
+    fetchDrivers();
   }, [navigate]);
 
   const handleSave = async () => {
     setLoading(true);
     try {
-      const avatar_url = JSON.stringify({ helmetColor, bgColor, teamId });
+      const avatar_url = JSON.stringify({ helmetColor, bgColor, teamId, favoriteDriverId });
 
       const payload = {
         full_name: fullName || null,
@@ -85,7 +99,7 @@ export function ProfileScreen() {
 
   return (
     <>
-      <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32 sm:pb-0">
+      <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32 sm:pb-0 px-4 md:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl tracking-tight font-bold">Edit Profile</h1>
@@ -113,7 +127,7 @@ export function ProfileScreen() {
                 onChange={(e) => setFullName(e.target.value)}
                 minLength={2}
                 maxLength={32}
-                pattern="^[a-zA-Z\\s'-]+$"
+                pattern="^([a-zA-Z\\s']|-)+$"
                 title="Only letters, spaces, hyphens, and apostrophes are allowed"
               />
             </div>
@@ -127,35 +141,61 @@ export function ProfileScreen() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 minLength={2}
                 maxLength={32}
-                pattern="^[a-zA-Z0-9_-]+$"
+                pattern="^([a-zA-Z0-9_]|-)+$"
                 title="Only letters, numbers, underscores, and hyphens are allowed"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="favorite_team">Favorite Team</Label>
-              <Select value={teamId} onValueChange={setTeamId}>
-                <SelectTrigger id="favorite_team">
-                  <SelectValue placeholder="Select a team" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TEAMS.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="h-3 w-3 rounded-full border border-border"
-                          style={{ background: team.primaryColor }}
-                        />
-                        {team.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="favorite_team">Favorite Team</Label>
+                <Select value={teamId} onValueChange={setTeamId}>
+                  <SelectTrigger id="favorite_team">
+                    <SelectValue placeholder="Select a team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TEAMS.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-3 w-3 rounded-full border border-border"
+                            style={{ background: team.primaryColor }}
+                          />
+                          {team.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="favorite_driver">Favorite Driver</Label>
+                <Select value={favoriteDriverId} onValueChange={setFavoriteDriverId}>
+                  <SelectTrigger id="favorite_driver">
+                    <SelectValue placeholder="Select a driver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Favorite</SelectItem>
+                    {drivers
+                      .sort((a, b) => (a.rank || 999) - (b.rank || 999))
+                      .map((driver) => (
+                        <SelectItem key={driver.driverId} value={driver.driverId}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-muted-foreground w-6">
+                              {driver.permanentNumber || "--"}
+                            </span>
+                            {driver.givenName} {driver.familyName}
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-4 border rounded-xl p-5 bg-card">
+          <div className="space-y-4 border rounded-xl p-5 bg-card mb-8">
             <div className="flex flex-col items-center">
               <div className="w-24 h-24 ring-4 ring-background shadow-xl rounded-full">
                 <F1HelmetAvatar helmetColor={helmetColor} bgColor={bgColor} />
@@ -199,8 +239,13 @@ export function ProfileScreen() {
         </div>
       </div>
 
-      <div className="sm:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
-        <Button onClick={handleSave} disabled={loading} size="lg" className="w-full">
+      <div className="sm:hidden fixed bottom-24 left-0 right-0 z-40 px-4 flex items-center justify-center pointer-events-none">
+        <Button
+          onClick={handleSave}
+          disabled={loading}
+          size="lg"
+          className="w-full shadow-2xl text-lg font-bold rounded-full pointer-events-auto">
+          {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
           {loading ? "Saving..." : "Save Profile"}
         </Button>
       </div>

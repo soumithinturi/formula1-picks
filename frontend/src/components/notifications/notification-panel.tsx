@@ -78,7 +78,7 @@ export function NotificationPanel() {
   const { notifications, unreadCount, markAllRead, isLoading } = useNotifications();
 
   return (
-    <div className="w-80 max-h-[480px] flex flex-col overflow-hidden">
+    <div className="w-full md:w-80 max-h-[480px] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">

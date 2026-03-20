@@ -104,7 +104,7 @@ export function Step1({ initialData, onNext, onCancel }: Step1Props) {
           </Button>
           <div className="flex justify-end">
             <Button type="submit" form="step1-form" disabled={!name.trim()}>
-              Continue <ChevronRight className="ml-2 h-4 w-4" />
+              Continue
             </Button>
           </div>
         </div>
@@ -126,7 +126,7 @@ export function Step1({ initialData, onNext, onCancel }: Step1Props) {
           size="lg"
           disabled={!name.trim()}
           className="flex-1 shadow-2xl text-lg font-bold bg-primary/85 backdrop-blur-xl border-t border-white/20 text-primary-foreground rounded-full pointer-events-auto">
-          Continue <ChevronRight className="ml-2 h-5 w-5" />
+          Continue
         </Button>
       </div>
     </>

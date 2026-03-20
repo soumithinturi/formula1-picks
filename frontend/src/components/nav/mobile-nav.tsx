@@ -30,43 +30,23 @@ export function MobileNav({ className, ...props }: MobileNavProps) {
   const { currentTeam } = useTheme();
   const primaryColor = currentTeam.primaryColor;
 
-  const activeIndex = navItems.findIndex((item) =>
+  const [clickedIndex, setClickedIndex] = React.useState<number | null>(null);
+
+  // Clear optimistic state when the route actually changes
+  React.useEffect(() => {
+    setClickedIndex(null);
+  }, [location.pathname]);
+
+  const actualActiveIndex = navItems.findIndex((item) =>
     item.end
       ? location.pathname === item.to
       : location.pathname.startsWith(item.to)
   );
 
+  const activeIndex = clickedIndex !== null ? clickedIndex : actualActiveIndex;
+
   // Refs for measuring nav item positions
   const navRef = React.useRef<HTMLDivElement>(null);
-  const itemRefs = React.useRef<(HTMLDivElement | null)[]>([]);
-
-  // Drag state
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [dragActiveIndex, setDragActiveIndex] = React.useState<number | null>(null);
-
-  // Track actual index to animate from
-  const currentDisplayIndex = isDragging && dragActiveIndex !== null ? dragActiveIndex : activeIndex;
-
-  const handleDrag = (_: PointerEvent, info: { point: { x: number } }) => {
-    if (!navRef.current) return;
-    const navBox = navRef.current.getBoundingClientRect();
-    const relX = info.point.x - navBox.left;
-    const navW = navBox.width;
-    const segmentW = navW / navItems.length;
-    const hoveredIndex = Math.max(0, Math.min(navItems.length - 1, Math.floor(relX / segmentW)));
-
-    if (hoveredIndex !== dragActiveIndex) {
-      setDragActiveIndex(hoveredIndex);
-    }
-  };
-
-  const handleDragEnd = () => {
-    setIsDragging(false);
-    if (dragActiveIndex !== null && dragActiveIndex !== activeIndex) {
-      navigate(navItems[dragActiveIndex]!.to);
-    }
-    setDragActiveIndex(null);
-  };
 
   return (
     <div
@@ -91,33 +71,33 @@ export function MobileNav({ className, ...props }: MobileNavProps) {
           style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)", borderRadius: 999 }}
         />
 
-        {/* Nav items wrapper that captures drag events and allows clicks to pass through */}
-        <motion.div
-          className="relative z-20 flex items-center cursor-grab active:cursor-grabbing"
-          drag="x"
-          dragElastic={0.05}
-          dragConstraints={{ left: 0, right: 0 }}
-          onDragStart={() => setIsDragging(true)}
-          onDrag={(e, info) => handleDrag(e as unknown as PointerEvent, info)}
-          onDragEnd={handleDragEnd}
-        >
+        {/* Nav items wrapper */}
+        <div className="relative z-20 flex items-center">
           {navItems.map((item, index) => {
-            const isActive = currentDisplayIndex === index;
+            const isActive = activeIndex === index;
 
             return (
-              <NavLink
+              <a
                 key={item.to}
-                to={item.to}
-                end={item.end}
+                href={item.to}
                 id={item.id}
                 draggable={false}
-                className="focus-visible:outline-none relative"
                 onClick={(e) => {
-                  if (isDragging) {
-                    e.preventDefault();
-                    return;
-                  }
+                  e.preventDefault();
+                  if (activeIndex === index) return;
+                  
+                  // Instantly update the UI so the animation starts right away
+                  setClickedIndex(index);
+                  
+                  // Defer the heavy routing computation to the next tick, 
+                  // letting the browser paint the active tab state instantly.
+                  setTimeout(() => {
+                    React.startTransition(() => {
+                      navigate(item.to);
+                    });
+                  }, 0);
                 }}
+                className="focus-visible:outline-none relative cursor-pointer"
               >
                 {isActive && (
                   <motion.div
@@ -129,43 +109,47 @@ export function MobileNav({ className, ...props }: MobileNavProps) {
                       border: `1px solid ${hexToRgba(primaryColor, 0.38)}`,
                       boxShadow: `0 0 18px ${hexToRgba(primaryColor, 0.28)}, 0 0 6px ${hexToRgba(primaryColor, 0.2)}, inset 0 1px 0 rgba(255,255,255,0.1)`,
                     }}
-                    transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
-                <div
-                  className={cn(
-                    "relative z-10 flex flex-col items-center justify-center gap-0.5 select-none transition-all duration-300 ease-out",
-                    isActive ? "px-3.5 py-2.5 min-w-[72px]" : "px-3.5 py-2.5 min-w-[52px]"
-                  )}
+                <motion.div
+                  className="relative z-10 flex flex-col items-center justify-center gap-0.5 select-none px-3.5 py-2.5"
+                  initial={false}
+                  animate={{
+                    width: isActive ? 72 : 52,
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 >
                   <item.icon
-                    className="transition-all duration-300 ease-out"
                     style={{
                       width: 20,
                       height: 20,
-                      color: isActive ? primaryColor : "rgba(255,255,255,0.38)",
+                      color: isActive ? primaryColor : "#ffffff",
+                      opacity: isActive ? 1 : 0.38,
                       filter: isActive ? `drop-shadow(0 0 6px ${hexToRgba(primaryColor, 0.7)})` : "none",
                       strokeWidth: isActive ? 2.8 : 2.2,
+                      transition: "color 0.15s ease-out, opacity 0.15s ease-out, filter 0.15s ease-out, stroke-width 0.15s ease-out",
                     }}
                   />
                   <motion.span
-                    className="text-[10px] font-semibold tracking-wide whitespace-nowrap overflow-hidden"
+                    className="text-[10px] font-semibold tracking-wide whitespace-nowrap overflow-hidden origin-top"
                     style={{ color: primaryColor }}
                     initial={false}
                     animate={{
                       opacity: isActive ? 1 : 0,
-                      maxHeight: isActive ? 18 : 0,
+                      height: isActive ? 14 : 0,
                       y: isActive ? 0 : -4,
+                      marginTop: isActive ? 2 : 0, // Gives the gap between icon and label manually and smoothly
                     }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   >
                     {item.label}
                   </motion.span>
-                </div>
-              </NavLink>
+                </motion.div>
+              </a>
             );
           })}
-        </motion.div>
+        </div>
       </nav>
     </div>
   );

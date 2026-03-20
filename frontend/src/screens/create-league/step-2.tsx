@@ -230,9 +230,7 @@ export function Step2({ initialData, onNext, onBack }: Step2Props) {
           </div>
           <div className="justify-end hidden lg:flex" />
           <div className="flex justify-end items-center gap-2">
-            <Button onClick={() => onNext({ rules })}>
-              Finalize <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
+            <Button onClick={() => onNext({ rules })}>Finalize</Button>
           </div>
         </div>
       </div>
@@ -252,7 +250,7 @@ export function Step2({ initialData, onNext, onBack }: Step2Props) {
           size="lg"
           onClick={() => onNext({ rules })}
           className="flex-1 shadow-2xl text-lg font-bold bg-primary/85 backdrop-blur-xl border-t border-white/20 text-primary-foreground rounded-full pointer-events-auto">
-          Finalize <ChevronRight className="ml-2 h-5 w-5" />
+          Finalize
         </Button>
       </div>
     </>

@@ -6,6 +6,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuArrow,
 } from "@/components/ui/dropdown-menu";
 import { TEAMS, useTheme } from "@/context/theme-context";
 import { Check, Palette } from "lucide-react";
@@ -23,6 +24,7 @@ export function TeamSwitcher() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto">
+        <DropdownMenuArrow className="fill-popover" />
         <DropdownMenuLabel>Select Team Theme</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {TEAMS.map((team) => (
