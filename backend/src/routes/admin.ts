@@ -3,6 +3,8 @@ import { withAdmin, parseBody } from "../middleware/auth.ts";
 import { ResultSubmissionSchema, type PickRow, type LeagueRow, type ScoringConfig } from "../types/index.ts";
 import { calculatePoints } from "../services/scoring.ts";
 import { createNotificationsForAllPicksInRace } from "../services/notifications.ts";
+import { sendPushNotification } from "../services/pushService.ts";
+import { TestNotificationSchema } from "../types/index.ts";
 
 /**
  * POST /api/v1/admin/results
@@ -106,4 +108,75 @@ export const submitResults = withAdmin(async (req) => {
   `;
 
   return Response.json({ message: "Results processed successfully" });
+});
+
+/**
+ * POST /api/v1/admin/notifications/test
+ * Triggers a test push notification.
+ * Protected — ADMIN role required.
+ */
+export const testNotification = withAdmin(async (req) => {
+  const { data, error } = await parseBody(req, TestNotificationSchema);
+  if (error) return error;
+
+  const adminId = (req as any).user.id;
+
+  let subscriptions;
+  if (data.broadcast) {
+    // Fetch all non-expired push subscriptions
+    subscriptions = await db`
+      SELECT endpoint, p256dh, auth, id, user_id FROM user_push_subscriptions
+    `;
+  } else {
+    // Only send to the admin's own devices for testing
+    subscriptions = await db`
+      SELECT endpoint, p256dh, auth, id, user_id FROM user_push_subscriptions
+      WHERE user_id = ${adminId}
+    `;
+  }
+
+  if (subscriptions.length === 0) {
+    return Response.json({ error: "No active push subscriptions found for target" }, { status: 404 });
+  }
+
+  const payload = {
+    title: data.title,
+    body: data.body,
+    url: data.metadata?.url || "/",
+  };
+
+  // Also create an in-app notification record for the admin (and others if broadcast)
+  // for better visibility in the UI "Notifications" section.
+  const targetUserIds = data.broadcast 
+    ? [...new Set(subscriptions.map((s: any) => s.user_id))] // This is tricky as we don't have user_id in the SELECT prompt above, let's fix the SELECT
+    : [adminId];
+
+  // Re-fetch subscriptions with user_id if we want to do broadcast DB records, 
+  // but for now let's just ensure the admin gets the record.
+  await Promise.all(targetUserIds.map(uid => 
+    db`
+      INSERT INTO notifications (user_id, type, title, body, metadata)
+      VALUES (${uid}, ${data.type}, ${data.title}, ${data.body}, ${data.metadata || {}})
+    `
+  ));
+
+  const results = await Promise.all(
+    subscriptions.map(async (sub: any) => {
+      const success = await sendPushNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        payload
+      );
+      if (!success) {
+        // Remove invalid subscription
+        await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
+        return { id: sub.id, success: false, reason: "410 Gone" };
+      }
+      return { id: sub.id, success: true };
+    })
+  );
+
+  return Response.json({
+    message: `Attempted to send ${subscriptions.length} push notifications`,
+    results,
+  });
 });

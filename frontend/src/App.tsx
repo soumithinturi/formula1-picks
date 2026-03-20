@@ -25,6 +25,7 @@ import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { AdminRoute } from "@/components/layout/admin-route";
 import { AdminResultsScreen } from "./screens/admin/results";
+import { AdminNotificationsScreen } from "./screens/admin/notifications";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { useTheme } from "@/context/theme-context";
@@ -150,6 +151,7 @@ export function App() {
               {/* Admin Routes */}
               <Route element={<AdminRoute />}>
                 <Route path="admin/results" element={<AdminResultsScreen />} />
+                <Route path="admin/notifications" element={<AdminNotificationsScreen />} />
               </Route>
 
               {/* Fallback */}

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
-import { Home, Trophy, Users, Calendar, Settings, LogOut, Megaphone } from "lucide-react";
+import { Home, Trophy, Users, Calendar, Settings, LogOut, Megaphone, ShieldCheck, Bell } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { Disclaimer } from "@/components/ui/disclaimer";
 
@@ -57,6 +57,42 @@ export function SideNav({ className, ...props }: SideNavProps) {
             {item.label}
           </NavLink>
         ))}
+
+        {auth.getUser()?.role === "ADMIN" && (
+          <div className="pt-4 mt-4 border-t border-border/50">
+            <h3 className="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+              Admin Tools
+            </h3>
+            <div className="space-y-1">
+              <NavLink
+                to="/admin/results"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )
+                }>
+                <ShieldCheck className="mr-3 h-4 w-4" />
+                Submit Results
+              </NavLink>
+              <NavLink
+                to="/admin/notifications"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )
+                }>
+                <Bell className="mr-3 h-4 w-4" />
+                Notification Test
+              </NavLink>
+            </div>
+          </div>
+        )}
       </nav>
 
       <div className="mt-auto pt-4 border-t border-border space-y-1">
