@@ -19,10 +19,10 @@ const navItems = [
 
 export function SideNav({ className, ...props }: SideNavProps) {
   return (
-    <div className={cn("flex flex-col h-full w-64 bg-card border-r border-border p-4", className)} {...props}>
+    <aside className={cn("flex flex-col h-full w-64 bg-card border-r border-border p-4", className)} {...props}>
       <div className="flex items-center gap-2 mb-8 px-2">
         <img src="/assets/icon-192x192.png" alt="F1 Picks" className="h-8 w-8 shrink-0 object-contain" />
-        <span className="text-xl font-black uppercase italic tracking-tighter">Picks</span>
+        <span className="text-xl font-black uppercase italic tracking-tighter -ml-1.5">Picks</span>
         <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
           BETA
         </span>
@@ -133,6 +133,6 @@ export function SideNav({ className, ...props }: SideNavProps) {
       <div className="mt-6 px-2">
         <Disclaimer variant="small" />
       </div>
-    </div>
+    </aside>
   );
 }

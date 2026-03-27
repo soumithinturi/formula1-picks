@@ -6,8 +6,9 @@ export type Team = {
   id: string;
   name: string;
   themeName: string;
-  primaryColor: string; // Hex or OKLCH
-  primaryForeground: string; // Hex or OKLCH
+  primaryColor: string; // Hex Fallback
+  primaryForeground: string; // Hex Fallback
+  oklch: { l: string; c: string; h: string }; // New Generative Oklch tokens
 };
 
 export const TEAMS: Team[] = [
@@ -17,6 +18,7 @@ export const TEAMS: Team[] = [
     themeName: "F1 (Default)",
     primaryColor: "#e10600",
     primaryForeground: "#ffffff",
+    oklch: { l: "0.573", c: "0.233", h: "29.5" },
   },
   {
     id: "redbull",
@@ -24,6 +26,7 @@ export const TEAMS: Team[] = [
     name: "Red Bull",
     primaryColor: CONSTRUCTOR_COLORS.RED_BULL,
     primaryForeground: "#ffffff",
+    oklch: { l: "0.553", c: "0.146", h: "257.9" },
   },
   {
     id: "ferrari",
@@ -31,6 +34,7 @@ export const TEAMS: Team[] = [
     name: "Ferrari",
     primaryColor: CONSTRUCTOR_COLORS.FERRARI,
     primaryForeground: "#ffffff",
+    oklch: { l: "0.375", c: "0.139", h: "29.1" },
   },
   {
     id: "mclaren",
@@ -38,6 +42,7 @@ export const TEAMS: Team[] = [
     name: "McLaren",
     primaryColor: CONSTRUCTOR_COLORS.MCLAREN,
     primaryForeground: "#000000",
+    oklch: { l: "0.732", c: "0.186", h: "53.0" },
   },
   {
     id: "mercedes",
@@ -45,6 +50,7 @@ export const TEAMS: Team[] = [
     name: "Mercedes",
     primaryColor: CONSTRUCTOR_COLORS.MERCEDES,
     primaryForeground: "#000000",
+    oklch: { l: "0.867", c: "0.155", h: "177.3" },
   },
   {
     id: "astonmartin",
@@ -52,6 +58,7 @@ export const TEAMS: Team[] = [
     name: "Aston Martin",
     primaryColor: CONSTRUCTOR_COLORS.ASTON_MARTIN,
     primaryForeground: "#ffffff",
+    oklch: { l: "0.610", c: "0.119", h: "165.0" },
   },
   {
     id: "alpine",
@@ -59,6 +66,7 @@ export const TEAMS: Team[] = [
     name: "Alpine",
     primaryColor: CONSTRUCTOR_COLORS.ALPINE,
     primaryForeground: "#000000",
+    oklch: { l: "0.771", c: "0.156", h: "353.5" },
   },
   {
     id: "williams",
@@ -66,6 +74,7 @@ export const TEAMS: Team[] = [
     name: "Williams",
     primaryColor: CONSTRUCTOR_COLORS.WILLIAMS,
     primaryForeground: "#ffffff",
+    oklch: { l: "0.541", c: "0.191", h: "259.0" },
   },
   {
     id: "rb",
@@ -73,6 +82,7 @@ export const TEAMS: Team[] = [
     name: "Racing Bulls",
     primaryColor: CONSTRUCTOR_COLORS.RB,
     primaryForeground: "#000000",
+    oklch: { l: "0.680", c: "0.168", h: "265.6" },
   },
   {
     id: "audi",
@@ -80,6 +90,7 @@ export const TEAMS: Team[] = [
     name: "Audi",
     primaryColor: CONSTRUCTOR_COLORS.AUDI,
     primaryForeground: "#ffffff",
+    oklch: { l: "0.643", c: "0.244", h: "31.9" },
   },
   {
     id: "haas",
@@ -87,6 +98,7 @@ export const TEAMS: Team[] = [
     name: "Haas",
     primaryColor: CONSTRUCTOR_COLORS.HAAS,
     primaryForeground: "#000000",
+    oklch: { l: "0.541", c: "0.015", h: "221.6" },
   },
   {
     id: "cadillac",
@@ -94,6 +106,7 @@ export const TEAMS: Team[] = [
     name: "Cadillac",
     primaryColor: CONSTRUCTOR_COLORS.CADILLAC,
     primaryForeground: "#000000",
+    oklch: { l: "0.800", c: "0.170", h: "73.6" },
   },
 ];
 
@@ -121,6 +134,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Apply theme CSS variables whenever the team changes.
   useEffect(() => {
     const root = document.documentElement;
+    root.style.setProperty("--theme-l", currentTeam.oklch.l);
+    root.style.setProperty("--theme-c", currentTeam.oklch.c);
+    root.style.setProperty("--theme-h", currentTeam.oklch.h);
+    
     root.style.setProperty("--primary", currentTeam.primaryColor);
     root.style.setProperty("--primary-foreground", currentTeam.primaryForeground);
     root.style.setProperty("--ring", currentTeam.primaryColor);

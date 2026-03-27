@@ -20,6 +20,7 @@ import { ProfileScreen } from "@/screens/profile";
 import { ChangelogScreen } from "./screens/changelog";
 import { AdminLeaguesScreen } from "./screens/admin/leagues";
 import { LandingScreen } from "./screens/landing";
+import { ChangelogTrigger } from "@/components/changelog-trigger";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
@@ -134,6 +135,7 @@ export function App() {
               element={
                 <>
                   <OnboardingTrigger />
+                  <ChangelogTrigger />
                   <AppLayout />
                 </>
               }>

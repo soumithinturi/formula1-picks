@@ -23,7 +23,7 @@ export function SeasonCard({ year, winnerName, winnerPoints, isCurrent }: Season
       <CardContent>
         <div className="flex items-center gap-2 mb-1">
           <Trophy className="h-4 w-4 text-yellow-500" />
-          <div className="text-2xl font-bold">{winnerName}</div>
+          <h3 className="text-2xl font-bold">{winnerName}</h3>
         </div>
         <p className="text-xs text-muted-foreground">{winnerPoints} Points</p>
       </CardContent>

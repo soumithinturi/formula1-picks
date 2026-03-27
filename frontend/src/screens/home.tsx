@@ -520,7 +520,7 @@ export function HomeScreen() {
                   </Button>
                 </div>
               ) : (
-                <div className="text-center py-4 text-muted-foreground text-sm">Loading prediction rules...</div>
+                <p className="text-center py-4 text-muted-foreground text-sm">Loading prediction rules...</p>
               )}
             </CardContent>
           </Card>

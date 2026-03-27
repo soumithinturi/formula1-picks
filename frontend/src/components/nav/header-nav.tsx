@@ -65,7 +65,7 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       {...props}>
       <div className="flex items-center gap-2 md:hidden mr-auto">
         <img src="/assets/icon-192x192.png" alt="F1 Picks" className="h-8 w-8 shrink-0 object-contain" />
-        <span className="text-xl font-black uppercase italic tracking-tighter">Picks</span>
+        <span className="text-xl font-black uppercase italic tracking-tighter -ml-1.5">Picks</span>
         <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
           BETA
         </span>
