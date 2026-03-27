@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link } from "react-router";
 import { F1HelmetAvatar } from "@/components/user/f1-helmet-avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger, PopoverArrow } from "@/components/ui/popover";
 import { NotificationPanel } from "@/components/notifications/notification-panel";
 import { useNotifications } from "@/context/notification-context";
 
@@ -65,7 +65,7 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
       {...props}>
       <div className="flex items-center gap-2 md:hidden mr-auto">
         <img src="/assets/icon-192x192.png" alt="F1 Picks" className="h-8 w-8 shrink-0 object-contain" />
-        <span className="text-xl font-black uppercase italic tracking-tighter">Picks</span>
+        <span className="text-xl font-black uppercase italic tracking-tighter -ml-1.5">Picks</span>
         <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
           BETA
         </span>
@@ -105,17 +105,19 @@ export function HeaderNav({ className, ...props }: HeaderNavProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            align="end"
+            align="center"
             sideOffset={8}
-            className="p-0 rounded-xl overflow-hidden border-border/60 shadow-2xl w-auto">
+            collisionPadding={16}
+            className="p-0 rounded-xl overflow-hidden border-border/60 shadow-2xl w-[calc(100vw-32px)] md:w-80">
+            <PopoverArrow className="fill-popover border-none" />
             <NotificationPanel />
           </PopoverContent>
         </Popover>
 
         <div className="flex items-center gap-2 md:gap-4 shrink-0" id="personalization-tour">
-          <TeamSwitcher />
-
           <div className="h-6 w-px bg-border mx-1 md:mx-2 hidden sm:block" />
+
+          <TeamSwitcher />
 
           {/* Desktop Profile Header */}
           <Link to="/profile" className="hidden sm:block" id="profile-header-tour">

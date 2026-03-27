@@ -40,6 +40,9 @@ export interface Race {
   sprint_date: string | null;
   sprint_quali_date: string | null;
   race_quali_date: string | null;
+  fp1_date: string | null;
+  fp2_date: string | null;
+  fp3_date: string | null;
 }
 
 export interface Driver {
@@ -121,7 +124,7 @@ export interface League {
 
 export interface Notification {
   id: string;
-  type: "RESULTS_IN" | "PICKS_DUE" | "LEAGUE_ACTIVITY";
+  type: "RESULTS_IN" | "PICKS_DUE" | "LEAGUE_ACTIVITY" | "UPCOMING_SESSION" | "GENERAL";
   title: string;
   body: string;
   metadata: Record<string, unknown>;
@@ -224,7 +227,7 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  delete: <T>(endpoint: string) => request<T>(endpoint, { method: "DELETE" }),
+  delete: <T>(endpoint: string, body?: unknown) => request<T>(endpoint, { method: "DELETE", ...(body ? { body: JSON.stringify(body) } : {}) }),
 
   // Specific API methods (can be moved to services later if gets too big)
   // ------------------------------------------------------------------
@@ -250,7 +253,7 @@ export const api = {
     updateProfile: (payload: { display_name?: string; full_name?: string | null; avatar_url?: string | null; preferences?: UserPreferences }) =>
       api.put<{ user: any }>("/users/me", payload),
 
-    delete: () => api.delete<{ success: boolean }>("/users/me"),
+    delete: (body?: any) => api.delete<{ success: boolean }>("/users/me", body),
   },
 
   races: {
@@ -295,8 +298,8 @@ export const api = {
     leave: (id: string) =>
       api.post<{ success: boolean }>(`/leagues/${id}/leave`, {}),
 
-    delete: (id: string) =>
-      api.delete<{ success: boolean }>(`/leagues/${id}`),
+    delete: (id: string, body?: any) =>
+      api.delete<{ success: boolean }>(`/leagues/${id}`, body),
   },
 
   picks: {
@@ -329,6 +332,8 @@ export const api = {
   admin: {
     submitResults: (payload: { raceId: number; results: PickSelections }) =>
       api.post("/admin/results", payload),
+    testPush: (payload: { type: string; title: string; body: string; metadata?: any; broadcast?: boolean }) =>
+      api.post("/admin/notifications/test", payload),
   },
 };
 

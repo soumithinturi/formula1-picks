@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
+import { Link } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { DriverSelector } from "@/components/racing/driver-selector";
-import { Timer, AlertTriangle, Save, Loader2, Plus, Info, CheckCircle2 } from "lucide-react";
+import { Timer, AlertTriangle, Save, Loader2, Plus, Info, CheckCircle2, Bell } from "lucide-react";
 import { api, type Driver, type Race } from "@/lib/api";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -171,11 +172,21 @@ export function AdminResultsScreen() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/10 pb-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <StatusPill variant="neutral" className="bg-primary/10 text-primary border-primary/20">
-              Admin Portal
-            </StatusPill>
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter">Submit Results</h1>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <StatusPill variant="neutral" className="bg-primary/10 text-primary border-primary/20">
+                Admin Portal
+              </StatusPill>
+            </div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-4xl font-black uppercase italic tracking-tighter">Submit Results</h1>
+              <Link to="/admin/notifications">
+                <Button variant="outline" size="sm" className="h-8 gap-2 border-primary/20 hover:bg-primary/5">
+                  <Bell className="w-3.5 h-3.5" />
+                  Trigger Notifications
+                </Button>
+              </Link>
+            </div>
           </div>
           <p className="text-muted-foreground text-sm max-w-md">
             Input official session outcomes. Submitting will immediately trigger global points calculation for all

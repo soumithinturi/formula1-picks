@@ -46,8 +46,8 @@ export function CreateLeagueWizard() {
       quali: { enabled: true, points: 1 },
       podium: { enabled: true, points: 10 },
       perfectOrder: { enabled: true, points: 15 },
-      fastestLap: { enabled: true, points: 5 },
-      firstDNF: { enabled: false, points: 5 },
+      fastestLap: { enabled: true, points: 1 },
+      firstDNF: { enabled: false, points: 1 },
     },
   });
 

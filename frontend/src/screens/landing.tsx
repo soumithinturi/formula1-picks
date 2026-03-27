@@ -35,7 +35,7 @@ export function LandingScreen() {
       <nav className="relative z-10 max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <img src="/assets/icon-192x192.png" alt="F1 Picks" className="h-8 w-8 shrink-0 object-contain" />
-          <span className="text-xl font-black uppercase italic tracking-tighter">Picks</span>
+          <span className="text-xl font-black uppercase italic tracking-tighter -ml-1.5">Picks</span>
           <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
             BETA
           </span>
@@ -132,16 +132,16 @@ export function LandingScreen() {
                       { pos: 2, name: "MaxFan99", points: 26, accuracy: "18%", team: "RED_BULL" },
                     ].map((user) => (
                       <div key={user.name} className="flex items-center gap-4">
-                        <div className="w-4 text-xs font-medium text-muted-foreground">{user.pos}</div>
+                        <span className="w-4 text-xs font-medium text-muted-foreground">{user.pos}</span>
                         <F1HelmetAvatar
                           className="w-6 h-6"
                           helmetColor={user.team === "RED_BULL" ? "#1e3a8a" : "#2dd4bf"}
                         />
                         <div className="flex-1">
-                          <div
+                          <p
                             className={`text-sm ${user.name.includes("(You)") ? "text-primary font-medium" : "font-medium"}`}>
                             {user.name}
-                          </div>
+                          </p>
                         </div>
                         <div className="flex gap-8 text-sm font-medium text-right">
                           <span className="w-8">{user.accuracy}</span>
@@ -179,36 +179,36 @@ export function LandingScreen() {
                         L
                       </div>
                       <div className="flex-1">
-                        <div className="text-[10px] text-muted-foreground mb-1 uppercase font-bold tracking-wider">
+                        <p className="text-[10px] text-muted-foreground mb-1 uppercase font-bold tracking-wider">
                           Pole Position
-                        </div>
-                        <div className="text-sm font-semibold">Lando Norris</div>
+                        </p>
+                        <p className="text-sm font-semibold">Lando Norris</p>
                       </div>
-                      <div className="text-xs text-muted-foreground">#1</div>
+                      <span className="text-xs text-muted-foreground">#1</span>
                     </div>
                     <div className="p-3 bg-card border border-border rounded-lg flex items-center gap-3">
                       <div className="w-8 h-8 rounded bg-yellow-500/20 text-yellow-500 flex items-center justify-center font-bold text-sm">
                         M
                       </div>
                       <div className="flex-1">
-                        <div className="text-[10px] text-muted-foreground mb-1 uppercase font-bold tracking-wider">
+                        <p className="text-[10px] text-muted-foreground mb-1 uppercase font-bold tracking-wider">
                           Race P1
-                        </div>
-                        <div className="text-sm font-semibold">Max Verstappen</div>
+                        </p>
+                        <p className="text-sm font-semibold">Max Verstappen</p>
                       </div>
-                      <div className="text-xs text-muted-foreground">#3</div>
+                      <span className="text-xs text-muted-foreground">#3</span>
                     </div>
                     <div className="p-3 bg-card border border-border rounded-lg flex items-center gap-3">
                       <div className="w-8 h-8 rounded bg-red-500/20 text-red-500 flex items-center justify-center font-bold text-sm">
                         C
                       </div>
                       <div className="flex-1">
-                        <div className="text-[10px] text-muted-foreground mb-1 uppercase font-bold tracking-wider">
+                        <p className="text-[10px] text-muted-foreground mb-1 uppercase font-bold tracking-wider">
                           Race P2
-                        </div>
-                        <div className="text-sm font-semibold">Charles Leclerc</div>
+                        </p>
+                        <p className="text-sm font-semibold">Charles Leclerc</p>
                       </div>
-                      <div className="text-xs text-muted-foreground">#16</div>
+                      <span className="text-xs text-muted-foreground">#16</span>
                     </div>
                   </div>
                 </div>

@@ -7,6 +7,7 @@ import {
   DEFAULT_SCORING_CONFIG,
   type LeagueRow,
 } from "../types/index.ts";
+import { notifyLeagueJoin } from "../services/pushService.ts";
 
 /**
  * POST /api/v1/leagues
@@ -100,6 +101,11 @@ export const joinLeague = withAuth(async (req) => {
     INSERT INTO league_members (league_id, user_id, joined_at)
     VALUES (${league.id}, ${req.user.id}, NOW())
   `;
+
+  // Trigger push notifications
+  // Background task so we don't delay the response
+  const [currentUser] = await db`SELECT display_name FROM users WHERE id = ${req.user.id} LIMIT 1`;
+  notifyLeagueJoin(league.id, req.user.id, currentUser?.display_name || "A user").catch(console.error);
 
   const [updatedLeague] = await db<any[]>`
     SELECT l.*, (SELECT count(*) FROM league_members WHERE league_id = l.id)::int as members_count

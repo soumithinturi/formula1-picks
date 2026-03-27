@@ -4,10 +4,10 @@ import { listDrivers } from "./routes/drivers.ts";
 import { getPickForRace, submitPick, getUserPickForRace } from "./routes/picks.ts";
 import { createLeague, listLeagues, joinLeague, previewLeague, updateLeague, leaveLeague, deleteLeague } from "./routes/leagues.ts";
 import { getLeaderboard } from "./routes/leaderboard.ts";
-import { submitResults } from "./routes/admin.ts";
+import { submitResults, testNotification } from "./routes/admin.ts";
 import { updateProfile, getProfile, deleteProfile } from "./routes/users.ts";
 import { submitFeedback } from "./routes/feedback.ts";
-import { listNotifications, markAllRead } from "./routes/notifications.ts";
+import { listNotifications, markAllRead, subscribePush, unsubscribePush, getNotificationSettings, updateNotificationSettings } from "./routes/notifications.ts";
 import { getChatMessages, sendChatMessage } from "./routes/chat.ts";
 import { seedDatabase } from "./services/seed.ts";
 import { startCronJobs } from "./services/cron.ts";
@@ -162,11 +162,24 @@ const server = Bun.serve({
 
     // ─── Notifications ──────────────────────────────────────────────────────
     "/api/v1/notifications": {
-      GET: withCors(listNotifications),
+      GET: withCors(withAuth(listNotifications)),
       OPTIONS: handleOptions,
     },
     "/api/v1/notifications/read": {
-      PUT: withCors(markAllRead),
+      PUT: withCors(withAuth(markAllRead)),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/notifications/subscribe": {
+      POST: withCors(subscribePush),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/notifications/unsubscribe": {
+      DELETE: withCors(unsubscribePush),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/notifications/settings": {
+      GET: withCors(getNotificationSettings),
+      PUT: withCors(updateNotificationSettings),
       OPTIONS: handleOptions,
     },
 
@@ -183,6 +196,10 @@ const server = Bun.serve({
     // ─── Admin ─────────────────────────────────────────────────────────────
     "/api/v1/admin/results": {
       POST: withCors(submitResults),
+      OPTIONS: handleOptions,
+    },
+    "/api/v1/admin/notifications/test": {
+      POST: withCors(testNotification),
       OPTIONS: handleOptions,
     },
   },

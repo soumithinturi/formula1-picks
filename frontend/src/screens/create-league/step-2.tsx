@@ -209,7 +209,8 @@ export function Step2({ initialData, onNext, onBack }: Step2Props) {
         </div>
       </div>
 
-      <div className="fixed bottom-16 md:bottom-0 left-0 md:left-64 right-0 z-40 bg-background border-t p-4 px-4 md:px-8">
+      {/* Desktop Navigation Bar */}
+      <div className="hidden md:block fixed bottom-0 left-0 md:left-64 right-0 z-40 bg-background border-t p-4 px-4 md:px-8">
         <div className="max-w-6xl mx-auto grid grid-cols-3 items-center">
           <div className="flex justify-start">
             <Button
@@ -229,11 +230,28 @@ export function Step2({ initialData, onNext, onBack }: Step2Props) {
           </div>
           <div className="justify-end hidden lg:flex" />
           <div className="flex justify-end items-center gap-2">
-            <Button onClick={() => onNext({ rules })}>
-              Finalize <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
+            <Button onClick={() => onNext({ rules })}>Finalize</Button>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Floating Actions */}
+      <div className="md:hidden fixed bottom-6 left-0 right-0 z-40 px-6 flex items-center gap-3 pointer-events-none">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="h-12 px-6 shrink-0 font-bold border border-white/10 bg-black/70 backdrop-blur-xl rounded-full pointer-events-auto shadow-2xl text-muted-foreground hover:bg-black/80"
+          onClick={onBack}>
+          Back
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          onClick={() => onNext({ rules })}
+          className="flex-1 shadow-2xl text-lg font-bold bg-primary/85 backdrop-blur-xl border-t border-white/20 text-primary-foreground rounded-full pointer-events-auto">
+          Finalize
+        </Button>
       </div>
     </>
   );

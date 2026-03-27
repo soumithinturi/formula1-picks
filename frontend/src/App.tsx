@@ -18,13 +18,15 @@ import { InviteScreen } from "./screens/invite";
 import { SettingsScreen } from "@/screens/settings";
 import { ProfileScreen } from "@/screens/profile";
 import { ChangelogScreen } from "./screens/changelog";
-import { DevModeScreen } from "./screens/dev-mode";
+import { AdminLeaguesScreen } from "./screens/admin/leagues";
 import { LandingScreen } from "./screens/landing";
+import { ChangelogTrigger } from "@/components/changelog-trigger";
 
 import { LoginScreen } from "./screens/login";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { AdminRoute } from "@/components/layout/admin-route";
 import { AdminResultsScreen } from "./screens/admin/results";
+import { AdminNotificationsScreen } from "./screens/admin/notifications";
 import { auth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { useTheme } from "@/context/theme-context";
@@ -71,16 +73,16 @@ function AppLayout() {
       {/* Desktop Sidebar - Hidden on mobile */}
       <SideNav className="hidden md:flex shrink-0" />
 
-      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0">
         <HeaderNav />
 
-        <main className={`flex-1 overflow-y-auto ${isCreateLeague ? "" : "p-4 md:p-8"}`}>
+        <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      {/* Mobile Bottom Navigation - Hidden on Create League Wizard */}
+      {!isCreateLeague && <MobileNav />}
     </div>
   );
 }
@@ -133,6 +135,7 @@ export function App() {
               element={
                 <>
                   <OnboardingTrigger />
+                  <ChangelogTrigger />
                   <AppLayout />
                 </>
               }>
@@ -145,11 +148,12 @@ export function App() {
               <Route path="schedule" element={<RaceSchedule />} />
               <Route path="settings" element={<SettingsScreen />} />
               <Route path="changelog" element={<ChangelogScreen />} />
-              <Route path="dev-mode" element={<DevModeScreen />} />
 
               {/* Admin Routes */}
               <Route element={<AdminRoute />}>
                 <Route path="admin/results" element={<AdminResultsScreen />} />
+                <Route path="admin/notifications" element={<AdminNotificationsScreen />} />
+                <Route path="admin/leagues" element={<AdminLeaguesScreen />} />
               </Route>
 
               {/* Fallback */}

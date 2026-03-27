@@ -236,6 +236,19 @@ function DropdownMenuSubContent({
   )
 }
 
+function DropdownMenuArrow({
+  className,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Arrow>) {
+  return (
+    <DropdownMenuPrimitive.Arrow
+      data-slot="dropdown-menu-arrow"
+      className={cn("fill-popover", className)}
+      {...props}
+    />
+  )
+}
+
 export {
   DropdownMenu,
   DropdownMenuPortal,
@@ -252,4 +265,5 @@ export {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
+  DropdownMenuArrow,
 }

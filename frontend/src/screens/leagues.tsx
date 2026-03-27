@@ -13,7 +13,6 @@ import {
   Check,
   Share2,
   Plus,
-  UserPlus,
   Loader2,
   Pencil,
   X,
@@ -21,13 +20,7 @@ import {
   MessageSquare,
   Info,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/page-container";
 import { api, type League, type Race } from "@/lib/api";
@@ -84,6 +77,9 @@ function RulesDialog({ scoringConfig }: { scoringConfig: any }) {
             <Trophy className="h-5 w-5 text-primary" />
             League Scoring Rules
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Points breakdown for league scoring
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="grid gap-3">
@@ -511,7 +507,7 @@ export function LeaguesScreen() {
                         <span className="hidden md:inline lg:hidden">{truncateName(activeLeague.name, 16)}</span>
                         <span className="hidden lg:inline">{truncateName(activeLeague.name, 26)}</span>
                       </CardTitle>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 whitespace-nowrap">
                         <RulesDialog scoringConfig={activeLeague.scoring_config} />
                         {currentUser?.id === activeLeague.created_by && (
                           <Button
@@ -535,7 +531,7 @@ export function LeaguesScreen() {
                 </div>
               </div>
               {activeLeague.nextRace && (
-                <div className="text-right shrink-0">
+                <div className="text-right min-w-0 max-w-[120px] sm:max-w-none">
                   <p className="text-xs text-muted-foreground uppercase">Next:</p>
                   <p className="font-bold">{activeLeague.nextRace.name}</p>
                   <p className="text-2xl font-bold text-primary">{activeLeague.nextRace.daysUntil}d</p>
@@ -649,7 +645,7 @@ export function LeaguesScreen() {
           </CardContent>
         </Card>
         {/* Chat FAB */}
-        <div className="fixed bottom-24 right-4 z-50 md:bottom-8 md:right-8">
+        <div className="fixed bottom-28 right-4 z-50 md:bottom-8 md:right-8">
           <Dialog
             open={isChatOpen}
             onOpenChange={(open) => {
@@ -678,6 +674,9 @@ export function LeaguesScreen() {
                   <MessageCircle className="h-5 w-5 text-primary" />
                   {activeLeague.name} Chat
                 </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Chat messages for {activeLeague.name}
+                </DialogDescription>
               </DialogHeader>
               <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
                 {isChatOpen && (

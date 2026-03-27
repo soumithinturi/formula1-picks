@@ -126,7 +126,7 @@ export function InviteScreen() {
               <div className="text-sm text-muted-foreground uppercase tracking-widest font-semibold mb-1">
                 League Code
               </div>
-              <div className="font-mono text-2xl font-bold text-foreground tracking-[0.2em]">{code}</div>
+              <h2 className="font-mono text-2xl font-bold text-foreground tracking-[0.2em]">{code}</h2>
             </div>
           )}
 

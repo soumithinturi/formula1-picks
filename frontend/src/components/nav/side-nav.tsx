@@ -1,7 +1,7 @@
 import * as React from "react";
 import { NavLink } from "react-router";
 import { cn } from "@/lib/utils";
-import { Home, Trophy, Users, Calendar, Settings, LogOut, Megaphone } from "lucide-react";
+import { Home, Trophy, Users, Calendar, Settings, LogOut, Megaphone, ShieldCheck, Bell } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { Disclaimer } from "@/components/ui/disclaimer";
 
@@ -19,10 +19,10 @@ const navItems = [
 
 export function SideNav({ className, ...props }: SideNavProps) {
   return (
-    <div className={cn("flex flex-col h-full w-64 bg-card border-r border-border p-4", className)} {...props}>
+    <aside className={cn("flex flex-col h-full w-64 bg-card border-r border-border p-4", className)} {...props}>
       <div className="flex items-center gap-2 mb-8 px-2">
         <img src="/assets/icon-192x192.png" alt="F1 Picks" className="h-8 w-8 shrink-0 object-contain" />
-        <span className="text-xl font-black uppercase italic tracking-tighter">Picks</span>
+        <span className="text-xl font-black uppercase italic tracking-tighter -ml-1.5">Picks</span>
         <span className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
           BETA
         </span>
@@ -57,6 +57,55 @@ export function SideNav({ className, ...props }: SideNavProps) {
             {item.label}
           </NavLink>
         ))}
+
+        {auth.getUser()?.role === "ADMIN" && (
+          <div className="pt-4 mt-4 border-t border-border/50">
+            <h3 className="px-3 mb-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+              Admin Tools
+            </h3>
+            <div className="space-y-1">
+              <NavLink
+                to="/admin/results"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )
+                }>
+                <ShieldCheck className="mr-3 h-4 w-4" />
+                Submit Results
+              </NavLink>
+              <NavLink
+                to="/admin/notifications"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )
+                }>
+                <Bell className="mr-3 h-4 w-4" />
+                Notification Test
+              </NavLink>
+              <NavLink
+                to="/admin/leagues"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary border border-primary/20"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )
+                }>
+                <Trophy className="mr-3 h-4 w-4" />
+                Manage Leagues
+              </NavLink>
+            </div>
+          </div>
+        )}
       </nav>
 
       <div className="mt-auto pt-4 border-t border-border space-y-1">
@@ -84,6 +133,6 @@ export function SideNav({ className, ...props }: SideNavProps) {
       <div className="mt-6 px-2">
         <Disclaimer variant="small" />
       </div>
-    </div>
+    </aside>
   );
 }

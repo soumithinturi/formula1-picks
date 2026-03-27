@@ -49,10 +49,10 @@ export function RaceCard({ race, winner }: RaceCardProps) {
 
           <div className="flex items-center gap-2">
             {winner && (
-              <div className="text-xs">
+              <p className="text-xs">
                 <span className="text-muted-foreground">Winner: </span>
                 <span className="font-semibold">{winner}</span>
-              </div>
+              </p>
             )}
             <ChevronDown
               className={cn(

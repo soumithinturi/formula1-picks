@@ -5,7 +5,7 @@ const REFRESH_TOKEN_KEY = "f1_refresh_token";
 const USER_KEY = "f1_user";
 
 const SUPABASE_URL = process.env.BUN_PUBLIC_SUPABASE_URL || import.meta.env?.BUN_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.BUN_PUBLIC_SUPABASE_ANON_KEY || import.meta.env?.BUN_PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_ANON_KEY = process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY || import.meta.env?.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 export interface UserProfile {
   id: string;

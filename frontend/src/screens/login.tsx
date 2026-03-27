@@ -243,9 +243,9 @@ export function LoginScreen() {
       <div className="flex items-center gap-3 mb-10">
         <div className="flex items-center gap-2">
           <img src="/assets/icon-192x192.png" alt="F1 Picks" className="h-10 w-10 shrink-0 object-contain" />
-          <span className="text-3xl font-black tracking-tighter uppercase italic leading-none">Picks</span>
+          <span className="text-3xl font-black tracking-tighter uppercase italic leading-none -ml-1.5">Picks</span>
         </div>
-        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1.5">
+        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mt-1">
           BETA
         </span>
       </div>

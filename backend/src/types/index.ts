@@ -47,9 +47,9 @@ export const ScoringConfigSchema = z.object({
   quali: RuleSchema.default({ enabled: true, points: 1 }),
   podium: RuleSchema.default({ enabled: true, points: 10 }),
   perfectOrder: RuleSchema.default({ enabled: true, points: 15 }),
-  fastestLap: RuleSchema.default({ enabled: true, points: 5 }),
-  sprintFastestLap: RuleSchema.default({ enabled: true, points: 5 }),
-  firstDNF: RuleSchema.default({ enabled: false, points: 5 }),
+  fastestLap: RuleSchema.default({ enabled: true, points: 1 }),
+  sprintFastestLap: RuleSchema.default({ enabled: true, points: 1 }),
+  firstDNF: RuleSchema.default({ enabled: false, points: 2 }),
 });
 
 export type ScoringConfig = z.infer<typeof ScoringConfigSchema>;
@@ -61,9 +61,9 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   quali: { enabled: true, points: 1 },
   podium: { enabled: true, points: 10 },
   perfectOrder: { enabled: true, points: 15 },
-  fastestLap: { enabled: true, points: 5 },
-  sprintFastestLap: { enabled: true, points: 5 },
-  firstDNF: { enabled: false, points: 5 },
+  fastestLap: { enabled: true, points: 1 },
+  sprintFastestLap: { enabled: true, points: 1 },
+  firstDNF: { enabled: false, points: 2 },
 };
 
 // ─── Pick Selections ─────────────────────────────────────────────────────────
@@ -126,6 +126,14 @@ export const ResultSubmissionSchema = z.object({
 });
 
 export type ResultSubmission = z.infer<typeof ResultSubmissionSchema>;
+export const TestNotificationSchema = z.object({
+  type: z.enum(["RESULTS_IN", "PICKS_DUE", "LEAGUE_ACTIVITY", "UPCOMING_SESSION", "GENERAL"]),
+  title: z.string().min(1),
+  body: z.string().min(1),
+  metadata: z.record(z.unknown()).optional(),
+  broadcast: z.boolean().optional().default(false),
+});
+export type TestNotification = z.infer<typeof TestNotificationSchema>;
 
 // ─── Leagues ─────────────────────────────────────────────────────────────────
 

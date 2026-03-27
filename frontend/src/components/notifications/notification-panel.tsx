@@ -31,6 +31,16 @@ const TYPE_CONFIG: Record<Notification["type"], { icon: React.ElementType; color
     color: "text-blue-400",
     bg: "bg-blue-400/10",
   },
+  UPCOMING_SESSION: {
+    icon: Clock,
+    color: "text-rose-500",
+    bg: "bg-rose-500/10",
+  },
+  GENERAL: {
+    icon: Bell,
+    color: "text-slate-400",
+    bg: "bg-slate-400/10",
+  },
 };
 
 interface NotificationItemProps {
@@ -38,7 +48,11 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ notification }: NotificationItemProps) {
-  const config = TYPE_CONFIG[notification.type];
+  const config = TYPE_CONFIG[notification.type] || {
+    icon: Bell,
+    color: "text-muted-foreground",
+    bg: "bg-muted",
+  };
   const Icon = config.icon;
 
   return (
@@ -64,7 +78,7 @@ export function NotificationPanel() {
   const { notifications, unreadCount, markAllRead, isLoading } = useNotifications();
 
   return (
-    <div className="w-80 max-h-[480px] flex flex-col overflow-hidden">
+    <div className="w-full md:w-80 max-h-[480px] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">

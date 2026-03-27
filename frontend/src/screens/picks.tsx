@@ -16,9 +16,9 @@ import {
   Plus,
   Lock,
   Copy,
-  Trash2,
   ChevronLeft,
   ChevronRight,
+  Eraser,
 } from "lucide-react";
 import { api, type Driver, type Race, type League } from "@/lib/api";
 import { toast } from "sonner";
@@ -440,7 +440,7 @@ export function PicksScreen() {
   const isNextDisabled = !currentRace || races.findIndex((r) => r.id === currentRace.id) >= races.length - 1;
 
   return (
-    <div className="space-y-6 pb-32 md:pb-8 relative">
+    <div className="space-y-6 px-4 md:px-8 pb-48 md:pb-8 relative">
       {/* Header */}
       <div className="flex flex-col items-center justify-center space-y-4 pt-4">
         <StatusPill
@@ -573,22 +573,22 @@ export function PicksScreen() {
         </div>
         <div className="hidden md:flex w-full max-md mx-auto items-center gap-3 pt-4">
           <Button
-            variant="outline"
-            size="lg"
-            className="flex-1 font-bold border-muted-foreground/20"
-            onClick={handleClear}
-            disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
-            <Trash2 className="w-5 h-5 mr-2" />
-            Clear
-          </Button>
-          <Button
             id="save-picks-btn"
             size="lg"
-            className="flex-2 shadow-lg text-lg font-bold bg-primary text-primary-foreground"
+            className="flex-1 shadow-lg text-lg font-bold bg-primary text-primary-foreground rounded-full"
             onClick={handleSave}
             disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
             {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
             Save Picks
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 shrink-0 font-bold border-muted-foreground/20 rounded-full"
+            onClick={handleClear}
+            title="Clear Picks"
+            disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
+            <Eraser className="w-5 h-5" />
           </Button>
         </div>
       </div>
@@ -787,24 +787,23 @@ export function PicksScreen() {
         </Tabs>
       )}
 
-      <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-background border-t p-4 px-4 shadow-[0_-4px_10px_rgba(0,0,0,0.5)] flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="lg"
-          className="flex-1 font-bold border-muted-foreground/20"
-          onClick={handleClear}
-          disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
-          <Trash2 className="w-5 h-5 mr-2" />
-          Clear
-        </Button>
+      <div className="md:hidden fixed bottom-28 left-0 right-0 z-40 px-6 flex items-center gap-3 pointer-events-none">
         <Button
           id="save-picks-btn-mobile"
           size="lg"
-          className="flex-2 text-lg font-bold bg-primary text-primary-foreground"
+          className="flex-2 shadow-2xl text-lg font-bold bg-primary text-primary-foreground rounded-full pointer-events-auto"
           onClick={handleSave}
           disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
           {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
           Save Picks
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-12 w-12 shrink-0 font-bold border-white/10 bg-black/60 backdrop-blur-md rounded-full pointer-events-auto shadow-2xl"
+          onClick={handleClear}
+          disabled={saving || !currentRace || currentRace.status === "COMPLETED"}>
+          <Eraser className="w-5 h-5 text-muted-foreground" />
         </Button>
       </div>
     </div>
