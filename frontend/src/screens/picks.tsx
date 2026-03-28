@@ -383,6 +383,12 @@ export function PicksScreen() {
           position={pos}
           drivers={availableDrivers}
           selectedDriver={selectedDriver as any}
+          disabled={
+            currentRace?.status === "COMPLETED" ||
+            (type === "sprint"
+              ? (currentRace?.sprint_deadline ? new Date() > new Date(currentRace.sprint_deadline) : false)
+              : (currentRace?.race_deadline ? new Date() > new Date(currentRace.race_deadline) : false))
+          }
           onSelect={(d) => (type === "sprint" ? handleSprintSelect(pKey as any, d) : handleRaceSelect(pKey as any, d))}>
           <div
             className={`flex flex-col items-center justify-end ${heightCls} w-1/3 p-2 rounded-t-xl bg-card border-x border-t relative overflow-visible cursor-pointer hover:bg-muted/50 transition-colors`}>
@@ -633,7 +639,7 @@ export function PicksScreen() {
                       drivers={availableDrivers}
                       selectedDriver={sprintPredictions.sprintQualifyingP1}
                       showPosition={false}
-                      disabled={currentRace.status === "COMPLETED"}
+                      disabled={currentRace.status === "COMPLETED" || (currentRace.sprint_quali_date ? new Date() > new Date(currentRace.sprint_quali_date) : false)}
                       onSelect={(d) => handleSprintSelect("sprintQualifyingP1", d)}
                     />
                   </CardContent>
@@ -670,6 +676,7 @@ export function PicksScreen() {
                         drivers={availableDrivers}
                         selectedDriver={sprintPredictions.sprintFastestLap}
                         showPosition={false}
+                        disabled={currentRace.status === "COMPLETED" || (currentRace.sprint_deadline ? new Date() > new Date(currentRace.sprint_deadline) : false)}
                         onSelect={(d) => handleSprintSelect("sprintFastestLap", d)}
                       />
                     </CardContent>
@@ -707,7 +714,7 @@ export function PicksScreen() {
                     drivers={availableDrivers}
                     selectedDriver={racePredictions.raceQualifyingP1}
                     showPosition={false}
-                    disabled={currentRace.status === "COMPLETED"}
+                    disabled={currentRace.status === "COMPLETED" || (currentRace.race_quali_date ? new Date() > new Date(currentRace.race_quali_date) : false)}
                     onSelect={(d) => handleRaceSelect("raceQualifyingP1", d)}
                   />
                 </CardContent>
@@ -746,6 +753,7 @@ export function PicksScreen() {
                       drivers={availableDrivers}
                       selectedDriver={racePredictions.fastestLap}
                       showPosition={false}
+                      disabled={currentRace.status === "COMPLETED" || (currentRace.race_deadline ? new Date() > new Date(currentRace.race_deadline) : false)}
                       onSelect={(d) => handleRaceSelect("fastestLap", d)}
                     />
                   </CardContent>
@@ -776,6 +784,7 @@ export function PicksScreen() {
                         drivers={availableDrivers}
                         selectedDriver={racePredictions.firstDnf}
                         showPosition={false}
+                        disabled={currentRace.status === "COMPLETED" || (currentRace.race_deadline ? new Date() > new Date(currentRace.race_deadline) : false)}
                         onSelect={(d) => handleRaceSelect("firstDnf", d)}
                       />
                     </CardContent>
