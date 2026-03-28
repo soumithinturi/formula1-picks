@@ -21,12 +21,12 @@ export function getTeamColor(teamName?: string): string | undefined {
   if (tn.includes("mclaren")) return CONSTRUCTOR_COLORS.MCLAREN;
   if (tn.includes("mercedes")) return CONSTRUCTOR_COLORS.MERCEDES;
   if (tn.includes("aston martin")) return CONSTRUCTOR_COLORS.ASTON_MARTIN;
-  if (tn.includes("alpine")) return CONSTRUCTOR_COLORS.ALPINE; // Pink/Blue, using pink
-  if (tn.includes("williams")) return CONSTRUCTOR_COLORS.WILLIAMS; // Now typically dark blue/light blue
+  if (tn.includes("alpine")) return CONSTRUCTOR_COLORS.ALPINE;
+  if (tn.includes("williams")) return CONSTRUCTOR_COLORS.WILLIAMS;
   if (tn.includes("rb f1") || tn.includes("racing bulls")) return CONSTRUCTOR_COLORS.RB;
-  if (tn.includes("sauber") || tn.includes("audi")) return CONSTRUCTOR_COLORS.AUDI; // Stake green (#52E252), but transitioning to Audi Red
+  if (tn.includes("audi") || tn.includes("audi")) return CONSTRUCTOR_COLORS.AUDI;
   if (tn.includes("haas")) return CONSTRUCTOR_COLORS.HAAS;
-  if (tn.includes("cadillac")) return CONSTRUCTOR_COLORS.CADILLAC; // Signature Yellow/Gold
+  if (tn.includes("cadillac")) return CONSTRUCTOR_COLORS.CADILLAC;
   return undefined;
 }
 
