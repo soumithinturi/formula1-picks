@@ -20,6 +20,8 @@ interface Driver {
   avatarUrl?: string;
   rank?: number;
   driverNumber?: number;
+  points?: number;
+  wins?: number;
 }
 
 interface DriverSelectorProps {
@@ -75,6 +77,8 @@ export function DriverSelector({
                         team={selectedDriver.team}
                         avatarUrl={selectedDriver.avatarUrl}
                         driverNumber={selectedDriver.driverNumber}
+                        points={selectedDriver.points}
+                        wins={selectedDriver.wins}
                       />
                     </div>
                   </div>
@@ -155,6 +159,8 @@ export function DriverSelector({
                               team={driver.team}
                               avatarUrl={driver.avatarUrl}
                               driverNumber={driver.driverNumber}
+                              points={driver.points}
+                              wins={driver.wins}
                             />
                           </Button>
                         ))}
@@ -166,10 +172,18 @@ export function DriverSelector({
               <div className="space-y-1">
                 {[...drivers]
                   .sort((a, b) => {
-                    // Sort by rank: if rank is missing or 0, push to bottom, otherwise sort ascending
-                    const rankA = a.rank && a.rank > 0 ? a.rank : 999;
-                    const rankB = b.rank && b.rank > 0 ? b.rank : 999;
-                    return rankA - rankB;
+                    // Sort by points descending
+                    const pointsA = a.points || 0;
+                    const pointsB = b.points || 0;
+                    if (pointsB !== pointsA) return pointsB - pointsA;
+                    
+                    // Tie-breaker: wins descending
+                    const winsA = a.wins || 0;
+                    const winsB = b.wins || 0;
+                    if (winsB !== winsA) return winsB - winsA;
+                    
+                    // Fallback to name
+                    return a.name.localeCompare(b.name);
                   })
                   .map((driver, index) => (
                     <div key={driver.id} className="flex flex-col">
@@ -186,6 +200,8 @@ export function DriverSelector({
                             team={driver.team}
                             avatarUrl={driver.avatarUrl}
                             driverNumber={driver.driverNumber}
+                            points={driver.points}
+                            wins={driver.wins}
                           />
                         </div>
                       </Button>

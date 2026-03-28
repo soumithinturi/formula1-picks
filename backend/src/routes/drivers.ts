@@ -21,7 +21,10 @@ export const listDrivers = withAuth(async (_req) => {
     dateOfBirth: row.date_of_birth,
     nationality: row.nationality,
     constructorId: row.constructor_id,
-    constructorName: row.constructor_name
+    constructorName: row.constructor_name,
+    points: parseFloat(row.points as any) || 0,
+    wins: parseInt(row.wins as any) || 0,
+    rank: parseInt(row.rank as any) || 999
   }));
 
   return Response.json(drivers);

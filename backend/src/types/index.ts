@@ -193,6 +193,9 @@ export interface DriverRow {
   nationality: string | null;
   constructor_id: string | null;
   constructor_name: string | null;
+  points: number;
+  wins: number;
+  rank: number;
 }
 
 export interface PickRow {

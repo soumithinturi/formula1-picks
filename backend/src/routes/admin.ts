@@ -4,6 +4,7 @@ import { ResultSubmissionSchema, type PickRow, type LeagueRow, type ScoringConfi
 import { calculatePoints } from "../services/scoring.ts";
 import { createNotificationsForAllPicksInRace } from "../services/notifications.ts";
 import { sendPushNotification } from "../services/pushService.ts";
+import { fetchAndUpdateDriverStandings } from "../services/cron.ts";
 import { TestNotificationSchema } from "../types/index.ts";
 
 /**
@@ -106,6 +107,9 @@ export const submitResults = withAdmin(async (req) => {
   await db`
     UPDATE races SET status = 'COMPLETED' WHERE id = ${data.raceId}
   `;
+
+  // 7. Update Driver Standings
+  await fetchAndUpdateDriverStandings();
 
   return Response.json({ message: "Results processed successfully" });
 });

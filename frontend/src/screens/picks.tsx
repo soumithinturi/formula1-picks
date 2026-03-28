@@ -51,7 +51,7 @@ export function PicksScreen() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
   const [currentRace, setCurrentRace] = useState<Race | null>(null);
 
-  type DriverSelection = { id: string; name: string; team: string; rank: number; avatarUrl?: string } | null;
+  type DriverSelection = { id: string; name: string; team: string; rank: number; avatarUrl?: string; points?: number; wins?: number } | null;
 
   // Render variables mapped from drivers array for selectors
   const mapDriverToSelector = (d: Driver) => ({
@@ -60,6 +60,8 @@ export function PicksScreen() {
     team: d.constructorName || "Unknown constructor",
     rank: d.rank || 999,
     driverNumber: parseInt(d.permanentNumber || "0") || 0,
+    points: d.points,
+    wins: d.wins,
   });
   const availableDrivers = useMemo(() => drivers.map(mapDriverToSelector), [drivers]);
 

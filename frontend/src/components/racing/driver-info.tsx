@@ -8,6 +8,8 @@ interface DriverInfoProps extends React.HTMLAttributes<HTMLDivElement> {
   team?: string;
   avatarUrl?: string;
   driverNumber?: number;
+  points?: number;
+  wins?: number;
   isCurrentUser?: boolean;
 }
 
@@ -22,7 +24,7 @@ export function getTeamColor(teamName?: string): string | undefined {
   if (tn.includes("alpine")) return CONSTRUCTOR_COLORS.ALPINE; // Pink/Blue, using pink
   if (tn.includes("williams")) return CONSTRUCTOR_COLORS.WILLIAMS; // Now typically dark blue/light blue
   if (tn.includes("rb f1") || tn.includes("racing bulls")) return CONSTRUCTOR_COLORS.RB;
-  if (tn.includes("sauber") || tn.includes("audi")) return CONSTRUCTOR_COLORS.SAUBER; // Stake green (#52E252), but transitioning to Audi Red
+  if (tn.includes("sauber") || tn.includes("audi")) return CONSTRUCTOR_COLORS.AUDI; // Stake green (#52E252), but transitioning to Audi Red
   if (tn.includes("haas")) return CONSTRUCTOR_COLORS.HAAS;
   if (tn.includes("cadillac")) return CONSTRUCTOR_COLORS.CADILLAC; // Signature Yellow/Gold
   return undefined;
@@ -33,6 +35,8 @@ export function DriverInfo({
   team,
   avatarUrl,
   driverNumber,
+  points,
+  wins,
   isCurrentUser,
   className,
   ...props
@@ -76,8 +80,17 @@ export function DriverInfo({
         </span>
         {team && <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{team}</span>}
       </div>
-      {typeof driverNumber === "number" && (
-        <span className="text-sm font-black text-muted-foreground/50 ml-auto pr-1">#{driverNumber}</span>
+      {(typeof driverNumber === "number" || typeof points === "number") && (
+        <div className="flex flex-col items-end text-right ml-auto pl-2 shrink-0">
+          {typeof driverNumber === "number" && (
+            <span className="text-sm font-black text-muted-foreground/50">#{driverNumber}</span>
+          )}
+          {points !== undefined && points !== null && (
+            <span className="text-[10px] sm:text-xs text-muted-foreground font-semibold mt-0.5 whitespace-nowrap">
+              {points} PTS {wins ? `(${wins} Win${wins === 1 ? "" : "s"})` : ""}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

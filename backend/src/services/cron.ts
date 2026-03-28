@@ -33,6 +33,12 @@ export function startCronJobs() {
     await fetchAndUpdateSchedule();
   });
 
+  // Run every Monday at 1:00 AM UTC to fetch driver standings
+  cron.schedule("0 1 * * 1", async () => {
+    console.log("⏰ Running Monday Cron: Fetching and Updating Driver Standings");
+    await fetchAndUpdateDriverStandings();
+  });
+
   // Run every minute to check for upcoming sessions and trigger PWA notifications
   cron.schedule("* * * * *", async () => {
     await checkUpcomingSessionsForNotifications();
@@ -321,6 +327,9 @@ export async function fetchRaceResults() {
     );
 
     console.log(`✅ Automated: Successfully processed results and scoring for ${race.name}`);
+    
+    // 5. Update Driver Standings
+    await fetchAndUpdateDriverStandings();
 
   } catch (err) {
     console.error("Failed Sunday cron:", err);
@@ -378,7 +387,7 @@ export async function fetchAndUpdateSchedule() {
         : null;
 
       const sprint_deadline = sprint_quali_date;
-      const race_deadline = race_quali_date;
+      const race_deadline = date;
 
       await db`
         INSERT INTO races (
@@ -416,5 +425,49 @@ export async function fetchAndUpdateSchedule() {
     console.log("✅ Successfully updated season schedule.");
   } catch (err) {
     console.error("Failed to update season schedule:", err);
+  }
+}
+
+/**
+ * Fetches the current season's driver standings and updates the database.
+ */
+export async function fetchAndUpdateDriverStandings() {
+  try {
+    console.log("Fetching latest driver standings from Ergast API...");
+    const res = await fetch(`${JOLPI_API_BASE}/driverstandings.json`);
+    if (!res.ok) {
+      console.error(`Ergast API failed with status ${res.status}`);
+      return;
+    }
+
+    const data: any = await res.json();
+    const standingsList = data?.MRData?.StandingsTable?.StandingsLists?.[0];
+    if (!standingsList) {
+      console.log("⚠️ No standings lists found in payload.");
+      return;
+    }
+
+    const driverStandings = standingsList.DriverStandings;
+    if (!driverStandings || driverStandings.length === 0) {
+      console.log("⚠️ No driver standings found in payload.");
+      return;
+    }
+
+    for (const standing of driverStandings) {
+      const driverId = standing.Driver.driverId;
+      const points = parseFloat(standing.points) || 0;
+      const wins = parseInt(standing.wins) || 0;
+      const rank = parseInt(standing.position) || 999;
+
+      await db`
+        UPDATE drivers 
+        SET points = ${points}, wins = ${wins}, rank = ${rank}
+        WHERE driver_id = ${driverId}
+      `;
+    }
+
+    console.log("✅ Successfully updated driver standings.");
+  } catch (err) {
+    console.error("Failed to update driver standings:", err);
   }
 }

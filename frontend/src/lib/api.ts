@@ -57,6 +57,8 @@ export interface Driver {
   constructorId?: string;
   constructorName?: string;
   rank?: number;
+  points?: number;
+  wins?: number;
 }
 
 export interface ScoringConfig {
