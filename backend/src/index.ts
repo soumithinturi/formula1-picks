@@ -12,6 +12,7 @@ import { getChatMessages, sendChatMessage } from "./routes/chat.ts";
 import { seedDatabase } from "./services/seed.ts";
 import { startCronJobs } from "./services/cron.ts";
 import { withAuth } from "./middleware/auth.ts";
+import { logger } from "./services/logger.ts";
 
 const PORT = parseInt(process.env.PORT ?? "8080");
 
@@ -22,7 +23,7 @@ seedDatabase()
     startCronJobs();
   })
   .catch((err) => {
-    console.error("Database seeding failed:", err);
+    logger.error({ err }, "Database seeding failed");
   });
 
 // Setup dynamic CORS to support credentials (cookies)
@@ -206,7 +207,7 @@ const server = Bun.serve({
 
   // Global error handler
   error(err) {
-    console.error("Unhandled server error:", err);
+    logger.error({ err }, "Unhandled server error");
     return Response.json(
       { error: "Internal server error" },
       {
@@ -220,4 +221,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`🏎️  F1 Picks API v2 running at ${server.url}`);
+logger.info(`🏎️  F1 Picks API v2 running at ${server.url}`);

@@ -1,6 +1,9 @@
 import { db } from "../db/index.ts";
+import { logger } from "./logger.ts";
 
-// Manual 2026 driver to constructor mapping since Jolpi API doesn't provide it pre-season
+/**
+ * Manual 2026 driver to constructor mapping since Jolpi API doesn't provide it pre-season
+ */
 const DRIVER_CONSTRUCTOR_MAP: Record<string, { id: string; name: string }> = {
   max_verstappen: { id: "red_bull", name: "Red Bull Racing" },
   hadjar: { id: "red_bull", name: "Red Bull Racing" },
@@ -57,7 +60,7 @@ interface ErgastDriver {
 }
 
 /**
- * Seeds the database with 2025 race schedule and driver list from static JSON.
+ * Seeds the database with 2026 race schedule and driver list from static JSON.
  * Only runs if the respective tables are empty — safe to call on every startup.
  */
 export async function seedDatabase(): Promise<void> {
@@ -65,12 +68,7 @@ export async function seedDatabase(): Promise<void> {
     await seedRaces();
     await seedDrivers();
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Connection closed")) {
-      console.warn("⚠️ Database connection closed during seeding. This is likely a temporary glitch. Resuming...");
-      console.error(error); // Log the full trace to see what failed
-    } else {
-      console.warn("⚠️ Seeding skipped (non-fatal):", error);
-    }
+    logger.warn({ err: error, job: "seeding" }, "⚠️ Seeding skipped (non-fatal)");
   }
 }
 
@@ -80,11 +78,11 @@ async function seedRaces(): Promise<void> {
   `;
 
   if (parseInt(count) > 0) {
-    console.log("Race data already exists. Skipping seed.");
+    logger.info({ job: "seedRaces" }, "Race data already exists. Skipping seed.");
     return;
   }
 
-  console.log("Fetching race schedule from Jolpi Ergast API...");
+  logger.info({ job: "seedRaces" }, "Fetching race schedule from Jolpi Ergast API...");
 
   try {
     const res = await fetch(`${JOLPI_API_BASE}.json`);
@@ -101,7 +99,6 @@ async function seedRaces(): Promise<void> {
       const hasSprint = !!race.Sprint;
 
       // Lock picks effectively at the start of the session.
-      // Race picks lock at race_deadline.
       let raceDeadline = new Date(raceDate);
 
       let sprintDeadline = null;
@@ -159,9 +156,9 @@ async function seedRaces(): Promise<void> {
     `;
       await Bun.sleep(20);
     }
-    console.log(`Seeded ${races.length} races.`);
-  } catch (err) {
-    console.error("Failed to seed races from Ergast API:", err);
+    logger.info({ job: "seedRaces", count: races.length }, `Seeded ${races.length} races.`);
+  } catch (error) {
+    logger.error({ err: error, job: "seedRaces" }, "Failed to seed races from Ergast API");
   }
 }
 
@@ -171,11 +168,11 @@ async function seedDrivers(): Promise<void> {
   `;
 
   if (parseInt(count) > 0) {
-    console.log("Driver data already exists. Skipping seed.");
+    logger.info({ job: "seedDrivers" }, "Driver data already exists. Skipping seed.");
     return;
   }
 
-  console.log("Fetching driver data from Jolpi Ergast API...");
+  logger.info({ job: "seedDrivers" }, "Fetching driver data from Jolpi Ergast API...");
 
   try {
     const res = await fetch(`${JOLPI_API_BASE}/drivers.json`);
@@ -214,8 +211,8 @@ async function seedDrivers(): Promise<void> {
       `;
       await Bun.sleep(20);
     }
-    console.log(`Seeded ${drivers.length} drivers.`);
-  } catch (err) {
-    console.error("Failed to seed drivers from Ergast API:", err);
+    logger.info({ job: "seedDrivers", count: drivers.length }, `Seeded ${drivers.length} drivers.`);
+  } catch (error) {
+    logger.error({ err: error, job: "seedDrivers" }, "Failed to seed drivers from Ergast API");
   }
 }

@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { db } from "../db/index.ts";
+import { logger } from "./logger.ts";
 import type { RaceRow, PickRow, LeagueRow, ScoringConfig, PickSelections } from "../types/index.ts";
 import { calculatePoints } from "./scoring.ts";
 import { createNotificationsForAllPicksInRace } from "./notifications.ts";
@@ -12,30 +13,25 @@ const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
  * This should be called from index.ts when the server boots.
  */
 export function startCronJobs() {
-  console.log("⏰ Initializing CRON jobs...");
+  logger.info("⏰ Initializing CRON jobs...");
 
-  // Run every Saturday at 14:00 (2:00 PM) UTC for Qualifying / Sprint
-  cron.schedule("0 14 * * 6", async () => {
-    console.log("⏰ Running Saturday Cron: Fetching Qualifying / Sprint Results");
+  // 1. Result Polling: Every 6 hours
+  // This covers Qualifying, Sprints, and Race results.
+  cron.schedule("0 */6 * * *", async () => {
+    logger.info({ job: "resultsPolling" }, "⏰ Running 6-hourly Cron: Polling for session results...");
     await fetchQualifyingResults();
-  });
-
-  // Run every Sunday at 11:00 PM CDT (04:00 Monday UTC)
-  // This ensure results are final (fia classification locks) before scoring.
-  cron.schedule("0 4 * * 1", async () => {
-    console.log("⏰ Running Sunday Cron: Scoring Race Results");
     await fetchRaceResults();
   });
 
-  // Run every Monday at midnight UTC to fetch the races in the current season and update the schedule
-  cron.schedule("0 0 * * 1", async () => {
-    console.log("⏰ Running Monday Cron: Fetching and Updating Season Schedule");
+  // 2. Schedule Sync: Every day at 00:00 UTC
+  cron.schedule("0 0 * * *", async () => {
+    logger.info({ job: "scheduleSync" }, "⏰ Running Daily Cron: Syncing season schedule...");
     await fetchAndUpdateSchedule();
   });
 
-  // Run every Monday at 1:00 AM UTC to fetch driver standings
-  cron.schedule("0 1 * * 1", async () => {
-    console.log("⏰ Running Monday Cron: Fetching and Updating Driver Standings");
+  // 3. Standings Sync: Every day at 01:00 UTC
+  cron.schedule("0 1 * * *", async () => {
+    logger.info({ job: "standingsSync" }, "⏰ Running Daily Cron: Syncing driver standings...");
     await fetchAndUpdateDriverStandings();
   });
 
@@ -91,7 +87,12 @@ async function checkUpcomingSessionsForNotifications() {
       `;
 
       if (subscriptions.length > 0) {
-        console.log(`Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
+        logger.info({
+          job: "notifications",
+          session: session.name,
+          count: subscriptions.length,
+          minutes: diffMinutes
+        }, `Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
         const payload = {
           title: "Session Starting Soon!",
           body: `${race.name} ${session.name} begins in ${diffMinutes} minutes. Lock in your picks now!`,
@@ -112,7 +113,7 @@ async function checkUpcomingSessionsForNotifications() {
       }
     }
   } catch (err) {
-    console.error("Failed notification cron:", err);
+    logger.error({ err, job: "notifications" }, "Failed notification cron");
   }
 }
 
@@ -124,11 +125,17 @@ export async function fetchQualifyingResults() {
     const nearbyRaces = await db<RaceRow[]>`
       SELECT * FROM races 
       WHERE status = 'UPCOMING'
-      AND date <= (NOW() + interval '2 days')
+      AND (
+        (sprint_quali_date IS NOT NULL AND sprint_quali_date <= NOW()) OR
+        (race_quali_date IS NOT NULL AND race_quali_date <= NOW())
+      )
       ORDER BY date ASC LIMIT 1
     `;
 
-    if (nearbyRaces.length === 0) return;
+    if (nearbyRaces.length === 0) {
+      logger.info({ job: "fetchQualifyingResults" }, "🔍 No upcoming races with completed qualifying sessions found.");
+      return;
+    }
     const race = nearbyRaces[0];
     const round = race.id.toString();
 
@@ -139,7 +146,7 @@ export async function fetchQualifyingResults() {
       const targetRace = data?.MRData?.RaceTable?.Races?.find((r: any) => r.round === round);
       const results = targetRace?.QualifyingResults;
       if (results?.length > 0) {
-        console.log(`✅ Automated: Found Quali results for ${race.name}`);
+        logger.info({ job: "fetchQualifyingResults", race: race.name }, `✅ Automated: Found Quali results for ${race.name}`);
         await db`
           INSERT INTO race_results (race_id, race_qualifying_p1)
           VALUES (${race.id}, ${results[0].Driver.driverId})
@@ -157,7 +164,7 @@ export async function fetchQualifyingResults() {
         const targetRace = data?.MRData?.RaceTable?.Races?.find((r: any) => r.round === round);
         const results = targetRace?.SprintResults;
         if (results?.length > 0) {
-          console.log(`✅ Automated: Found Sprint results for ${race.name}`);
+          logger.info({ job: "fetchQualifyingResults", race: race.name, sprint: true }, `✅ Automated: Found Sprint results for ${race.name}`);
 
           // Find fastest lap in sprint if available
           let fastestLap = null;
@@ -186,7 +193,7 @@ export async function fetchQualifyingResults() {
       }
     }
   } catch (err) {
-    console.error("Failed Saturday cron:", err);
+    logger.error({ err, job: "fetchQualifyingResults" }, "Failed Saturday cron (Qualifying/Sprint Fetching)");
   }
 }
 
@@ -198,15 +205,18 @@ export async function fetchRaceResults() {
     const nearbyRaces = await db<RaceRow[]>`
       SELECT * FROM races 
       WHERE status = 'UPCOMING'
-      AND date <= (NOW() + interval '2 days')
+      AND date <= NOW()
       ORDER BY date ASC LIMIT 1
     `;
 
-    if (nearbyRaces.length === 0) return;
+    if (nearbyRaces.length === 0) {
+      logger.info({ job: "fetchRaceResults" }, "🔍 No recently finished races found for scoring.");
+      return;
+    }
     const race = nearbyRaces[0];
     const round = race.id.toString();
 
-    console.log(`Fetching Race results for Round ${round}...`);
+    logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
     const res = await fetch(`${JOLPI_API_BASE}/results.json`);
     if (!res.ok) return;
 
@@ -215,7 +225,7 @@ export async function fetchRaceResults() {
     const resultsData = targetRaceData?.Results;
 
     if (!resultsData || resultsData.length === 0) {
-      console.log(`⚠️ No official results for ${race.name} yet.`);
+      logger.info({ job: "fetchRaceResults", race: race.name }, `⚠️ No official results for ${race.name} yet.`);
       return;
     }
 
@@ -234,7 +244,7 @@ export async function fetchRaceResults() {
       // Find driver who finished the fewest laps
       const sortedByLaps = retired.sort((a: any, b: any) => parseInt(a.laps) - parseInt(b.laps));
       firstDnf = sortedByLaps[0].Driver.driverId;
-      console.log(`🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
+      logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
     }
 
     // Find Fastest Lap
@@ -326,13 +336,13 @@ export async function fetchRaceResults() {
       { raceId: race.id }
     );
 
-    console.log(`✅ Automated: Successfully processed results and scoring for ${race.name}`);
+    logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
     
     // 5. Update Driver Standings
     await fetchAndUpdateDriverStandings();
 
   } catch (err) {
-    console.error("Failed Sunday cron:", err);
+    logger.error({ err, job: "fetchRaceResults" }, "Failed Sunday cron (Race Scoring)");
   }
 }
 
@@ -341,10 +351,10 @@ export async function fetchRaceResults() {
  */
 export async function fetchAndUpdateSchedule() {
   try {
-    console.log("Fetching latest season schedule from Ergast API...");
+    logger.info({ job: "fetchAndUpdateSchedule" }, "Fetching latest season schedule from Ergast API...");
     const res = await fetch(`${JOLPI_API_BASE}/races.json`);
     if (!res.ok) {
-      console.error(`Ergast API failed with status ${res.status}`);
+      logger.error({ job: "fetchAndUpdateSchedule", status: res.status }, `Ergast API failed with status ${res.status}`);
       return;
     }
 
@@ -352,7 +362,7 @@ export async function fetchAndUpdateSchedule() {
     const races = data?.MRData?.RaceTable?.Races;
 
     if (!races || races.length === 0) {
-      console.log("⚠️ No races found in schedule payload.");
+      logger.warn({ job: "fetchAndUpdateSchedule" }, "⚠️ No races found in schedule payload.");
       return;
     }
 
@@ -422,9 +432,9 @@ export async function fetchAndUpdateSchedule() {
     const maxRound = Math.max(...races.map((r: any) => parseInt(r.round)));
     await db`DELETE FROM races WHERE id > ${maxRound}`;
 
-    console.log("✅ Successfully updated season schedule.");
+    logger.info({ job: "fetchAndUpdateSchedule", count: races.length }, `✅ Successfully updated season schedule.`);
   } catch (err) {
-    console.error("Failed to update season schedule:", err);
+    logger.error({ err, job: "fetchAndUpdateSchedule" }, "Failed to update season schedule");
   }
 }
 
@@ -433,23 +443,23 @@ export async function fetchAndUpdateSchedule() {
  */
 export async function fetchAndUpdateDriverStandings() {
   try {
-    console.log("Fetching latest driver standings from Ergast API...");
+    logger.info({ job: "fetchAndUpdateDriverStandings" }, "Fetching latest driver standings from Ergast API...");
     const res = await fetch(`${JOLPI_API_BASE}/driverstandings.json`);
     if (!res.ok) {
-      console.error(`Ergast API failed with status ${res.status}`);
+      logger.error({ job: "fetchAndUpdateDriverStandings", status: res.status }, `Ergast API failed with status ${res.status}`);
       return;
     }
 
     const data: any = await res.json();
     const standingsList = data?.MRData?.StandingsTable?.StandingsLists?.[0];
     if (!standingsList) {
-      console.log("⚠️ No standings lists found in payload.");
+      logger.warn({ job: "fetchAndUpdateDriverStandings" }, "⚠️ No standings lists found in payload.");
       return;
     }
 
     const driverStandings = standingsList.DriverStandings;
     if (!driverStandings || driverStandings.length === 0) {
-      console.log("⚠️ No driver standings found in payload.");
+      logger.warn({ job: "fetchAndUpdateDriverStandings" }, "⚠️ No driver standings found in payload.");
       return;
     }
 
@@ -466,8 +476,8 @@ export async function fetchAndUpdateDriverStandings() {
       `;
     }
 
-    console.log("✅ Successfully updated driver standings.");
+    logger.info({ job: "fetchAndUpdateDriverStandings", count: driverStandings.length }, `✅ Successfully updated driver standings.`);
   } catch (err) {
-    console.error("Failed to update driver standings:", err);
+    logger.error({ err, job: "fetchAndUpdateDriverStandings" }, "Failed to update driver standings");
   }
 }

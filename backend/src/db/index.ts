@@ -7,7 +7,9 @@ if (!connectionString) {
 }
 
 export const db = new SQL(connectionString, {
-  idle_timeout: 20,
-  max_lifetime: 60 * 30, // 30 minutes
+  max: 5, // Limit concurrent connections
+  idleTimeout: 20,
+  maxLifetime: 60 * 30, // 30 minutes
   tls: { rejectUnauthorized: false }, // Supabase requires TLS
+  prepare: false, // Disable prepared statements for PgBouncer/Transaction mode
 });
