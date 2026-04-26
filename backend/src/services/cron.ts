@@ -127,11 +127,13 @@ export async function fetchQualifyingResults() {
     const race = nearbyRaces[0];
     const round = race.id.toString();
 
-    // 1. Qualifying
-    const qualRes = await fetch(`${JOLPI_API_BASE}/qualifying.json`);
+    // 1. Qualifying — use round-specific endpoint to avoid pagination issues
+    // The season-wide /qualifying.json is paginated (30 results/page) so later
+    // rounds never appear in page 1. /2026/{round}/qualifying.json is direct.
+    const qualRes = await fetch(`${JOLPI_API_BASE}/${round}/qualifying.json`);
     if (qualRes.ok) {
       const data: any = await qualRes.json();
-      const targetRace = data?.MRData?.RaceTable?.Races?.find((r: any) => r.round === round);
+      const targetRace = data?.MRData?.RaceTable?.Races?.[0];
       const results = targetRace?.QualifyingResults;
       if (results?.length > 0) {
         logger.info({ job: "fetchQualifyingResults", race: race.name }, `✅ Automated: Found Quali results for ${race.name}`);
@@ -144,12 +146,12 @@ export async function fetchQualifyingResults() {
       }
     }
 
-    // 2. Sprint
+    // 2. Sprint — round-specific endpoint for same pagination reason
     if (race.has_sprint) {
-      const sprintRes = await fetch(`${JOLPI_API_BASE}/sprint.json`);
+      const sprintRes = await fetch(`${JOLPI_API_BASE}/${round}/sprint.json`);
       if (sprintRes.ok) {
         const data: any = await sprintRes.json();
-        const targetRace = data?.MRData?.RaceTable?.Races?.find((r: any) => r.round === round);
+        const targetRace = data?.MRData?.RaceTable?.Races?.[0];
         const results = targetRace?.SprintResults;
         if (results?.length > 0) {
           logger.info({ job: "fetchQualifyingResults", race: race.name, sprint: true }, `✅ Automated: Found Sprint results for ${race.name}`);
@@ -205,11 +207,14 @@ export async function fetchRaceResults() {
     const round = race.id.toString();
 
     logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
-    const res = await fetch(`${JOLPI_API_BASE}/results.json`);
+    // Use round-specific endpoint — the season-wide /results.json is paginated
+    // (30 driver results/page) so Round 3+ data falls onto page 2 and is never seen.
+    const res = await fetch(`${JOLPI_API_BASE}/${round}/results.json`);
     if (!res.ok) return;
 
     const data: any = await res.json();
-    const targetRaceData = data?.MRData?.RaceTable?.Races?.find((r: any) => r.round === round);
+    // Round-specific endpoint returns exactly one race in the array
+    const targetRaceData = data?.MRData?.RaceTable?.Races?.[0];
     const resultsData = targetRaceData?.Results;
 
     if (!resultsData || resultsData.length === 0) {
