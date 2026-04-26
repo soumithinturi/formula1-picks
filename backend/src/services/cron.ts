@@ -62,16 +62,17 @@ export async function checkUpcomingSessionsForNotifications() {
         continue;
       }
 
-      // We use a raw string for the column name (which is allowlisted)
-      // and let the tagged template handle the value parameter.
-      const query = `
+      // NOTE: We cannot mix db() identifier escaping and ${ } value binding in
+      // the same query — the postgres driver miscounts result format descriptors.
+      // Instead, validate the column name against an allowlist and use db.unsafe()
+      // for the identifier, keeping the value parameter separate.
+      const subscriptions = await db.unsafe(`
         SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${session.column} as cadence
         FROM user_notification_settings uns
         JOIN user_push_subscriptions ups ON uns.user_id = ups.user_id
         WHERE uns.${session.column} IS NOT NULL
-          AND uns.${session.column} = \${diffMinutes}
-      `;
-      const subscriptions = await db(query);
+          AND uns.${session.column} = $1
+      `, [diffMinutes]);
 
       if (subscriptions.length > 0) {
         logger.info({

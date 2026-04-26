@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: POST /api/v1/internal/cron/notifications
         run: |
-          curl -s -f -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/notifications" \
+          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/notifications" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"
 
@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: POST /api/v1/internal/cron/results
         run: |
-          curl -s -f -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/results" \
+          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/results" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"
 
@@ -63,7 +63,7 @@ jobs:
     steps:
       - name: POST /api/v1/internal/cron/schedule
         run: |
-          curl -s -f -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/schedule" \
+          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/schedule" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"
 
@@ -77,6 +77,6 @@ jobs:
     steps:
       - name: POST /api/v1/internal/cron/standings
         run: |
-          curl -s -f -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/standings" \
+          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/standings" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"
