@@ -25,13 +25,7 @@ export const createLeague = withAuth(async (req) => {
 
     const [league] = await db<LeagueRow[]>`
       INSERT INTO leagues (name, created_by, invite_code, scoring_config, created_at)
-      VALUES (
-        ${data.name},
-        ${req.user.id},
-        ${inviteCode},
-        ${JSON.stringify(scoringConfig)}::jsonb,
-        NOW()
-      )
+      VALUES (${data.name}, ${req.user.id}, ${inviteCode}, ${JSON.stringify(scoringConfig)}::jsonb, NOW())
       RETURNING *
     `;
 
@@ -109,8 +103,7 @@ export const joinLeague = withAuth(async (req) => {
 
   const [updatedLeague] = await db<any[]>`
     SELECT l.*, (SELECT count(*) FROM league_members WHERE league_id = l.id)::int as members_count
-    FROM leagues l
-    WHERE l.id = ${league.id}
+    FROM leagues l WHERE l.id = ${league.id}
   `;
 
   return Response.json({
@@ -135,9 +128,7 @@ export const previewLeague = async (req: Request) => {
   try {
     const [league] = await db`
       SELECT id, name, created_by, invite_code, invite_message
-      FROM leagues 
-      WHERE invite_code = ${code} 
-      LIMIT 1
+      FROM leagues WHERE invite_code = ${code} LIMIT 1
     `;
 
     if (!league) {
@@ -201,8 +192,7 @@ export const updateLeague = withAuth(async (req) => {
 
     const [updatedLeague] = await db<any[]>`
       SELECT l.*, (SELECT count(*) FROM league_members WHERE league_id = l.id)::int as members_count
-      FROM leagues l
-      WHERE l.id = ${id}
+      FROM leagues l WHERE l.id = ${id}
     `;
 
     return Response.json({

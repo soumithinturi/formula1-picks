@@ -11,8 +11,7 @@ import type { AuthedRequest } from "../middleware/auth.ts";
 export async function getProfile(req: AuthedRequest): Promise<Response> {
   const [user] = await db`
     SELECT id, contact, display_name, full_name, avatar_url, role, preferences
-    FROM users
-    WHERE id = ${req.user.id}
+    FROM users WHERE id = ${req.user.id}
   `;
 
   if (!user) {
@@ -22,10 +21,9 @@ export async function getProfile(req: AuthedRequest): Promise<Response> {
   // Calculate global prediction stats from all their picks
   const [stats] = await db`
     SELECT
-      COALESCE(SUM(correct_predictions), 0)::int AS "globalCorrectPredictions",
-      COALESCE(SUM(total_predictions), 0)::int AS "globalTotalPredictions"
-    FROM picks
-    WHERE user_id = ${req.user.id}
+       COALESCE(SUM(correct_predictions), 0)::int AS "globalCorrectPredictions",
+       COALESCE(SUM(total_predictions), 0)::int AS "globalTotalPredictions"
+     FROM picks WHERE user_id = ${req.user.id}
   `;
 
   return Response.json({ user, stats });
@@ -59,38 +57,43 @@ export async function updateProfile(req: AuthedRequest): Promise<Response> {
 
   const prefsJson = data.preferences;
 
+  // db(updates) dynamic key injection is replaced with explicit conditional SET clauses.
   if (hasScalars && hasPreferences) {
     [updatedUser] = await db`
       UPDATE users
-      SET ${db(updates)},
-          preferences = (
-            COALESCE(
-              CASE WHEN jsonb_typeof(preferences) = 'object' THEN preferences ELSE '{}'::jsonb END,
-              '{}'::jsonb
-            ) || ${prefsJson}
-          )
-      WHERE id = ${req.user.id}
-      RETURNING id, contact, display_name, full_name, avatar_url, role, preferences
+       SET display_name = COALESCE(${updates.display_name ?? null}, display_name),
+           full_name    = COALESCE(${updates.full_name ?? null}, full_name),
+           avatar_url   = COALESCE(${updates.avatar_url ?? null}, avatar_url),
+           preferences  = (
+             COALESCE(
+               CASE WHEN jsonb_typeof(preferences) = 'object' THEN preferences ELSE '{}'::jsonb END,
+               '{}'::jsonb
+             ) || ${JSON.stringify(prefsJson)}::jsonb
+           )
+       WHERE id = ${req.user.id}
+       RETURNING id, contact, display_name, full_name, avatar_url, role, preferences
     `;
   } else if (hasPreferences) {
     [updatedUser] = await db`
       UPDATE users
-      SET preferences = (
-            COALESCE(
-              CASE WHEN jsonb_typeof(preferences) = 'object' THEN preferences ELSE '{}'::jsonb END,
-              '{}'::jsonb
-            ) || ${prefsJson}
-          )
-      WHERE id = ${req.user.id}
-      RETURNING id, contact, display_name, full_name, avatar_url, role, preferences
+       SET preferences = (
+             COALESCE(
+               CASE WHEN jsonb_typeof(preferences) = 'object' THEN preferences ELSE '{}'::jsonb END,
+               '{}'::jsonb
+             ) || ${JSON.stringify(prefsJson)}::jsonb
+           )
+       WHERE id = ${req.user.id}
+       RETURNING id, contact, display_name, full_name, avatar_url, role, preferences
     `;
   } else {
-    // Scalar fields only — straightforward update.
+    // Scalar fields only.
     [updatedUser] = await db`
       UPDATE users
-      SET ${db(updates)}
-      WHERE id = ${req.user.id}
-      RETURNING id, contact, display_name, full_name, avatar_url, role, preferences
+       SET display_name = COALESCE(${updates.display_name ?? null}, display_name),
+           full_name    = COALESCE(${updates.full_name ?? null}, full_name),
+           avatar_url   = COALESCE(${updates.avatar_url ?? null}, avatar_url)
+       WHERE id = ${req.user.id}
+       RETURNING id, contact, display_name, full_name, avatar_url, role, preferences
     `;
   }
 
@@ -111,8 +114,8 @@ export async function deleteProfile(req: AuthedRequest): Promise<Response> {
   try {
     // 1. Delete user from the public.users database (cascade should handle related records if set)
     const [deletedUser] = await db`
-      DELETE FROM public.users
-      WHERE id = ${userId}
+      DELETE FROM public.users 
+      WHERE id = ${userId} 
       RETURNING id
     `;
 

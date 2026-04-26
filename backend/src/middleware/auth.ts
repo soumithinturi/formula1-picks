@@ -63,9 +63,11 @@ async function verifyToken(req: Request): Promise<AuthedUser | null> {
     const sub = payload.sub;
     if (!sub) return null;
 
-    // Fetch the user's role from our users table
+    // Fetch the user's role from our users table.
     const [user] = await db<UserRow[]>`
-      SELECT id, contact, role FROM users WHERE id = ${sub} LIMIT 1
+      SELECT id, contact, role FROM users 
+      WHERE id = ${sub} 
+      LIMIT 1
     `;
 
     if (!user) return null;

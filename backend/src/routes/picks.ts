@@ -18,10 +18,10 @@ export const getPickForRace = withAuth(async (req) => {
   }
 
   const [pick] = await db<PickRow[]>`
-    SELECT * FROM picks
-    WHERE user_id = ${req.user.id}
-      AND race_id = ${parseInt(raceId)}
-      AND league_id = ${leagueId}
+    SELECT * FROM picks 
+    WHERE user_id = ${req.user.id} 
+    AND race_id = ${parseInt(raceId)} 
+    AND league_id = ${leagueId} 
     LIMIT 1
   `;
 
@@ -49,8 +49,9 @@ export const getUserPickForRace = withAuth(async (req) => {
 
   // --- Security Check: Ensure requesting user is a member of the league ---
   const [membership] = await db`
-    SELECT 1 FROM league_members
-    WHERE league_id = ${leagueId} AND user_id = ${req.user.id}
+    SELECT 1 FROM league_members 
+    WHERE league_id = ${leagueId} 
+    AND user_id = ${req.user.id} 
     LIMIT 1
   `;
 
@@ -60,10 +61,10 @@ export const getUserPickForRace = withAuth(async (req) => {
 
   // Fetch the target user's pick
   const [pick] = await db<PickRow[]>`
-    SELECT * FROM picks
-    WHERE user_id = ${targetUserId}
-      AND race_id = ${parseInt(raceId)}
-      AND league_id = ${leagueId}
+    SELECT * FROM picks 
+    WHERE user_id = ${targetUserId} 
+    AND race_id = ${parseInt(raceId)} 
+    AND league_id = ${leagueId} 
     LIMIT 1
   `;
 
@@ -72,7 +73,9 @@ export const getUserPickForRace = withAuth(async (req) => {
   }
 
   const [results] = await db`
-    SELECT * FROM race_results WHERE race_id = ${parseInt(raceId)} LIMIT 1
+    SELECT * FROM race_results 
+    WHERE race_id = ${parseInt(raceId)} 
+    LIMIT 1
   `;
 
   // If requesting own picks, return as is (with results attached)
@@ -82,7 +85,9 @@ export const getUserPickForRace = withAuth(async (req) => {
 
   // Otherwise, apply visibility logic
   const [race] = await db<RaceRow[]>`
-    SELECT * FROM races WHERE id = ${parseInt(raceId)} LIMIT 1
+    SELECT * FROM races 
+    WHERE id = ${parseInt(raceId)} 
+    LIMIT 1
   `;
 
   if (!race) {
@@ -129,8 +134,9 @@ export const submitPick = withAuth(async (req) => {
 
   // --- Security Fix: Prevent Submission for Non-Members ---
   const [membership] = await db`
-    SELECT 1 FROM league_members
-    WHERE league_id = ${data.leagueId} AND user_id = ${req.user.id}
+    SELECT 1 FROM league_members 
+    WHERE league_id = ${data.leagueId} 
+    AND user_id = ${req.user.id} 
     LIMIT 1
   `;
 
@@ -140,7 +146,9 @@ export const submitPick = withAuth(async (req) => {
 
   // Fetch the race to check deadlines
   const [race] = await db<RaceRow[]>`
-    SELECT * FROM races WHERE id = ${data.raceId} LIMIT 1
+    SELECT * FROM races 
+    WHERE id = ${data.raceId} 
+    LIMIT 1
   `;
 
   if (!race) {
@@ -150,7 +158,9 @@ export const submitPick = withAuth(async (req) => {
   // Fetch existing pick to support "Smart Enforcement" (only block if locked field is CHANGED)
   const [existingPick] = await db<PickRow[]>`
     SELECT * FROM picks 
-    WHERE user_id = ${req.user.id} AND race_id = ${data.raceId} AND league_id = ${data.leagueId}
+    WHERE user_id = ${req.user.id} 
+    AND race_id = ${data.raceId} 
+    AND league_id = ${data.leagueId} 
     LIMIT 1
   `;
 
@@ -211,17 +221,21 @@ export const submitPick = withAuth(async (req) => {
       race_qualifying_p1, race_p1, race_p2, race_p3,
       fastest_lap, first_dnf
     ) VALUES (
-      ${req.user.id}, ${data.raceId}, ${data.leagueId}, 0, NOW(),
-      ${sel.sprintQualifyingP1 ?? (existingPick?.sprint_qualifying_p1 || null)}, 
+      ${req.user.id}, 
+      ${data.raceId}, 
+      ${data.leagueId}, 
+      0, 
+      NOW(),
+      ${sel.sprintQualifyingP1 ?? (existingPick?.sprint_qualifying_p1 || null)},
       ${sel.sprintP1 ?? (existingPick?.sprint_p1 || null)},
-      ${sel.sprintP2 ?? (existingPick?.sprint_p2 || null)}, 
-      ${sel.sprintP3 ?? (existingPick?.sprint_p3 || null)}, 
+      ${sel.sprintP2 ?? (existingPick?.sprint_p2 || null)},
+      ${sel.sprintP3 ?? (existingPick?.sprint_p3 || null)},
       ${sel.sprintFastestLap ?? (existingPick?.sprint_fastest_lap || null)},
-      ${sel.raceQualifyingP1 ?? (existingPick?.race_qualifying_p1 || null)}, 
+      ${sel.raceQualifyingP1 ?? (existingPick?.race_qualifying_p1 || null)},
       ${sel.raceP1 ?? (existingPick?.race_p1 || null)},
-      ${sel.raceP2 ?? (existingPick?.race_p2 || null)}, 
+      ${sel.raceP2 ?? (existingPick?.race_p2 || null)},
       ${sel.raceP3 ?? (existingPick?.race_p3 || null)},
-      ${sel.fastestLap ?? (existingPick?.fastest_lap || null)}, 
+      ${sel.fastestLap ?? (existingPick?.fastest_lap || null)},
       ${sel.firstDnf ?? (existingPick?.first_dnf || null)}
     )
     ON CONFLICT (user_id, race_id, league_id) DO UPDATE SET
@@ -258,7 +272,9 @@ export async function broadcastPickSystemMessage(
 ): Promise<void> {
   try {
     const [userRow] = await db`
-      SELECT display_name, contact FROM users WHERE id = ${userId} LIMIT 1
+      SELECT display_name, contact FROM users 
+      WHERE id = ${userId} 
+      LIMIT 1
     `;
     const displayName = (userRow as any)?.display_name || (userRow as any)?.contact || "Someone";
 

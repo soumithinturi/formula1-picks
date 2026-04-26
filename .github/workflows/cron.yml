@@ -1,0 +1,82 @@
+name: F1 Cron Jobs
+
+# Each schedule only triggers the job that matches it via the `if` condition.
+# GitHub Actions doesn't reliably support sub-minute intervals — */5 is the
+# practical minimum. A 5-minute window on push notifications is acceptable.
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # Notifications  — every 5 minutes
+    - cron: "0 */6 * * *"  # Results        — every 6 hours
+    - cron: "0 0 * * *"    # Schedule sync  — daily at 00:00 UTC
+    - cron: "0 1 * * *"    # Standings sync — daily at 01:00 UTC
+
+  # Allow manual triggering from the GitHub Actions UI for any job
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which job to run manually"
+        required: true
+        type: choice
+        options:
+          - notifications
+          - results
+          - schedule
+          - standings
+
+jobs:
+  # ── Push Notifications ────────────────────────────────────────────────────
+  notifications:
+    name: Push Notifications Check
+    # Run on its own schedule OR when triggered manually
+    if: |
+      github.event.schedule == '*/5 * * * *' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'notifications')
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/v1/internal/cron/notifications
+        run: |
+          curl -s -f -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/notifications" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
+
+  # ── Race Results + Scoring ────────────────────────────────────────────────
+  results:
+    name: Poll Race Results & Score
+    if: |
+      github.event.schedule == '0 */6 * * *' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'results')
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/v1/internal/cron/results
+        run: |
+          curl -s -f -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/results" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
+
+  # ── Season Schedule Sync ──────────────────────────────────────────────────
+  schedule-sync:
+    name: Sync Season Schedule
+    if: |
+      github.event.schedule == '0 0 * * *' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'schedule')
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/v1/internal/cron/schedule
+        run: |
+          curl -s -f -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/schedule" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
+
+  # ── Driver Standings Sync ─────────────────────────────────────────────────
+  standings:
+    name: Sync Driver Standings
+    if: |
+      github.event.schedule == '0 1 * * *' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'standings')
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/v1/internal/cron/standings
+        run: |
+          curl -s -f -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/standings" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"

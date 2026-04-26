@@ -10,18 +10,14 @@ import { submitFeedback } from "./routes/feedback.ts";
 import { listNotifications, markAllRead, subscribePush, unsubscribePush, getNotificationSettings, updateNotificationSettings } from "./routes/notifications.ts";
 import { getChatMessages, sendChatMessage } from "./routes/chat.ts";
 import { seedDatabase } from "./services/seed.ts";
-import { startCronJobs } from "./services/cron.ts";
 import { withAuth } from "./middleware/auth.ts";
 import { logger } from "./services/logger.ts";
+import { cronSchedule, cronStandings, cronResults, cronNotifications } from "./routes/cron.ts";
 
 const PORT = parseInt(process.env.PORT ?? "8080");
 
 // Seed races and drivers on startup (no-op if data already exists)
 seedDatabase()
-  .then(() => {
-    // Start cron jobs after successful seed check
-    startCronJobs();
-  })
   .catch((err) => {
     logger.error({ err }, "Database seeding failed");
   });
@@ -203,6 +199,13 @@ const server = Bun.serve({
       POST: withCors(testNotification),
       OPTIONS: handleOptions,
     },
+    // ─── Internal Cron Webhooks (External Cron Services) ───────────────────
+    // Protected by x-cron-secret header. Never call these from the browser.
+    "/api/v1/internal/cron/schedule": { POST: cronSchedule },
+    "/api/v1/internal/cron/standings": { POST: cronStandings },
+    "/api/v1/internal/cron/results": { POST: cronResults },
+    "/api/v1/internal/cron/notifications": { POST: cronNotifications },
+
   },
 
   // Global error handler

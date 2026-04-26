@@ -1,4 +1,3 @@
-import cron from "node-cron";
 import { db } from "../db/index.ts";
 import { logger } from "./logger.ts";
 import type { RaceRow, PickRow, LeagueRow, ScoringConfig, PickSelections } from "../types/index.ts";
@@ -8,43 +7,17 @@ import { sendPushNotification } from "./pushService.ts";
 
 const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
 
-/**
- * Start all recurring cron jobs.
- * This should be called from index.ts when the server boots.
- */
-export function startCronJobs() {
-  logger.info("⏰ Initializing CRON jobs...");
 
-  // 1. Result Polling: Every 6 hours
-  // This covers Qualifying, Sprints, and Race results.
-  cron.schedule("0 */6 * * *", async () => {
-    logger.info({ job: "resultsPolling" }, "⏰ Running 6-hourly Cron: Polling for session results...");
-    await fetchQualifyingResults();
-    await fetchRaceResults();
-  });
-
-  // 2. Schedule Sync: Every day at 00:00 UTC
-  cron.schedule("0 0 * * *", async () => {
-    logger.info({ job: "scheduleSync" }, "⏰ Running Daily Cron: Syncing season schedule...");
-    await fetchAndUpdateSchedule();
-  });
-
-  // 3. Standings Sync: Every day at 01:00 UTC
-  cron.schedule("0 1 * * *", async () => {
-    logger.info({ job: "standingsSync" }, "⏰ Running Daily Cron: Syncing driver standings...");
-    await fetchAndUpdateDriverStandings();
-  });
-
-  // Run every minute to check for upcoming sessions and trigger PWA notifications
-  cron.schedule("* * * * *", async () => {
-    await checkUpcomingSessionsForNotifications();
-  });
-}
 
 /**
  * Checks upcoming sessions and users' notification cadences to send push notifications.
  */
-async function checkUpcomingSessionsForNotifications() {
+/**
+ * Checks upcoming sessions and users' notification cadences to send push notifications.
+ * Invoked via webhook (POST /api/v1/internal/cron/notifications) every minute.
+ * Exported so the route layer can call it directly without re-importing.
+ */
+export async function checkUpcomingSessionsForNotifications() {
   try {
     const upcomingRaces = await db<RaceRow[]>`
       SELECT * FROM races 
@@ -75,16 +48,30 @@ async function checkUpcomingSessionsForNotifications() {
       // We only care if it's within a timeframe users might have set
       if (diffMinutes < 0 || diffMinutes > 24 * 60) continue;
 
-      // Find users whose notification cadence matches this exact minute (with a small buffer in case of cron delay)
-      // Since this runs every minute, we check if diffMinutes matches their cadence.
-      
-      const subscriptions = await db`
-        SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${db(session.column)} as cadence
+      // NOTE: We validate the column name against an allowlist and use a raw
+      // query string for the identifier, as tagged templates don't support
+      // dynamic identifiers (columns/tables).
+      const ALLOWED_CADENCE_COLUMNS = new Set([
+        "notify_sprint_quali_cadence",
+        "notify_sprint_cadence",
+        "notify_race_quali_cadence",
+        "notify_race_cadence",
+      ]);
+      if (!ALLOWED_CADENCE_COLUMNS.has(session.column)) {
+        logger.warn({ job: "notifications", column: session.column }, "Invalid cadence column name, skipping.");
+        continue;
+      }
+
+      // We use a raw string for the column name (which is allowlisted)
+      // and let the tagged template handle the value parameter.
+      const query = `
+        SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${session.column} as cadence
         FROM user_notification_settings uns
         JOIN user_push_subscriptions ups ON uns.user_id = ups.user_id
-        WHERE uns.${db(session.column)} IS NOT NULL
-          AND uns.${db(session.column)} = ${diffMinutes}
+        WHERE uns.${session.column} IS NOT NULL
+          AND uns.${session.column} = \${diffMinutes}
       `;
+      const subscriptions = await db(query);
 
       if (subscriptions.length > 0) {
         logger.info({
@@ -99,7 +86,7 @@ async function checkUpcomingSessionsForNotifications() {
           url: "/"
         };
 
-        const promises = subscriptions.map((sub: any) => 
+        const promises = subscriptions.map((sub: any) =>
           sendPushNotification(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             payload
@@ -337,7 +324,7 @@ export async function fetchRaceResults() {
     );
 
     logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
-    
+
     // 5. Update Driver Standings
     await fetchAndUpdateDriverStandings();
 
