@@ -389,7 +389,9 @@ export async function fetchAndUpdateSchedule() {
         ? r.ThirdPractice.date + (r.ThirdPractice.time ? `T${r.ThirdPractice.time}` : "T00:00:00Z")
         : null;
 
-      const sprint_deadline = sprint_quali_date;
+      // sprint_deadline = when the sprint RACE starts (locks sprint podium picks).
+      // sprint_quali_date separately locks sprint pole position picks.
+      const sprint_deadline = sprint_date;
       const race_deadline = date;
 
       await db`
