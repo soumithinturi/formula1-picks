@@ -146,7 +146,10 @@ export async function fetchQualifyingResults() {
       }
     }
 
-    // 2. Sprint — round-specific endpoint for same pagination reason
+    // 2. Sprint Race — round-specific endpoint for same pagination reason.
+    // NOTE: The Jolpi/Ergast API has no sprint qualifying endpoint, so
+    // sprint_qualifying_p1 (pole position) must be entered manually via admin.
+    // We deliberately omit it here to avoid clobbering admin-entered values.
     if (race.has_sprint) {
       const sprintRes = await fetch(`${JOLPI_API_BASE}/${round}/sprint.json`);
       if (sprintRes.ok) {
@@ -158,15 +161,13 @@ export async function fetchQualifyingResults() {
 
           // Find fastest lap in sprint if available
           let fastestLap = null;
-          // Note: Ergast sprint data format for fastest lap can vary, checking rank 1
           const flResult = results.find((r: any) => r.FastestLap?.rank === "1");
           if (flResult) fastestLap = flResult.Driver.driverId;
 
           await db`
-            INSERT INTO race_results (race_id, sprint_qualifying_p1, sprint_p1, sprint_p2, sprint_p3, sprint_fastest_lap)
+            INSERT INTO race_results (race_id, sprint_p1, sprint_p2, sprint_p3, sprint_fastest_lap)
             VALUES (
-              ${race.id}, 
-              ${results[0].Driver.driverId}, -- Placeholder for sprint pole if not distinct
+              ${race.id},
               ${results[0].Driver.driverId},
               ${results[1]?.Driver.driverId || null},
               ${results[2]?.Driver.driverId || null},
@@ -176,8 +177,8 @@ export async function fetchQualifyingResults() {
               sprint_p1 = EXCLUDED.sprint_p1,
               sprint_p2 = EXCLUDED.sprint_p2,
               sprint_p3 = EXCLUDED.sprint_p3,
-              sprint_fastest_lap = EXCLUDED.sprint_fastest_lap,
-              sprint_qualifying_p1 = EXCLUDED.sprint_qualifying_p1
+              sprint_fastest_lap = EXCLUDED.sprint_fastest_lap
+            -- sprint_qualifying_p1 is intentionally excluded: must be set manually via admin
           `;
         }
       }
