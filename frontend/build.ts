@@ -152,6 +152,20 @@ if (existsSync(envFile)) {
   });
 }
 
+// Also inject environment variables from the system process.env (useful for Cloudflare CI/CD builds)
+Object.keys(process.env).forEach(key => {
+  if (key.startsWith("BUN_PUBLIC_")) {
+    const value = process.env[key];
+    if (value !== undefined) {
+      const stringifiedValue = JSON.stringify(value);
+      define[`process.env.${key}`] = stringifiedValue;
+      define[`globalThis.process.env.${key}`] = stringifiedValue;
+      define[`import.meta.env.${key}`] = stringifiedValue;
+      console.log(`🔹 Injected from system env: ${key}`);
+    }
+  }
+});
+
 const result = await Bun.build({
   entrypoints,
   outdir,
