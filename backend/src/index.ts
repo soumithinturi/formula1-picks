@@ -24,17 +24,9 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 // ─── Health Check ────────────────────────────────────────────────────────────
 app.get("/", (c) => c.json({ status: "ok", service: "f1-picks-api" }));
 
-// ─── Middleware: Inject DB, Supabase, and env into every request ────────────
-app.use("*", async (c, next) => {
-  const db = getDb(c.env.HYPERDRIVE.connectionString);
-  const supabase = createSupabaseClient(c.env.SUPABASE_URL, c.env.SUPABASE_SECRET_KEY);
-  c.set("db", db);
-  c.set("supabase", supabase);
-  c.set("env", c.env);
-  await next();
-});
-
-// ─── CORS ───────────────────────────────────────────────────────────────────
+// ─── CORS — must run first so headers are present on ALL responses ───────────
+// If DB injection or any downstream middleware throws, the browser still gets
+// Access-Control-Allow-Origin and won't surface a misleading CORS error.
 const PROD_ORIGIN = "https://formula1-picks.sintur-labs.workers.dev";
 
 app.use("*", cors({
@@ -47,8 +39,8 @@ app.use("*", cors({
       }
     }
     if (origin === PROD_ORIGIN) return origin;
-    // Support Cloudflare Pages preview URLs
-    if (isProd && origin?.endsWith(".sintur-labs.workers.dev")) return origin;
+    // Support any *.sintur-labs.workers.dev preview/staging origin
+    if (origin?.endsWith(".sintur-labs.workers.dev")) return origin;
     // Echo bad origin so the browser blocks it cleanly
     return origin ?? PROD_ORIGIN;
   },
@@ -56,6 +48,16 @@ app.use("*", cors({
   allowHeaders: ["Content-Type", "Authorization", "x-client-info", "apikey"],
   credentials: true,
 }));
+
+// ─── Middleware: Inject DB, Supabase, and env into every request ────────────
+app.use("*", async (c, next) => {
+  const db = getDb(c.env.HYPERDRIVE.connectionString);
+  const supabase = createSupabaseClient(c.env.SUPABASE_URL, c.env.SUPABASE_SECRET_KEY);
+  c.set("db", db);
+  c.set("supabase", supabase);
+  c.set("env", c.env);
+  await next();
+});
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 app.post("/api/v1/auth/request", requestOtp);
