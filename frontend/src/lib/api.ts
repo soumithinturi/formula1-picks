@@ -1,25 +1,24 @@
 import { auth } from "./auth";
 
 const getApiUrl = () => {
-  // If in browser, detect environment by hostname for seamless dev/staging/prod experience
+  const url = process.env.BUN_PUBLIC_API_URL || import.meta.env?.BUN_PUBLIC_API_URL;
+
+  if (url && url !== "undefined") {
+    // Normalise: ensure the base URL ends with /api/v1
+    return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
+  }
+
+  // Fallback for local dev with no env file
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return "http://localhost:8080/api/v1";
-    }
-    if (hostname.includes("-staging")) {
-      return "https://formula1-picks-staging.up.railway.app/api/v1";
-    }
-    if (hostname.includes("formula1-picks")) {
-      return "https://formula1-picks-production.up.railway.app/api/v1";
+      return "http://localhost:8787/api/v1";
     }
   }
 
-  const url = process.env.BUN_PUBLIC_API_URL || import.meta.env?.BUN_PUBLIC_API_URL;
-  if (!url || url === "undefined") {
-    return "https://formula1-picks-production.up.railway.app/api/v1";
-  }
-  return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
+  // Should never reach here in a properly configured environment
+  console.warn("BUN_PUBLIC_API_URL is not set — API calls will fail.");
+  return "/api/v1";
 };
 
 const BASE_URL = getApiUrl();

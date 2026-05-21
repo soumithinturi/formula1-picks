@@ -167,23 +167,12 @@ export const auth = {
       import('./realtime').then(({ resetSupabase }) => resetSupabase()).catch(() => { });
 
       // Fire-and-forget call to backend to clear HttpOnly cookie
-      const url = process.env.BUN_PUBLIC_API_URL || import.meta.env?.BUN_PUBLIC_API_URL;
-      let BASE_URL = url && url !== "undefined" ? url : "https://formula1-picks-production.up.railway.app/api/v1";
+      const rawUrl = process.env.BUN_PUBLIC_API_URL || import.meta.env?.BUN_PUBLIC_API_URL;
+      let BASE_URL = rawUrl && rawUrl !== "undefined"
+        ? (rawUrl.endsWith("/api/v1") ? rawUrl : `${rawUrl}/api/v1`)
+        : "http://localhost:8787/api/v1";
 
-      if (typeof window !== "undefined") {
-        const hostname = window.location.hostname;
-        if (hostname === "localhost" || hostname === "127.0.0.1") {
-          BASE_URL = "http://localhost:8080/api/v1";
-        } else if (hostname.includes("-staging")) {
-          BASE_URL = "https://formula1-picks-staging.up.railway.app/api/v1";
-        } else if (hostname.includes("formula1-picks")) {
-          BASE_URL = "https://formula1-picks-production.up.railway.app/api/v1";
-        }
-      }
-
-      const apiEndpoint = BASE_URL.endsWith("/api/v1") ? `${BASE_URL}/auth/logout` : `${BASE_URL}/api/v1/auth/logout`;
-
-      fetch(apiEndpoint, {
+      fetch(`${BASE_URL}/auth/logout`, {
         method: "POST",
         credentials: "include"
       }).catch(console.error);
