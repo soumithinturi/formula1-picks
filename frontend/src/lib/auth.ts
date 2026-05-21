@@ -167,12 +167,12 @@ export const auth = {
       import('./realtime').then(({ resetSupabase }) => resetSupabase()).catch(() => { });
 
       // Fire-and-forget call to backend to clear HttpOnly cookie
-      const rawUrl = process.env.BUN_PUBLIC_API_URL || import.meta.env?.BUN_PUBLIC_API_URL;
-      let BASE_URL = rawUrl && rawUrl !== "undefined"
-        ? (rawUrl.endsWith("/api/v1") ? rawUrl : `${rawUrl}/api/v1`)
-        : "http://localhost:8787/api/v1";
+      const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      const API_BASE = isLocal
+        ? "http://localhost:8787/api/v1"
+        : "https://f1-picks-api.sintur-labs.workers.dev/api/v1";
 
-      fetch(`${BASE_URL}/auth/logout`, {
+      fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
         credentials: "include"
       }).catch(console.error);

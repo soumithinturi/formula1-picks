@@ -1,24 +1,15 @@
 import { auth } from "./auth";
 
-const getApiUrl = () => {
-  const url = process.env.BUN_PUBLIC_API_URL || import.meta.env?.BUN_PUBLIC_API_URL;
-
-  if (url && url !== "undefined") {
-    // Normalise: ensure the base URL ends with /api/v1
-    return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
-  }
-
-  // Fallback for local dev with no env file
+const getApiUrl = (): string => {
+  // In production, always point at the backend Worker.
+  // In local dev (no env var set), fall back to the local wrangler dev server.
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     if (hostname === "localhost" || hostname === "127.0.0.1") {
       return "http://localhost:8787/api/v1";
     }
   }
-
-  // Should never reach here in a properly configured environment
-  console.warn("BUN_PUBLIC_API_URL is not set — API calls will fail.");
-  return "/api/v1";
+  return "https://f1-picks-api.sintur-labs.workers.dev/api/v1";
 };
 
 const BASE_URL = getApiUrl();
