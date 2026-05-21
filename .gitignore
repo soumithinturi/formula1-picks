@@ -16,7 +16,8 @@
 .env.local
 .env.development
 .env.test
-.env.production
+# .env.production is NOT ignored globally — frontend/.env.production only has
+# BUN_PUBLIC_ public keys and must be committed for Cloudflare builds to work.
 /.nx
 /.nx/cache
 /.vscode/*
