@@ -4,8 +4,11 @@ const TOKEN_KEY = "f1_auth_token";
 const REFRESH_TOKEN_KEY = "f1_refresh_token";
 const USER_KEY = "f1_user";
 
-const SUPABASE_URL = process.env.BUN_PUBLIC_SUPABASE_URL || import.meta.env?.BUN_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY || import.meta.env?.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+// Hardcoded — these are public keys, safe to commit. The process.env/import.meta.env
+// approach breaks in production builds because the bundler replaces process.env with {}
+// before the specific key injections take effect.
+const SUPABASE_URL = "https://hfpfzutyaashzkkykbnx.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_UwKaUfAUmoZEsmDpJVu87Q_mucI5hzb";
 
 export interface UserProfile {
   id: string;

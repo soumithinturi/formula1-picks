@@ -1,8 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { auth } from './auth';
 
-const supabaseUrl = process.env.BUN_PUBLIC_SUPABASE_URL || import.meta.env?.BUN_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY || import.meta.env?.BUN_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+// Hardcoded — public keys, safe to commit. See auth.ts for explanation.
+const supabaseUrl = "https://hfpfzutyaashzkkykbnx.supabase.co";
+const supabaseAnonKey = "sb_publishable_UwKaUfAUmoZEsmDpJVu87Q_mucI5hzb";
 
 let supabaseInstance: SupabaseClient | null = null;
 
