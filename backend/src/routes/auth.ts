@@ -2,7 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 import { parseBody } from "../middleware/auth.ts";
 import { AuthRequestSchema, AuthVerifySchema } from "../types/index.ts";
 import { z } from "zod";
-import { db } from "../db/index.ts";
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
+
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
 // The same preset palette as the frontend profile picker.
 const AVATAR_COLORS = [
@@ -22,9 +25,8 @@ function randomAvatarUrl(): string {
   return JSON.stringify({ helmetColor: AVATAR_COLORS[helmetIndex], bgColor: AVATAR_COLORS[bgIndex] });
 }
 
-function getCookieString(token: string) {
+function getCookieString(token: string, isProd: boolean) {
   // 1 week expiry. Use SameSite=None and Secure for cross-origin in production.
-  const isProd = process.env.NODE_ENV === "production";
   const sameSite = isProd ? "None" : "Lax";
   const secure = isProd ? "Secure" : "";
   const partitioned = isProd ? "Partitioned" : "";
@@ -32,8 +34,7 @@ function getCookieString(token: string) {
   return `f1_auth_token=${token}; HttpOnly; ${secure}; SameSite=${sameSite}; Path=/; Max-Age=${60 * 60 * 24 * 7}; ${partitioned}`.replace(/; ;/g, ";").replace(/; $/g, "");
 }
 
-function getClearCookieString() {
-  const isProd = process.env.NODE_ENV === "production";
+function getClearCookieString(isProd: boolean) {
   const sameSite = isProd ? "None" : "Lax";
   const secure = isProd ? "Secure" : "";
   const partitioned = isProd ? "Partitioned" : "";
@@ -45,11 +46,12 @@ function getClearCookieString() {
  * POST /api/v1/auth/request
  * Sends a magic link (email) or OTP (phone) via Supabase Auth.
  */
-export async function requestOtp(req: Request): Promise<Response> {
-  const { data, error } = await parseBody(req, AuthRequestSchema);
+export async function requestOtp(c: AppContext) {
+  const { data, error } = await parseBody(c, AuthRequestSchema);
   if (error) return error;
 
-  const authClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY!, {
+  const env = c.get("env");
+  const authClient = createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_DEFAULT_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -58,22 +60,22 @@ export async function requestOtp(req: Request): Promise<Response> {
       email: data.contact,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: req.headers.get("origin") || undefined, // Send them back to where they came from
+        emailRedirectTo: c.req.header("origin") || undefined,
       },
     });
     if (supabaseError) {
-      return Response.json({ error: supabaseError.message }, { status: 400 });
+      return c.json({ error: supabaseError.message }, 400);
     }
   } else {
     const { error: supabaseError } = await authClient.auth.signInWithOtp({
       phone: data.contact,
     });
     if (supabaseError) {
-      return Response.json({ error: supabaseError.message }, { status: 400 });
+      return c.json({ error: supabaseError.message }, 400);
     }
   }
 
-  return Response.json({ message: "Code sent" });
+  return c.json({ message: "Code sent" });
 }
 
 /**
@@ -81,11 +83,12 @@ export async function requestOtp(req: Request): Promise<Response> {
  * Verifies the OTP code and returns a JWT session token.
  * Auto-creates the user profile in our `users` table on first login.
  */
-export async function verifyOtp(req: Request): Promise<Response> {
-  const { data, error } = await parseBody(req, AuthVerifySchema);
+export async function verifyOtp(c: AppContext) {
+  const { data, error } = await parseBody(c, AuthVerifySchema);
   if (error) return error;
 
-  const authClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY!, {
+  const env = c.get("env");
+  const authClient = createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_DEFAULT_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -113,16 +116,16 @@ export async function verifyOtp(req: Request): Promise<Response> {
   });
 
   if (supabaseError || !sessionData.session || !sessionData.user) {
-    return Response.json(
+    return c.json(
       { error: supabaseError?.message ?? "Invalid or expired code" },
-      { status: 401 }
+      401
     );
   }
 
   const { user: supabaseUser, session } = sessionData;
 
   // Upsert user profile in our own users table.
-  // On first login this creates the row with a random avatar; on subsequent logins it's a no-op.
+  const db = c.get("db");
   const newAvatarUrl = randomAvatarUrl();
   await db`
     INSERT INTO users (id, contact, role, avatar_url, created_at)
@@ -141,14 +144,13 @@ export async function verifyOtp(req: Request): Promise<Response> {
     SELECT id, contact, display_name, full_name, avatar_url, role, preferences FROM users WHERE id = ${supabaseUser.id}
   `;
 
-  return Response.json({
+  const isProd = env.NODE_ENV === "production";
+  return c.json({
     token: session.access_token,
     refresh_token: session.refresh_token,
     user: userProfile,
-  }, {
-    headers: {
-      "Set-Cookie": getCookieString(session.access_token)
-    }
+  }, 200, {
+    "Set-Cookie": getCookieString(session.access_token, isProd)
   });
 }
 
@@ -157,24 +159,23 @@ export async function verifyOtp(req: Request): Promise<Response> {
  * Takes an access_token from a Magic Link redirect,
  * creates the user profile if it doesn't exist, and returns it.
  */
-export async function syncAuth(req: Request): Promise<Response> {
-  const { data, error } = await parseBody(req, z.object({ access_token: z.string() }));
+export async function syncAuth(c: AppContext) {
+  const { data, error } = await parseBody(c, z.object({ access_token: z.string() }));
   if (error) return error;
 
-  const authClient = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY!, {
+  const env = c.get("env");
+  const authClient = createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_DEFAULT_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // Ask Supabase to verify the token and return the user
   const { data: { user }, error: authError } = await authClient.auth.getUser(data.access_token);
 
   if (authError || !user) {
-    return Response.json({ error: "Invalid access token" }, { status: 401 });
+    return c.json({ error: "Invalid access token" }, 401);
   }
 
   const contact = user.email || user.phone || "";
-
-  // Upsert user profile with a random avatar on first creation.
+  const db = c.get("db");
   const newAvatarUrl = randomAvatarUrl();
   await db`
     INSERT INTO users (id, contact, role, avatar_url, created_at)
@@ -185,14 +186,14 @@ export async function syncAuth(req: Request): Promise<Response> {
   const [userProfile] = await db`
     SELECT id, contact, display_name, full_name, avatar_url, role, preferences FROM users WHERE id = ${user.id}
   `;
-  return Response.json({
+
+  const isProd = env.NODE_ENV === "production";
+  return c.json({
     user: userProfile,
     token: data.access_token,
-    refresh_token: undefined, // syncAuth doesn't have a refresh_token easily accessible
-  }, {
-    headers: {
-      "Set-Cookie": getCookieString(data.access_token)
-    }
+    refresh_token: undefined,
+  }, 200, {
+    "Set-Cookie": getCookieString(data.access_token, isProd)
   });
 }
 
@@ -200,10 +201,9 @@ export async function syncAuth(req: Request): Promise<Response> {
  * POST /api/v1/auth/logout
  * Clears the HttpOnly cookie.
  */
-export async function logoutUser(_req: Request): Promise<Response> {
-  return Response.json({ message: "Logged out" }, {
-    headers: {
-      "Set-Cookie": getClearCookieString()
-    }
+export async function logoutUser(c: AppContext) {
+  const isProd = c.get("env").NODE_ENV === "production";
+  return c.json({ message: "Logged out" }, 200, {
+    "Set-Cookie": getClearCookieString(isProd)
   });
 }

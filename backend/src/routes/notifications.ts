@@ -1,58 +1,68 @@
-import { db } from "../db/index.ts";
-import { withAuth } from "../middleware/auth.ts";
-import type { AuthedRequest } from "../middleware/auth.ts";
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
+
 import type { NotificationRow } from "../types/index.ts";
+
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
 /**
  * GET /api/v1/notifications
  * Returns the authenticated user's 30 most recent notifications
  * plus a total unread count.
  */
-export const listNotifications = withAuth(async (req: AuthedRequest) => {
+export async function listNotifications(c: AppContext) {
+  const db = c.get("db");
+  const userId = c.get("user").id;
+
   const notifications = await db<NotificationRow[]>`
     SELECT id, type, title, body, metadata, is_read, created_at
     FROM notifications
-    WHERE user_id = ${req.user.id}
+    WHERE user_id = ${userId}
     ORDER BY created_at DESC
     LIMIT 30
   `;
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  return Response.json({ notifications, unreadCount });
-});
+  return c.json({ notifications, unreadCount });
+}
 
 /**
  * PUT /api/v1/notifications/read
  * Marks all of the authenticated user's notifications as read.
  */
-export const markAllRead = withAuth(async (req: AuthedRequest) => {
+export async function markAllRead(c: AppContext) {
+  const db = c.get("db");
+  const userId = c.get("user").id;
+
   const result = await db`
     UPDATE notifications
     SET is_read = true
-    WHERE user_id = ${req.user.id} AND is_read = false
+    WHERE user_id = ${userId} AND is_read = false
     RETURNING id
   `;
 
-  return Response.json({ updated: result.length });
-});
+  return c.json({ updated: result.length });
+}
 
 /**
  * POST /api/v1/notifications/subscribe
  * Saves a user's web PushSubscription
  */
-export const subscribePush = withAuth(async (req: AuthedRequest) => {
-  const subscription = await req.json() as any;
+export async function subscribePush(c: AppContext) {
+  const db = c.get("db");
+  const userId = c.get("user").id;
+
+  const subscription = await c.req.json() as any;
 
   if (!subscription || !subscription.endpoint) {
-    return Response.json({ error: "Invalid subscription payload" }, { status: 400 });
+    return c.json({ error: "Invalid subscription payload" }, 400);
   }
 
-  // Insert or update subscription
   await db`
     INSERT INTO user_push_subscriptions (user_id, endpoint, p256dh, auth)
     VALUES (
-      ${req.user.id}, 
+      ${userId}, 
       ${subscription.endpoint}, 
       ${subscription.keys.p256dh}, 
       ${subscription.keys.auth}
@@ -61,43 +71,48 @@ export const subscribePush = withAuth(async (req: AuthedRequest) => {
     SET user_id = EXCLUDED.user_id, updated_at = now()
   `;
 
-  return Response.json({ success: true });
-});
+  return c.json({ success: true });
+}
 
 /**
  * DELETE /api/v1/notifications/unsubscribe
  */
-export const unsubscribePush = withAuth(async (req: AuthedRequest) => {
-  const body = await req.json() as { endpoint: string };
+export async function unsubscribePush(c: AppContext) {
+  const db = c.get("db");
+  const userId = c.get("user").id;
+
+  const body = await c.req.json() as { endpoint: string };
   const { endpoint } = body;
 
   if (!endpoint) {
-    return Response.json({ error: "Missing endpoint" }, { status: 400 });
+    return c.json({ error: "Missing endpoint" }, 400);
   }
 
   await db`
     DELETE FROM user_push_subscriptions
-    WHERE user_id = ${req.user.id} AND endpoint = ${endpoint}
+    WHERE user_id = ${userId} AND endpoint = ${endpoint}
   `;
 
-  return Response.json({ success: true });
-});
+  return c.json({ success: true });
+}
 
 /**
  * GET /api/v1/notifications/settings
  * Fetch notification settings for user
  */
-export const getNotificationSettings = withAuth(async (req: AuthedRequest) => {
+export async function getNotificationSettings(c: AppContext) {
+  const db = c.get("db");
+  const userId = c.get("user").id;
+
   const settingsList = await db`
     SELECT notify_league_joins, notify_sprint_quali_cadence, 
            notify_sprint_cadence, notify_race_quali_cadence, notify_race_cadence
     FROM user_notification_settings
-    WHERE user_id = ${req.user.id}
+    WHERE user_id = ${userId}
   `;
 
   if (settingsList.length === 0) {
-    // Default settings
-    return Response.json({
+    return c.json({
       notify_league_joins: true,
       notify_sprint_quali_cadence: null,
       notify_sprint_cadence: null,
@@ -106,15 +121,18 @@ export const getNotificationSettings = withAuth(async (req: AuthedRequest) => {
     });
   }
 
-  return Response.json(settingsList[0]);
-});
+  return c.json(settingsList[0]);
+}
 
 /**
  * PUT /api/v1/notifications/settings
  * Update notification settings for user
  */
-export const updateNotificationSettings = withAuth(async (req: AuthedRequest) => {
-  const settings = await req.json() as any;
+export async function updateNotificationSettings(c: AppContext) {
+  const db = c.get("db");
+  const userId = c.get("user").id;
+
+  const settings = await c.req.json() as any;
 
   await db`
     INSERT INTO user_notification_settings (
@@ -126,7 +144,7 @@ export const updateNotificationSettings = withAuth(async (req: AuthedRequest) =>
       notify_race_cadence
     )
     VALUES (
-      ${req.user.id}, 
+      ${userId}, 
       ${settings.notify_league_joins ?? true}, 
       ${settings.notify_sprint_quali_cadence ?? null}, 
       ${settings.notify_sprint_cadence ?? null}, 
@@ -143,5 +161,5 @@ export const updateNotificationSettings = withAuth(async (req: AuthedRequest) =>
       updated_at = now()
   `;
 
-  return Response.json({ success: true });
-});
+  return c.json({ success: true });
+}

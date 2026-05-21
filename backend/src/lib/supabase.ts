@@ -1,19 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SECRET_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error(
-    "SUPABASE_URL and SUPABASE_SECRET_KEY environment variables are required"
-  );
+/**
+ * Creates a Supabase service-role client.
+ * 
+ * Factory function — Workers don't have a persistent boot lifecycle,
+ * so we create the client from env bindings passed via Hono context.
+ * Bypasses RLS for admin operations (sending OTPs, verifying tokens).
+ */
+export function createSupabaseClient(supabaseUrl: string, supabaseKey: string) {
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
-
-// Service role client — used server-side only (never exposed to the client).
-// Bypasses RLS for admin operations like sending OTPs and verifying tokens.
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});

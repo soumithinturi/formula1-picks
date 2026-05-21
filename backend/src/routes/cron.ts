@@ -1,3 +1,6 @@
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
+import type { Sql } from "../db/index.ts";
 import {
   fetchAndUpdateSchedule,
   fetchAndUpdateDriverStandings,
@@ -7,27 +10,28 @@ import {
 } from "../services/cron.ts";
 import { logger } from "../services/logger.ts";
 
-const CRON_SECRET = process.env.CRON_SECRET;
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
 /**
  * Guards a cron webhook handler with a shared secret header check.
  * External Cron services (like GitHub Actions) include this header in every request.
- * Set CRON_SECRET in the environment variables and in the Cron service configuration.
  */
 function withInternalSecret(
   jobName: string,
-  handler: () => Promise<void>
-): (req: Request) => Promise<Response> {
-  return async (req: Request) => {
+  handler: (db: Sql) => Promise<void>
+) {
+  return async (c: AppContext) => {
+    const env = c.get("env");
+
     // Require the secret in production; allow open access in local dev
-    if (process.env.NODE_ENV === "production") {
-      if (!CRON_SECRET) {
+    if (env.NODE_ENV === "production") {
+      if (!env.CRON_SECRET) {
         logger.error({ job: jobName }, "CRON_SECRET is not set — rejecting cron webhook");
-        return Response.json({ error: "Cron secret not configured" }, { status: 500 });
+        return c.json({ error: "Cron secret not configured" }, 500);
       }
-      if (req.headers.get("x-cron-secret") !== CRON_SECRET) {
+      if (c.req.header("x-cron-secret") !== env.CRON_SECRET) {
         logger.warn({ job: jobName }, "Cron webhook received with invalid secret");
-        return Response.json({ error: "Forbidden" }, { status: 403 });
+        return c.json({ error: "Forbidden" }, 403);
       }
     }
 
@@ -35,13 +39,14 @@ function withInternalSecret(
     const start = Date.now();
 
     try {
-      await handler();
+      const db = c.get("db");
+      await handler(db);
       const elapsed = Date.now() - start;
       logger.info({ job: jobName, elapsed }, `✅ Cron webhook completed: ${jobName} in ${elapsed}ms`);
-      return Response.json({ ok: true, job: jobName, elapsed });
+      return c.json({ ok: true, job: jobName, elapsed });
     } catch (err) {
       logger.error({ err, job: jobName }, `Cron webhook failed: ${jobName}`);
-      return Response.json({ error: "Job failed", job: jobName }, { status: 500 });
+      return c.json({ error: "Job failed", job: jobName }, 500);
     }
   };
 }
@@ -62,9 +67,9 @@ export const cronStandings = withInternalSecret("standings_sync", fetchAndUpdate
  * POST /api/v1/internal/cron/results
  * Polls for qualifying + race results and triggers scoring.
  */
-export const cronResults = withInternalSecret("results_polling", async () => {
-  await fetchQualifyingResults();
-  await fetchRaceResults();
+export const cronResults = withInternalSecret("results_polling", async (db) => {
+  await fetchQualifyingResults(db);
+  await fetchRaceResults(db);
 });
 
 /**

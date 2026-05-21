@@ -1,4 +1,12 @@
-import { requestOtp, verifyOtp, syncAuth } from "./routes/auth.ts";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { getDb } from "./db/index.ts";
+import { createSupabaseClient } from "./lib/supabase.ts";
+import { authMiddleware, adminMiddleware } from "./middleware/auth.ts";
+import type { Bindings, Variables } from "./types/env.ts";
+
+// Route handlers
+import { requestOtp, verifyOtp, syncAuth, logoutUser } from "./routes/auth.ts";
 import { listRaces } from "./routes/races.ts";
 import { listDrivers } from "./routes/drivers.ts";
 import { getPickForRace, submitPick, getUserPickForRace } from "./routes/picks.ts";
@@ -9,219 +17,110 @@ import { updateProfile, getProfile, deleteProfile } from "./routes/users.ts";
 import { submitFeedback } from "./routes/feedback.ts";
 import { listNotifications, markAllRead, subscribePush, unsubscribePush, getNotificationSettings, updateNotificationSettings } from "./routes/notifications.ts";
 import { getChatMessages, sendChatMessage } from "./routes/chat.ts";
-import { seedDatabase } from "./services/seed.ts";
-import { withAuth } from "./middleware/auth.ts";
-import { logger } from "./services/logger.ts";
 import { cronSchedule, cronStandings, cronResults, cronNotifications } from "./routes/cron.ts";
 
-const PORT = parseInt(process.env.PORT ?? "8080");
+const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-// Seed races and drivers on startup (no-op if data already exists)
-seedDatabase()
-  .catch((err) => {
-    logger.error({ err }, "Database seeding failed");
-  });
+// ─── Health Check ────────────────────────────────────────────────────────────
+app.get("/", (c) => c.json({ status: "ok", service: "f1-picks-api" }));
 
-// Setup dynamic CORS to support credentials (cookies)
-const ALLOWED_ORIGINS = process.env.NODE_ENV === "production"
-  ? ["https://formula1-picks.sintur-labs.workers.dev"]
-  : ["http://localhost:3000", "http://127.0.0.1:3000"];
-
-function getCorsHeaders(req: Request) {
-  const origin = req.headers.get("Origin");
-
-  // If no Origin header (e.g. direct API hit, or non-browser request), allow fallback
-  let allowOrigin = ALLOWED_ORIGINS[0];
-  if (origin) {
-    if (ALLOWED_ORIGINS.includes(origin)) {
-      allowOrigin = origin;
-    } else if (process.env.NODE_ENV === "production" && origin.endsWith(".sintur-labs.workers.dev")) {
-      // Support Cloudflare Pages preview URLs
-      allowOrigin = origin;
-    } else {
-      // Echo bad origin so the browser blocks it cleanly
-      allowOrigin = origin;
-    }
-  }
-
-  return {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
-
-const handleOptions = (req: Request) => new Response(null, { status: 204, headers: getCorsHeaders(req) });
-
-const withCors = (handler: (req: Request) => Response | Promise<Response>) =>
-  async (req: Request) => {
-    const res = await handler(req);
-    const headers = getCorsHeaders(req);
-    for (const [key, value] of Object.entries(headers)) {
-      res.headers.set(key, value);
-    }
-    return res;
-  };
-
-import { logoutUser } from "./routes/auth.ts";
-
-const server = Bun.serve({
-  port: PORT,
-  routes: {
-    // ─── Auth ──────────────────────────────────────────────────────────────
-    "/api/v1/auth/request": {
-      POST: withCors(requestOtp),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/auth/verify": {
-      POST: withCors(verifyOtp),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/auth/sync": {
-      POST: withCors(syncAuth),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/auth/logout": {
-      POST: withCors(logoutUser),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Races ─────────────────────────────────────────────────────────────
-    "/api/v1/races": {
-      GET: withCors(listRaces),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Drivers ───────────────────────────────────────────────────────────
-    "/api/v1/drivers": {
-      GET: withCors(listDrivers),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Picks ─────────────────────────────────────────────────────────────
-    "/api/v1/picks/race/:raceId": {
-      GET: withCors(getPickForRace),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/picks/race/:raceId/user/:userId": {
-      GET: withCors(getUserPickForRace),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/picks": {
-      POST: withCors(submitPick),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Leagues ───────────────────────────────────────────────────────────
-    "/api/v1/leagues": {
-      GET: withCors(listLeagues),
-      POST: withCors(createLeague),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/leagues/join": {
-      POST: withCors(joinLeague),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/leagues/:id": {
-      PATCH: withCors(updateLeague),
-      DELETE: withCors(deleteLeague),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/leagues/:id/leave": {
-      POST: withCors(leaveLeague),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/leagues/invite/:code": {
-      GET: withCors(previewLeague),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Leaderboard ───────────────────────────────────────────────────────
-    "/api/v1/leaderboard/:leagueId": {
-      GET: withCors(getLeaderboard),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Users ─────────────────────────────────────────────────────────────
-    "/api/v1/users/me": {
-      GET: withCors(withAuth(getProfile)),
-      PUT: withCors(withAuth(updateProfile)),
-      DELETE: withCors(withAuth(deleteProfile)),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Feedback ──────────────────────────────────────────────────────────
-    "/api/v1/feedback": {
-      POST: withCors(withAuth(submitFeedback)),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Notifications ──────────────────────────────────────────────────────
-    "/api/v1/notifications": {
-      GET: withCors(withAuth(listNotifications)),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/notifications/read": {
-      PUT: withCors(withAuth(markAllRead)),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/notifications/subscribe": {
-      POST: withCors(subscribePush),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/notifications/unsubscribe": {
-      DELETE: withCors(unsubscribePush),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/notifications/settings": {
-      GET: withCors(getNotificationSettings),
-      PUT: withCors(updateNotificationSettings),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Chat ──────────────────────────────────────────────────────────────
-    "/api/v1/chat": {
-      POST: withCors(withAuth(sendChatMessage)),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/chat/:leagueId": {
-      GET: withCors(withAuth(getChatMessages)),
-      OPTIONS: handleOptions,
-    },
-
-    // ─── Admin ─────────────────────────────────────────────────────────────
-    "/api/v1/admin/results": {
-      POST: withCors(submitResults),
-      OPTIONS: handleOptions,
-    },
-    "/api/v1/admin/notifications/test": {
-      POST: withCors(testNotification),
-      OPTIONS: handleOptions,
-    },
-    // ─── Internal Cron Webhooks (External Cron Services) ───────────────────
-    // Protected by x-cron-secret header. Never call these from the browser.
-    "/api/v1/internal/cron/schedule": { POST: cronSchedule },
-    "/api/v1/internal/cron/standings": { POST: cronStandings },
-    "/api/v1/internal/cron/results": { POST: cronResults },
-    "/api/v1/internal/cron/notifications": { POST: cronNotifications },
-
-  },
-
-  // Global error handler
-  error(err) {
-    logger.error({ err }, "Unhandled server error");
-    return Response.json(
-      { error: "Internal server error" },
-      {
-        status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": ALLOWED_ORIGINS[0],
-          "Access-Control-Allow-Credentials": "true"
-        }
-      }
-    );
-  },
+// ─── Middleware: Inject DB, Supabase, and env into every request ────────────
+app.use("*", async (c, next) => {
+  const db = getDb(c.env.HYPERDRIVE.connectionString);
+  const supabase = createSupabaseClient(c.env.SUPABASE_URL, c.env.SUPABASE_SECRET_KEY);
+  c.set("db", db);
+  c.set("supabase", supabase);
+  c.set("env", c.env);
+  await next();
 });
 
-logger.info(`🏎️  F1 Picks API v2 running at ${server.url}`);
+// ─── CORS ───────────────────────────────────────────────────────────────────
+const PROD_ORIGIN = "https://formula1-picks.sintur-labs.workers.dev";
+
+app.use("*", cors({
+  origin: (origin, c) => {
+    const isProd = c.env.NODE_ENV === "production";
+    if (!isProd) {
+      // Allow any localhost origin in dev
+      if (origin?.startsWith("http://localhost") || origin?.startsWith("http://127.0.0.1")) {
+        return origin;
+      }
+    }
+    if (origin === PROD_ORIGIN) return origin;
+    // Support Cloudflare Pages preview URLs
+    if (isProd && origin?.endsWith(".sintur-labs.workers.dev")) return origin;
+    // Echo bad origin so the browser blocks it cleanly
+    return origin ?? PROD_ORIGIN;
+  },
+  allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization", "x-client-info", "apikey"],
+  credentials: true,
+}));
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+app.post("/api/v1/auth/request", requestOtp);
+app.post("/api/v1/auth/verify", verifyOtp);
+app.post("/api/v1/auth/sync", syncAuth);
+app.post("/api/v1/auth/logout", logoutUser);
+
+// ─── Races ──────────────────────────────────────────────────────────────────
+app.get("/api/v1/races", authMiddleware, listRaces);
+
+// ─── Drivers ────────────────────────────────────────────────────────────────
+app.get("/api/v1/drivers", authMiddleware, listDrivers);
+
+// ─── Picks ──────────────────────────────────────────────────────────────────
+app.get("/api/v1/picks/race/:raceId", authMiddleware, getPickForRace);
+app.get("/api/v1/picks/race/:raceId/user/:userId", authMiddleware, getUserPickForRace);
+app.post("/api/v1/picks", authMiddleware, submitPick);
+
+// ─── Leagues ────────────────────────────────────────────────────────────────
+app.get("/api/v1/leagues", authMiddleware, listLeagues);
+app.post("/api/v1/leagues", authMiddleware, createLeague);
+app.post("/api/v1/leagues/join", authMiddleware, joinLeague);
+app.get("/api/v1/leagues/invite/:code", previewLeague);
+app.patch("/api/v1/leagues/:id", authMiddleware, updateLeague);
+app.delete("/api/v1/leagues/:id", authMiddleware, deleteLeague);
+app.post("/api/v1/leagues/:id/leave", authMiddleware, leaveLeague);
+
+// ─── Leaderboard ────────────────────────────────────────────────────────────
+app.get("/api/v1/leaderboard/:leagueId", authMiddleware, getLeaderboard);
+
+// ─── Users ──────────────────────────────────────────────────────────────────
+app.get("/api/v1/users/me", authMiddleware, getProfile);
+app.put("/api/v1/users/me", authMiddleware, updateProfile);
+app.delete("/api/v1/users/me", authMiddleware, deleteProfile);
+
+// ─── Feedback ───────────────────────────────────────────────────────────────
+app.post("/api/v1/feedback", authMiddleware, submitFeedback);
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+app.get("/api/v1/notifications", authMiddleware, listNotifications);
+app.put("/api/v1/notifications/read", authMiddleware, markAllRead);
+app.post("/api/v1/notifications/subscribe", authMiddleware, subscribePush);
+app.delete("/api/v1/notifications/unsubscribe", authMiddleware, unsubscribePush);
+app.get("/api/v1/notifications/settings", authMiddleware, getNotificationSettings);
+app.put("/api/v1/notifications/settings", authMiddleware, updateNotificationSettings);
+
+// ─── Chat ───────────────────────────────────────────────────────────────────
+app.post("/api/v1/chat", authMiddleware, sendChatMessage);
+app.get("/api/v1/chat/:leagueId", authMiddleware, getChatMessages);
+
+// ─── Admin ──────────────────────────────────────────────────────────────────
+app.post("/api/v1/admin/results", adminMiddleware, submitResults);
+app.post("/api/v1/admin/notifications/test", adminMiddleware, testNotification);
+
+// ─── Internal Cron Webhooks (GitHub Actions) ────────────────────────────────
+// Protected by x-cron-secret header. Never call these from the browser.
+app.post("/api/v1/internal/cron/schedule", cronSchedule);
+app.post("/api/v1/internal/cron/standings", cronStandings);
+app.post("/api/v1/internal/cron/results", cronResults);
+app.post("/api/v1/internal/cron/notifications", cronNotifications);
+
+// ─── Global Error Handler ───────────────────────────────────────────────────
+app.onError((err, c) => {
+  console.error("Unhandled server error:", err);
+  return c.json({ error: "Internal server error" }, 500);
+});
+
+export default app;

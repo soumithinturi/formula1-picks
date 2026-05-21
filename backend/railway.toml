@@ -1,4 +1,0 @@
-[deploy]
-startCommand = "bun run src/index.ts"
-restartPolicyType = "ON_FAILURE"
-numReplicas = 1

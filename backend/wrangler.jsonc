@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "f1-picks-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Workers Observability — auto-indexes structured JSON console.log output
+  "observability": {
+    "enabled": true,
+  },
+  // Cloudflare Hyperdrive — connection pooling for Supabase Postgres.
+  // Create with: npx wrangler hyperdrive create f1-picks-db --connection-string="<SUPABASE_DIRECT_URL>"
+  // Then paste the ID below.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "3c3e600e1e6f4ba1a7337c2a432facff",
+      // Used by `wrangler dev` only — points directly to Supabase pooler.
+      // Production traffic goes through the real Hyperdrive binding above.
+      "localConnectionString": "postgresql://postgres.hfpfzutyaashzkkykbnx:cutest-lucie-term-claimed@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
+    },
+  ],
+}

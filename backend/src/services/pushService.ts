@@ -1,5 +1,9 @@
 import webpush from "web-push";
-import { db } from "../db/index.ts";
+import type { Sql } from "../db/index.ts";
+
+// TODO: web-push relies on Node.js crypto and is currently broken.
+// Swap to @block65/webcrypto-web-push when fixing push notifications.
+// For now, nodejs_compat flag in wrangler.jsonc keeps it compiling.
 
 // VAPID keys should only be generated only once.
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY!;
@@ -35,7 +39,7 @@ export const sendPushNotification = async (
   return true;
 };
 
-export const notifyLeagueJoin = async (leagueId: string, joinerId: string, joinerName: string) => {
+export const notifyLeagueJoin = async (db: Sql, leagueId: string, joinerId: string, joinerName: string) => {
   try {
     const [league] = await db`SELECT name FROM leagues WHERE id = ${leagueId} LIMIT 1`;
     if (!league) return;

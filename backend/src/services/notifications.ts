@@ -1,10 +1,11 @@
-import { db } from "../db/index.ts";
+import type { Sql } from "../db/index.ts";
 import type { NotificationType } from "../types/index.ts";
 
 /**
  * Insert a single notification for a user.
  */
 export async function createNotification(
+  db: Sql,
   userId: string,
   type: NotificationType,
   title: string,
@@ -22,6 +23,7 @@ export async function createNotification(
  * (across all leagues). Runs inserts in parallel.
  */
 export async function createNotificationsForAllPicksInRace(
+  db: Sql,
   raceId: number,
   type: NotificationType,
   title: string,
@@ -36,6 +38,6 @@ export async function createNotificationsForAllPicksInRace(
   if (rows.length === 0) return;
 
   await Promise.all(
-    rows.map((r) => createNotification(r.user_id, type, title, body, metadata))
+    rows.map((r) => createNotification(db, r.user_id, type, title, body, metadata))
   );
 }

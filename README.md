@@ -3,19 +3,19 @@
 A modern, full-stack web application for Formula 1 fans to make predictions, join leagues, and compete on the leaderboard.
 
 This application is split into two main parts:
-- **Frontend**: A React 19 single-page application (PWA support) built with Bun, Tailwind CSS, Shadcn UI, and Framer Motion. It is deployed via Cloudflare Workers.
-- **Backend**: A REST API built with Bun, TypeScript, and Supabase. It includes scheduled cron jobs for race data sync.
+- **Frontend**: A React 19 single-page application (PWA support) built with Bun, Tailwind CSS, Shadcn UI, and Framer Motion. Deployed on Cloudflare Pages.
+- **Backend**: A REST API built with Hono + TypeScript, running on Cloudflare Workers. Uses Supabase for PostgreSQL and Auth, with cron jobs triggered via GitHub Actions webhooks.
 
 ---
 
 ## 🏎️ Features
 
-- View upcoming races and driver standings.
-- Make predictions for race weekends.
-- Create and join private leagues with friends.
-- Real-time leaderboard updates and scoring.
-- In-app chat within leagues.
-- Push notifications and PWA installability.
+- View upcoming races and driver standings
+- Make predictions for race weekends (qualifying, sprint, and race)
+- Create and join private leagues with friends
+- Real-time leaderboard updates and scoring
+- In-app chat within leagues
+- Push notifications and PWA installability
 
 ---
 
@@ -24,26 +24,27 @@ This application is split into two main parts:
 ### Frontend
 - **Framework**: React 19 + React Router v7
 - **Styling**: Tailwind CSS v4, Radix UI, Framer Motion
-- **Tooling**: Bun for fast builds and dev server
-- **Hosting**: Cloudflare Workers (`wrangler`)
+- **Tooling**: Bun
+- **Hosting**: Cloudflare Pages
 
 ### Backend
-- **Runtime**: Bun
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth (OTP and sessions)
-- **Task Scheduling**: `node-cron` for automated data syncing
+- **Runtime**: Cloudflare Workers (V8 isolates)
+- **Framework**: [Hono](https://hono.dev/)
+- **Database**: Supabase (PostgreSQL) via [Cloudflare Hyperdrive](https://developers.cloudflare.com/hyperdrive/)
+- **Authentication**: Supabase Auth (OTP — email and SMS)
+- **Task Scheduling**: GitHub Actions (cron webhooks → Worker endpoints)
+- **Tooling**: Wrangler
 
 ---
 
 ## 🚀 Getting Started
 
-Follow these instructions to get a local copy of the project up and running.
-
 ### Prerequisites
 
-Ensure you have the following installed on your machine:
-- [Bun](https://bun.sh/) (latest version recommended)
-- A [Supabase](https://supabase.com/) project (for the database and auth)
+- [Bun](https://bun.sh/) (latest)
+- [Node.js](https://nodejs.org/) 18+ (for Wrangler)
+- A [Supabase](https://supabase.com/) project
+- A [Cloudflare](https://dash.cloudflare.com/) account
 
 ### 1. Clone the repository
 
@@ -54,75 +55,125 @@ cd formula1-picks
 
 ### 2. Backend Setup
 
-Navigate to the backend directory and configure the environment:
-
 ```bash
 cd backend
-bun install
+npm install
 ```
 
-**Environment Variables:**
-Create a `.env` file from the provided example:
+**Local environment:**
+
+Create a `.dev.vars` file (Wrangler's local equivalent of secrets):
 
 ```bash
-cp .env.example .env
+cp .dev.vars.example .dev.vars   # if available, otherwise create manually
 ```
-Fill in the `.env` file with your Supabase credentials:
+
 ```env
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-publishable-key
 SUPABASE_SECRET_KEY=your-secret-key
-DATABASE_URL=postgresql://postgres:your-password@db.your-project.supabase.co:5432/postgres
-PORT=8080
+CRON_SECRET=a-random-secret-string
+VAPID_PUBLIC_KEY=your-vapid-public-key
+VAPID_PRIVATE_KEY=your-vapid-private-key
+VAPID_EMAIL=your@email.com
+NODE_ENV=development
 ```
 
-**Run the Backend Server:**
-```bash
-bun dev
+**Configure Wrangler for local Hyperdrive:**
+
+In `wrangler.jsonc`, set `localConnectionString` inside the `hyperdrive` binding to your Supabase direct connection string. Wrangler uses this during `wrangler dev`; production uses the real Hyperdrive binding.
+
+```jsonc
+"hyperdrive": [
+  {
+    "binding": "HYPERDRIVE",
+    "id": "your-hyperdrive-id",
+    "localConnectionString": "postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres"
+  }
+]
 ```
-*The API will start on `http://localhost:8080` and will automatically seed initial race and driver data.*
+
+**Run the local dev server:**
+```bash
+npm run dev
+# API available at http://localhost:8787
+```
 
 ### 3. Frontend Setup
-
-Open a new terminal session and navigate to the frontend directory:
 
 ```bash
 cd frontend
 bun install
 ```
 
-**Environment Variables:**
-Create a `.env.local` file (or configure your `.env.development`):
+Create a `.env.local` file:
 
-```bash
-echo "BUN_PUBLIC_API_URL=http://localhost:8080" > .env.local
+```env
+BUN_PUBLIC_API_URL=http://localhost:8787
 ```
 
-**Run the Frontend Development Server:**
+**Run the frontend dev server:**
 ```bash
 bun dev
+# App available at http://localhost:3000
 ```
-*The application will be accessible at `http://localhost:3000` (or the port defined by Bun).*
 
 ---
 
 ## 📦 Deployment
 
-### Backend
-The backend is configured to be deployed via platforms like Railway or Render, utilizing the `railway.toml` and `railpack.json` files for zero-config deployments. Ensure environment variables (`SUPABASE_URL`, etc.) are securely added to your hosting provider.
+### Backend (Cloudflare Workers)
 
-### Frontend
-The frontend is deployed to Cloudflare Workers using Wrangler.
+#### First-time setup
 
-1. Ensure you are authenticated with Cloudflare:
+1. **Create a Hyperdrive config** pointing at your Supabase direct connection (port 5432):
+   ```bash
+   npx wrangler hyperdrive create f1-picks-db \
+     --connection-string="postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres"
+   ```
+   Paste the output ID into `wrangler.jsonc`.
+
+2. **Upload all secrets** to the Worker:
+   ```bash
+   npx wrangler secret put SUPABASE_URL
+   npx wrangler secret put SUPABASE_SECRET_KEY
+   npx wrangler secret put SUPABASE_PUBLISHABLE_DEFAULT_KEY
+   npx wrangler secret put CRON_SECRET
+   npx wrangler secret put VAPID_PUBLIC_KEY
+   npx wrangler secret put VAPID_PRIVATE_KEY
+   npx wrangler secret put VAPID_EMAIL
+   npx wrangler secret put NODE_ENV   # set to "production"
+   ```
+
+3. **Deploy:**
+   ```bash
+   npm run deploy
+   ```
+
+#### Subsequent deploys
+```bash
+npm run deploy
+```
+
+### Frontend (Cloudflare Pages)
+
+1. Authenticate:
    ```bash
    bunx wrangler login
    ```
-2. Deploy the application:
+2. Set `BUN_PUBLIC_API_URL` in Cloudflare Pages → Settings → Environment Variables to your Worker URL.
+3. Deploy:
    ```bash
    bun run deploy
    ```
-*(A staging environment is also available via `bun run deploy:staging`).*
+
+### Cron Jobs (GitHub Actions)
+
+Automated tasks (results polling, standings sync, schedule sync, push notifications) are triggered by GitHub Actions on a schedule. They POST to internal Worker endpoints authenticated by `x-cron-secret`.
+
+Set these secrets in your GitHub repo → Settings → Secrets → Actions:
+- `BACKEND_URL` — your Worker URL (e.g. `https://f1-picks-api.<account>.workers.dev`)
+- `CRON_SECRET` — must match the `CRON_SECRET` secret on the Worker
 
 ---
 

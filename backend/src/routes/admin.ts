@@ -1,5 +1,7 @@
-import { db } from "../db/index.ts";
-import { withAdmin, parseBody } from "../middleware/auth.ts";
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
+
+import { parseBody } from "../middleware/auth.ts";
 import { ResultSubmissionSchema, type PickRow, type LeagueRow, type ScoringConfig } from "../types/index.ts";
 import { calculatePoints } from "../services/scoring.ts";
 import { createNotificationsForAllPicksInRace } from "../services/notifications.ts";
@@ -7,15 +9,18 @@ import { sendPushNotification } from "../services/pushService.ts";
 import { fetchAndUpdateDriverStandings } from "../services/cron.ts";
 import { TestNotificationSchema } from "../types/index.ts";
 
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
+
 /**
  * POST /api/v1/admin/results
  * Submits official race results, scores all picks across all leagues, and marks the race as COMPLETED.
  * Protected — ADMIN role required.
  */
-export const submitResults = withAdmin(async (req) => {
-  const { data, error } = await parseBody(req, ResultSubmissionSchema);
+export async function submitResults(c: AppContext) {
+  const { data, error } = await parseBody(c, ResultSubmissionSchema);
   if (error) return error;
 
+  const db = c.get("db");
   const results = data.results;
 
   // 1. Save the official results
@@ -56,11 +61,10 @@ export const submitResults = withAdmin(async (req) => {
     SELECT id, scoring_config FROM leagues
   `;
   const leagueConfigMap = new Map<string, ScoringConfig>(
-    leagues.map((l) => [l.id, l.scoring_config])
+    leagues.map((l) => [l.id, typeof l.scoring_config === "string" ? JSON.parse(l.scoring_config) : l.scoring_config])
   );
 
   // 4. Score each pick using its league's scoring config
-  // Run updates in parallel for performance
   await Promise.all(
     picks.map((pick) => {
       let config = leagueConfigMap.get(pick.league_id);
@@ -92,10 +96,11 @@ export const submitResults = withAdmin(async (req) => {
     })
   );
 
-  // 5. Fan out in-app notifications to all users who picked on this race
+  // 5. Fan out in-app notifications
   const [race] = await db<{ name: string }[]>`SELECT name FROM races WHERE id = ${data.raceId}`;
   const raceName = race?.name ?? `Race #${data.raceId}`;
   await createNotificationsForAllPicksInRace(
+    db,
     data.raceId,
     "RESULTS_IN",
     `${raceName} — Results In! 🏁`,
@@ -109,30 +114,29 @@ export const submitResults = withAdmin(async (req) => {
   `;
 
   // 7. Update Driver Standings
-  await fetchAndUpdateDriverStandings();
+  await fetchAndUpdateDriverStandings(db);
 
-  return Response.json({ message: "Results processed successfully" });
-});
+  return c.json({ message: "Results processed successfully" });
+}
 
 /**
  * POST /api/v1/admin/notifications/test
  * Triggers a test push notification.
  * Protected — ADMIN role required.
  */
-export const testNotification = withAdmin(async (req) => {
-  const { data, error } = await parseBody(req, TestNotificationSchema);
+export async function testNotification(c: AppContext) {
+  const { data, error } = await parseBody(c, TestNotificationSchema);
   if (error) return error;
 
-  const adminId = (req as any).user.id;
+  const db = c.get("db");
+  const adminId = c.get("user").id;
 
   let subscriptions;
   if (data.broadcast) {
-    // Fetch all non-expired push subscriptions
     subscriptions = await db`
       SELECT endpoint, p256dh, auth, id, user_id FROM user_push_subscriptions
     `;
   } else {
-    // Only send to the admin's own devices for testing
     subscriptions = await db`
       SELECT endpoint, p256dh, auth, id, user_id FROM user_push_subscriptions
       WHERE user_id = ${adminId}
@@ -140,7 +144,7 @@ export const testNotification = withAdmin(async (req) => {
   }
 
   if (subscriptions.length === 0) {
-    return Response.json({ error: "No active push subscriptions found for target" }, { status: 404 });
+    return c.json({ error: "No active push subscriptions found for target" }, 404);
   }
 
   const payload = {
@@ -149,18 +153,14 @@ export const testNotification = withAdmin(async (req) => {
     url: data.metadata?.url || "/",
   };
 
-  // Also create an in-app notification record for the admin (and others if broadcast)
-  // for better visibility in the UI "Notifications" section.
-  const targetUserIds = data.broadcast 
-    ? [...new Set(subscriptions.map((s: any) => s.user_id))] // This is tricky as we don't have user_id in the SELECT prompt above, let's fix the SELECT
+  const targetUserIds = data.broadcast
+    ? [...new Set(subscriptions.map((s: any) => s.user_id))]
     : [adminId];
 
-  // Re-fetch subscriptions with user_id if we want to do broadcast DB records, 
-  // but for now let's just ensure the admin gets the record.
-  await Promise.all(targetUserIds.map(uid => 
+  await Promise.all(targetUserIds.map(uid =>
     db`
       INSERT INTO notifications (user_id, type, title, body, metadata)
-      VALUES (${uid}, ${data.type}, ${data.title}, ${data.body}, ${data.metadata || {}})
+      VALUES (${uid}, ${data.type}, ${data.title}, ${data.body}, ${JSON.stringify(data.metadata || {})}::jsonb)
     `
   ));
 
@@ -171,7 +171,6 @@ export const testNotification = withAdmin(async (req) => {
         payload
       );
       if (!success) {
-        // Remove invalid subscription
         await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
         return { id: sub.id, success: false, reason: "410 Gone" };
       }
@@ -179,8 +178,8 @@ export const testNotification = withAdmin(async (req) => {
     })
   );
 
-  return Response.json({
+  return c.json({
     message: `Attempted to send ${subscriptions.length} push notifications`,
     results,
   });
-});
+}

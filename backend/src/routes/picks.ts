@@ -1,62 +1,69 @@
-import { db } from "../db/index.ts";
-import { withAuth, parseBody } from "../middleware/auth.ts";
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
+
+import type { Sql } from "../db/index.ts";
+import { parseBody } from "../middleware/auth.ts";
 import { PickSubmissionSchema, type PickRow, type RaceRow } from "../types/index.ts";
-import { supabase } from "../lib/supabase.ts";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
 
 /**
  * GET /api/v1/picks/race/:raceId?leagueId=<uuid>
  * Returns the current user's pick for a specific race within a league.
  */
-export const getPickForRace = withAuth(async (req) => {
-  const url = new URL(req.url);
-  const raceId = req.params.raceId;
-  const leagueId = url.searchParams.get("leagueId");
+export async function getPickForRace(c: AppContext) {
+  const db = c.get("db");
+  const user = c.get("user");
+  const raceId = c.req.param("raceId");
+  const leagueId = c.req.query("leagueId");
 
   if (!raceId || !leagueId) {
-    return Response.json({ error: "raceId and leagueId are required" }, { status: 400 });
+    return c.json({ error: "raceId and leagueId are required" }, 400);
   }
 
   const [pick] = await db<PickRow[]>`
     SELECT * FROM picks 
-    WHERE user_id = ${req.user.id} 
+    WHERE user_id = ${user.id} 
     AND race_id = ${parseInt(raceId)} 
     AND league_id = ${leagueId} 
     LIMIT 1
   `;
 
   if (!pick) {
-    return Response.json({ error: "Pick not found" }, { status: 404 });
+    return c.json({ error: "Pick not found" }, 404);
   }
 
-  return Response.json(pick);
-});
+  return c.json(pick);
+}
 
 /**
  * GET /api/v1/picks/race/:raceId/user/:userId?leagueId=<uuid>
  * Returns a specific user's pick for a specific race within a league.
  * Applies visibility rules: if the deadline hasn't passed, scrub the picks.
  */
-export const getUserPickForRace = withAuth(async (req) => {
-  const url = new URL(req.url);
-  const raceId = req.params.raceId;
-  const targetUserId = req.params.userId;
-  const leagueId = url.searchParams.get("leagueId");
+export async function getUserPickForRace(c: AppContext) {
+  const db = c.get("db");
+  const user = c.get("user");
+  const raceId = c.req.param("raceId");
+  const targetUserId = c.req.param("userId");
+  const leagueId = c.req.query("leagueId");
 
   if (!raceId || !targetUserId || !leagueId) {
-    return Response.json({ error: "raceId, userId, and leagueId are required" }, { status: 400 });
+    return c.json({ error: "raceId, userId, and leagueId are required" }, 400);
   }
 
   // --- Security Check: Ensure requesting user is a member of the league ---
   const [membership] = await db`
     SELECT 1 FROM league_members 
     WHERE league_id = ${leagueId} 
-    AND user_id = ${req.user.id} 
+    AND user_id = ${user.id} 
     LIMIT 1
   `;
 
   if (!membership) {
-    return Response.json({ error: "Forbidden: You are not a member of this league." }, { status: 403 });
+    return c.json({ error: "Forbidden: You are not a member of this league." }, 403);
   }
 
   // Fetch the target user's pick
@@ -69,7 +76,7 @@ export const getUserPickForRace = withAuth(async (req) => {
   `;
 
   if (!pick) {
-    return Response.json({ error: "Pick not found" }, { status: 404 });
+    return c.json({ error: "Pick not found" }, 404);
   }
 
   const [results] = await db`
@@ -79,8 +86,8 @@ export const getUserPickForRace = withAuth(async (req) => {
   `;
 
   // If requesting own picks, return as is (with results attached)
-  if (targetUserId === req.user.id) {
-    return Response.json({ ...pick, results: results || null });
+  if (targetUserId === user.id) {
+    return c.json({ ...pick, results: results || null });
   }
 
   // Otherwise, apply visibility logic
@@ -91,7 +98,7 @@ export const getUserPickForRace = withAuth(async (req) => {
   `;
 
   if (!race) {
-    return Response.json(pick); // Fallback
+    return c.json(pick); // Fallback
   }
 
   const now = new Date();
@@ -120,28 +127,32 @@ export const getUserPickForRace = withAuth(async (req) => {
     scrubbedPick.first_dnf = null;
   }
 
-  return Response.json({ ...scrubbedPick, results: results || null });
-});
+  return c.json({ ...scrubbedPick, results: results || null });
+}
 
 /**
  * POST /api/v1/picks
  * Submits or updates a pick for a race within a league.
  * Enforces sprint and race deadlines.
  */
-export const submitPick = withAuth(async (req) => {
-  const { data, error } = await parseBody(req, PickSubmissionSchema);
+export async function submitPick(c: AppContext) {
+  const { data, error } = await parseBody(c, PickSubmissionSchema);
   if (error) return error;
+
+  const db = c.get("db");
+  const user = c.get("user");
+  const supabase = c.get("supabase");
 
   // --- Security Fix: Prevent Submission for Non-Members ---
   const [membership] = await db`
     SELECT 1 FROM league_members 
     WHERE league_id = ${data.leagueId} 
-    AND user_id = ${req.user.id} 
+    AND user_id = ${user.id} 
     LIMIT 1
   `;
 
   if (!membership) {
-    return Response.json({ error: "Forbidden: You are not a member of this league." }, { status: 403 });
+    return c.json({ error: "Forbidden: You are not a member of this league." }, 403);
   }
 
   // Fetch the race to check deadlines
@@ -152,13 +163,13 @@ export const submitPick = withAuth(async (req) => {
   `;
 
   if (!race) {
-    return Response.json({ error: `Race not found: ${data.raceId}` }, { status: 404 });
+    return c.json({ error: `Race not found: ${data.raceId}` }, 404);
   }
 
   // Fetch existing pick to support "Smart Enforcement" (only block if locked field is CHANGED)
   const [existingPick] = await db<PickRow[]>`
     SELECT * FROM picks 
-    WHERE user_id = ${req.user.id} 
+    WHERE user_id = ${user.id} 
     AND race_id = ${data.raceId} 
     AND league_id = ${data.leagueId} 
     LIMIT 1
@@ -185,7 +196,7 @@ export const submitPick = withAuth(async (req) => {
 
   // 1. Sprint Qualifying
   if (isLockedAndModified("sprint_qualifying_p1", sel.sprintQualifyingP1, race.sprint_quali_date)) {
-    return Response.json({ error: "The deadline for sprint qualifying picks has passed." }, { status: 422 });
+    return c.json({ error: "The deadline for sprint qualifying picks has passed." }, 422);
   }
 
   // 2. Sprint Picks
@@ -194,13 +205,13 @@ export const submitPick = withAuth(async (req) => {
 
   for (let i = 0; i < sprintFields.length; i++) {
     if (isLockedAndModified(sprintFields[i], sel[sprintSelKeys[i]], race.sprint_deadline)) {
-      return Response.json({ error: "The deadline for sprint picks has passed." }, { status: 422 });
+      return c.json({ error: "The deadline for sprint picks has passed." }, 422);
     }
   }
 
   // 3. Race Qualifying
   if (isLockedAndModified("race_qualifying_p1", sel.raceQualifyingP1, race.race_quali_date)) {
-    return Response.json({ error: "The deadline for qualifying picks has passed." }, { status: 422 });
+    return c.json({ error: "The deadline for qualifying picks has passed." }, 422);
   }
 
   // 4. Race Picks
@@ -209,7 +220,7 @@ export const submitPick = withAuth(async (req) => {
 
   for (let i = 0; i < raceFields.length; i++) {
     if (isLockedAndModified(raceFields[i], sel[raceSelKeys[i]], race.race_deadline)) {
-      return Response.json({ error: "The deadline for race picks has passed." }, { status: 422 });
+      return c.json({ error: "The deadline for race picks has passed." }, 422);
     }
   }
 
@@ -221,7 +232,7 @@ export const submitPick = withAuth(async (req) => {
       race_qualifying_p1, race_p1, race_p2, race_p3,
       fastest_lap, first_dnf
     ) VALUES (
-      ${req.user.id}, 
+      ${user.id}, 
       ${data.raceId}, 
       ${data.leagueId}, 
       0, 
@@ -256,16 +267,18 @@ export const submitPick = withAuth(async (req) => {
 
   // Fire system message to the specific league chat — non-blocking
   const raceName = (race as any).name || `Race #${data.raceId}`;
-  queueMicrotask(() => broadcastPickSystemMessage(req.user.id, raceName, data.leagueId));
+  broadcastPickSystemMessage(db, supabase, user.id, raceName, data.leagueId).catch(console.error);
 
-  return Response.json(savedPick, { status: 201 });
-});
+  return c.json(savedPick, 201);
+}
 
 /**
  * Sends a system chat message to all leagues a user is a member of, announcing pick activity.
  * Called after a pick is submitted/updated. Non-blocking — errors are logged but not thrown.
  */
 export async function broadcastPickSystemMessage(
+  db: Sql,
+  supabase: SupabaseClient,
   userId: string,
   raceName: string,
   leagueId?: string
@@ -282,7 +295,6 @@ export async function broadcastPickSystemMessage(
     if (leagueId) {
       leagueIds = [leagueId];
     } else {
-      // Fallback: Find all leagues this user belongs to (backward compatibility or global events)
       const leagues = await db`
         SELECT league_id FROM league_members WHERE user_id = ${userId}
         UNION

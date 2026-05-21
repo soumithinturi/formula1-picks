@@ -1,30 +1,28 @@
+import { createMiddleware } from "hono/factory";
 import { jwtVerify, createRemoteJWKSet } from "jose";
+import type { Context } from "hono";
 import type { UserRow } from "../types/index.ts";
-import { db } from "../db/index.ts";
+import type { Bindings, Variables } from "../types/env.ts";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-if (!supabaseUrl) throw new Error("SUPABASE_URL environment variable is required");
+// Cache JWKS per Supabase URL to avoid re-creating on every request
+const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
-// Supabase now uses asymmetric ES256 signing — fetch the public key from the JWKS endpoint.
-// jose caches this automatically after the first fetch.
-const JWKS = createRemoteJWKSet(
-  new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`)
-);
+function getJWKS(supabaseUrl: string) {
+  let jwks = jwksCache.get(supabaseUrl);
+  if (!jwks) {
+    jwks = createRemoteJWKSet(
+      new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`)
+    );
+    jwksCache.set(supabaseUrl, jwks);
+  }
+  return jwks;
+}
 
 export interface AuthedUser {
   id: string;
   contact: string;
   role: "USER" | "ADMIN";
 }
-
-// Extends the standard Bun Request type to carry the authenticated user
-export interface AuthedRequest extends Request {
-  user: AuthedUser;
-  params: Record<string, string>;
-}
-
-type RouteHandler = (req: Request) => Response | Promise<Response>;
-type AuthedHandler = (req: AuthedRequest) => Response | Promise<Response>;
 
 function parseCookies(cookieHeader: string | null): Record<string, string> {
   if (!cookieHeader) return {};
@@ -36,34 +34,37 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
   );
 }
 
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
+
 /**
  * Extracts and verifies the Supabase JWT from the Authorization header or Cookie.
  * Returns the authenticated user or null if invalid.
  */
-async function verifyToken(req: Request): Promise<AuthedUser | null> {
+async function verifyToken(c: AppContext): Promise<AuthedUser | null> {
   let token = "";
 
-  const authHeader = req.headers.get("Authorization");
+  const authHeader = c.req.header("Authorization");
   if (authHeader?.startsWith("Bearer ")) {
     token = authHeader.slice(7);
   } else {
-    // Fallback to cookie
-    const cookies = parseCookies(req.headers.get("Cookie"));
+    const cookies = parseCookies(c.req.header("Cookie") ?? null);
     token = cookies["f1_auth_token"] || "";
   }
 
   if (!token) return null;
 
   try {
+    const supabaseUrl = c.get("env").SUPABASE_URL;
+    const JWKS = getJWKS(supabaseUrl);
+
     const { payload } = await jwtVerify(token, JWKS, {
-      // Supabase ES256 asymmetric signing
       algorithms: ["ES256"],
     });
 
     const sub = payload.sub;
     if (!sub) return null;
 
-    // Fetch the user's role from our users table.
+    const db = c.get("db");
     const [user] = await db<UserRow[]>`
       SELECT id, contact, role FROM users 
       WHERE id = ${sub} 
@@ -80,52 +81,58 @@ async function verifyToken(req: Request): Promise<AuthedUser | null> {
 }
 
 /**
- * Wraps a route handler with JWT authentication.
- * Injects `req.user` on success, returns 401 on failure.
+ * Hono middleware that enforces JWT authentication.
+ * Sets `c.set("user", authedUser)` on success, returns 401 on failure.
  */
-export function withAuth(handler: AuthedHandler): RouteHandler {
-  return async (req: Request) => {
-    const user = await verifyToken(req);
-    if (!user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    // Attach user to the request object
-    (req as AuthedRequest).user = user;
-    return handler(req as AuthedRequest);
-  };
-}
+export const authMiddleware = createMiddleware<{
+  Bindings: Bindings;
+  Variables: Variables;
+}>(async (c, next) => {
+  const user = await verifyToken(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  c.set("user", user);
+  await next();
+});
 
 /**
- * Wraps a route handler with JWT authentication + ADMIN role check.
+ * Hono middleware that enforces JWT authentication + ADMIN role.
  * Returns 403 if the user is not an admin.
  */
-export function withAdmin(handler: AuthedHandler): RouteHandler {
-  return withAuth(async (req: AuthedRequest) => {
-    if (req.user.role !== "ADMIN") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
-    }
-    return handler(req);
-  });
-}
+export const adminMiddleware = createMiddleware<{
+  Bindings: Bindings;
+  Variables: Variables;
+}>(async (c, next) => {
+  const user = await verifyToken(c);
+  if (!user) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  if (user.role !== "ADMIN") {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  c.set("user", user);
+  await next();
+});
 
 /**
  * Parses a JSON body and validates it with a Zod schema.
  * Returns { data } on success or { error: Response } on failure.
  */
 export async function parseBody<T>(
-  req: Request,
+  c: AppContext,
   schema: { safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: { format: () => unknown } } }
 ): Promise<{ data: T; error?: never } | { data?: never; error: Response }> {
   let body: unknown;
   try {
-    body = await req.json();
+    body = await c.req.json();
   } catch {
-    return { error: Response.json({ error: "Invalid JSON body" }, { status: 400 }) };
+    return { error: c.json({ error: "Invalid JSON body" }, 400) as unknown as Response };
   }
 
   const result = schema.safeParse(body);
   if (!result.success) {
-    return { error: Response.json({ error: result.error.format() }, { status: 400 }) };
+    return { error: c.json({ error: result.error.format() }, 400) as unknown as Response };
   }
 
   return { data: result.data };

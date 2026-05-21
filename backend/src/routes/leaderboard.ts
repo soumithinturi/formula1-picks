@@ -1,33 +1,35 @@
-import { db } from "../db/index.ts";
-import { withAuth } from "../middleware/auth.ts";
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
+
+
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
 /**
  * GET /api/v1/leaderboard/:leagueId
  * Returns the standings for a league, sorted by total points descending.
  * Uses the league's scoring config (points are already stored on each pick row).
  */
-export const getLeaderboard = withAuth(async (req) => {
-  const leagueId = req.params.leagueId;
+export async function getLeaderboard(c: AppContext) {
+  const leagueId = c.req.param("leagueId");
+  const db = c.get("db");
+  const user = c.get("user");
 
   if (!leagueId) {
-    return Response.json({ error: "leagueId is required" }, { status: 400 });
+    return c.json({ error: "leagueId is required" }, 400);
   }
 
   // --- Security Fix: Prevent IDOR ---
-  // Ensure the requesting user is actually a member of this league
   const [membership] = await db`
     SELECT 1 FROM league_members
-    WHERE league_id = ${leagueId} AND user_id = ${req.user.id}
+    WHERE league_id = ${leagueId} AND user_id = ${user.id}
     LIMIT 1
   `;
 
   if (!membership) {
-    return Response.json({ error: "Forbidden: You are not a member of this league." }, { status: 403 });
+    return c.json({ error: "Forbidden: You are not a member of this league." }, 403);
   }
-  // ----------------------------------
 
-  const url = new URL(req.url);
-  const raceId = url.searchParams.get("raceId");
+  const raceId = c.req.query("raceId");
 
   // Aggregate total points per user for this league
   const standings = await db`
@@ -50,5 +52,5 @@ export const getLeaderboard = withAuth(async (req) => {
     ORDER BY "totalPoints" DESC
   `;
 
-  return Response.json(standings);
-});
+  return c.json(standings);
+}

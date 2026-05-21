@@ -1,7 +1,9 @@
-import type { AuthedRequest } from "../middleware/auth.ts";
-import { db } from "../db/index.ts";
-import { supabase } from "../lib/supabase.ts";
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
+
 import { z } from "zod";
+
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
 const SendMessageSchema = z.object({
   leagueId: z.string().uuid(),
@@ -11,21 +13,22 @@ const SendMessageSchema = z.object({
 /**
  * GET /api/v1/chat/:leagueId
  * Fetch the last 50 messages for a league.
- * Auth: injected via withAuth middleware — user must be a member or creator.
  */
-export async function getChatMessages(req: AuthedRequest): Promise<Response> {
-  const url = new URL(req.url);
-  const leagueId = url.pathname.split("/").pop();
-  if (!leagueId) return Response.json({ error: "Missing leagueId" }, { status: 400 });
+export async function getChatMessages(c: AppContext) {
+  const db = c.get("db");
+  const user = c.get("user");
+  const leagueId = c.req.param("leagueId");
+
+  if (!leagueId) return c.json({ error: "Missing leagueId" }, 400);
 
   // Verify user is a member or creator of the league
   const result = await db`
-    SELECT 1 FROM league_members WHERE league_id = ${leagueId} AND user_id = ${req.user.id}
+    SELECT 1 FROM league_members WHERE league_id = ${leagueId} AND user_id = ${user.id}
     UNION
-    SELECT 1 FROM leagues WHERE id = ${leagueId} AND created_by = ${req.user.id}
+    SELECT 1 FROM leagues WHERE id = ${leagueId} AND created_by = ${user.id}
     LIMIT 1
   `;
-  if (!result.length) return Response.json({ error: "Forbidden" }, { status: 403 });
+  if (!result.length) return c.json({ error: "Forbidden" }, 403);
 
   const messages = await db`
     SELECT 
@@ -44,50 +47,53 @@ export async function getChatMessages(req: AuthedRequest): Promise<Response> {
     LIMIT 50
   `;
 
-  return Response.json(messages);
+  return c.json(messages);
 }
 
 /**
  * POST /api/v1/chat
  * Send a message to a league chat.
- * Auth: injected via withAuth middleware — user must be a member or creator.
  */
-export async function sendChatMessage(req: AuthedRequest): Promise<Response> {
+export async function sendChatMessage(c: AppContext) {
+  const db = c.get("db");
+  const user = c.get("user");
+  const supabase = c.get("supabase");
+
   let body: unknown;
   try {
-    body = await req.json();
+    body = await c.req.json();
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+    return c.json({ error: "Invalid JSON" }, 400);
   }
 
   const parsed = SendMessageSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ error: "Invalid request" }, { status: 400 });
+    return c.json({ error: "Invalid request" }, 400);
   }
 
   const { leagueId, message } = parsed.data;
 
   // Verify user is a member or creator of the league
   const result = await db`
-    SELECT 1 FROM league_members WHERE league_id = ${leagueId} AND user_id = ${req.user.id}
+    SELECT 1 FROM league_members WHERE league_id = ${leagueId} AND user_id = ${user.id}
     UNION
-    SELECT 1 FROM leagues WHERE id = ${leagueId} AND created_by = ${req.user.id}
+    SELECT 1 FROM leagues WHERE id = ${leagueId} AND created_by = ${user.id}
     LIMIT 1
   `;
-  if (!result.length) return Response.json({ error: "Forbidden" }, { status: 403 });
+  if (!result.length) return c.json({ error: "Forbidden" }, 403);
 
   // Insert using service role Supabase client — bypasses RLS.
   // Realtime pushes the event to all subscribers automatically.
   const { data, error } = await supabase
     .from("chat_messages")
-    .insert({ league_id: leagueId, user_id: req.user.id, message })
+    .insert({ league_id: leagueId, user_id: user.id, message })
     .select()
     .single();
 
   if (error) {
     console.error("Failed to insert chat message:", error);
-    return Response.json({ error: "Failed to send message" }, { status: 500 });
+    return c.json({ error: "Failed to send message" }, 500);
   }
 
-  return Response.json(data, { status: 201 });
+  return c.json(data, 201);
 }

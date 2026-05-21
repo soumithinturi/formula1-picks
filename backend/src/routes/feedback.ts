@@ -1,13 +1,14 @@
-import { supabase } from "../lib/supabase";
-import type { AuthedRequest } from "../middleware/auth";
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
 
-export async function submitFeedback(req: AuthedRequest) {
-  const userId = req.user?.id;
-  if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
-  const body = await req.json() as {
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
+
+export async function submitFeedback(c: AppContext) {
+  const userId = c.get("user").id;
+  const supabase = c.get("supabase");
+
+  const body = await c.req.json() as {
     type: 'bug' | 'feature_request' | 'general';
     message: string;
     appVersion?: string;
@@ -17,7 +18,7 @@ export async function submitFeedback(req: AuthedRequest) {
   const { type, message, appVersion, metadata } = body;
 
   if (!type || !message) {
-    return Response.json({ error: "Missing required fields" }, { status: 400 });
+    return c.json({ error: "Missing required fields" }, 400);
   }
 
   const { data, error } = await supabase
@@ -34,8 +35,8 @@ export async function submitFeedback(req: AuthedRequest) {
 
   if (error) {
     console.error("Failed to submit feedback:", error);
-    return Response.json({ error: "Failed to submit feedback" }, { status: 500 });
+    return c.json({ error: "Failed to submit feedback" }, 500);
   }
 
-  return Response.json({ data }, { status: 201 });
+  return c.json({ data }, 201);
 }

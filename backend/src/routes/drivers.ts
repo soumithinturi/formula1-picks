@@ -1,12 +1,15 @@
-import { db } from "../db/index.ts";
-import { withAuth } from "../middleware/auth.ts";
+import type { Context } from "hono";
+import type { Bindings, Variables } from "../types/env.ts";
 import type { DriverRow } from "../types/index.ts";
+
+type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
 /**
  * GET /api/v1/drivers
  * Returns all drivers ordered by family name.
  */
-export const listDrivers = withAuth(async (_req) => {
+export async function listDrivers(c: AppContext) {
+  const db = c.get("db");
   const driversRows = await db<DriverRow[]>`
     SELECT * FROM drivers ORDER BY family_name ASC
   `;
@@ -27,5 +30,5 @@ export const listDrivers = withAuth(async (_req) => {
     rank: parseInt(row.rank as any) || 999
   }));
 
-  return Response.json(drivers);
-});
+  return c.json(drivers);
+}

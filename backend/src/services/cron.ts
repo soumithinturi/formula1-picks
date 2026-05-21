@@ -1,4 +1,4 @@
-import { db } from "../db/index.ts";
+import type { Sql } from "../db/index.ts";
 import { logger } from "./logger.ts";
 import type { RaceRow, PickRow, LeagueRow, ScoringConfig, PickSelections } from "../types/index.ts";
 import { calculatePoints } from "./scoring.ts";
@@ -11,13 +11,9 @@ const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
 
 /**
  * Checks upcoming sessions and users' notification cadences to send push notifications.
- */
-/**
- * Checks upcoming sessions and users' notification cadences to send push notifications.
  * Invoked via webhook (POST /api/v1/internal/cron/notifications) every minute.
- * Exported so the route layer can call it directly without re-importing.
  */
-export async function checkUpcomingSessionsForNotifications() {
+export async function checkUpcomingSessionsForNotifications(db: Sql) {
   try {
     const upcomingRaces = await db<RaceRow[]>`
       SELECT * FROM races 
@@ -32,7 +28,7 @@ export async function checkUpcomingSessionsForNotifications() {
     // Array of sessions we track
     const sessions = [
       { name: "Sprint Quali", time: race.sprint_quali_date, column: "notify_sprint_quali_cadence" },
-      { name: "Sprint", time: race.sprint_date, column: "notify_sprint_cadence" },
+      { name: "Sprint", time: (race as any).sprint_date, column: "notify_sprint_cadence" },
       { name: "Race Quali", time: race.race_quali_date, column: "notify_race_quali_cadence" },
       { name: "Race", time: race.race_deadline, column: "notify_race_cadence" }
     ];
@@ -62,10 +58,8 @@ export async function checkUpcomingSessionsForNotifications() {
         continue;
       }
 
-      // NOTE: We cannot mix db() identifier escaping and ${ } value binding in
-      // the same query — the postgres driver miscounts result format descriptors.
-      // Instead, validate the column name against an allowlist and use db.unsafe()
-      // for the identifier, keeping the value parameter separate.
+      // NOTE: We use db.unsafe() for the dynamic column identifier,
+      // keeping the value parameter separate.
       const subscriptions = await db.unsafe(`
         SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${session.column} as cadence
         FROM user_notification_settings uns
@@ -108,7 +102,7 @@ export async function checkUpcomingSessionsForNotifications() {
 /**
  * Fetches Qualifying (and Sprint) results.
  */
-export async function fetchQualifyingResults() {
+export async function fetchQualifyingResults(db: Sql) {
   try {
     const nearbyRaces = await db<RaceRow[]>`
       SELECT * FROM races 
@@ -128,8 +122,6 @@ export async function fetchQualifyingResults() {
     const round = race.id.toString();
 
     // 1. Qualifying — use round-specific endpoint to avoid pagination issues
-    // The season-wide /qualifying.json is paginated (30 results/page) so later
-    // rounds never appear in page 1. /2026/{round}/qualifying.json is direct.
     const qualRes = await fetch(`${JOLPI_API_BASE}/${round}/qualifying.json`);
     if (qualRes.ok) {
       const data: any = await qualRes.json();
@@ -191,7 +183,7 @@ export async function fetchQualifyingResults() {
 /**
  * Fetches Sunday Race Results and triggers scoring
  */
-export async function fetchRaceResults() {
+export async function fetchRaceResults(db: Sql) {
   try {
     const nearbyRaces = await db<RaceRow[]>`
       SELECT * FROM races 
@@ -208,13 +200,10 @@ export async function fetchRaceResults() {
     const round = race.id.toString();
 
     logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
-    // Use round-specific endpoint — the season-wide /results.json is paginated
-    // (30 driver results/page) so Round 3+ data falls onto page 2 and is never seen.
     const res = await fetch(`${JOLPI_API_BASE}/${round}/results.json`);
     if (!res.ok) return;
 
     const data: any = await res.json();
-    // Round-specific endpoint returns exactly one race in the array
     const targetRaceData = data?.MRData?.RaceTable?.Races?.[0];
     const resultsData = targetRaceData?.Results;
 
@@ -224,7 +213,6 @@ export async function fetchRaceResults() {
     }
 
     // Determine First DNF
-    // Drivers who retired (status not Finished, +N Laps, Disqualified, DNS)
     const retired = resultsData.filter((r: any) => {
       const status = r.status.toLowerCase();
       return !status.includes("finished") &&
@@ -235,7 +223,6 @@ export async function fetchRaceResults() {
 
     let firstDnf = null;
     if (retired.length > 0) {
-      // Find driver who finished the fewest laps
       const sortedByLaps = retired.sort((a: any, b: any) => parseInt(a.laps) - parseInt(b.laps));
       firstDnf = sortedByLaps[0].Driver.driverId;
       logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
@@ -246,7 +233,7 @@ export async function fetchRaceResults() {
     const fastestLap = flResult?.Driver?.driverId || null;
 
     const officialResults: PickSelections = {
-      sprintQualifyingP1: null, // Fetched in Quali cron or mapped if needed
+      sprintQualifyingP1: null,
       sprintP1: null,
       sprintP2: null,
       sprintP3: null,
@@ -264,7 +251,12 @@ export async function fetchRaceResults() {
       INSERT INTO race_results (
         race_id, race_p1, race_p2, race_p3, fastest_lap, first_dnf
       ) VALUES (
-        ${race.id}, ${officialResults.raceP1}, ${officialResults.raceP2}, ${officialResults.raceP3}, ${fastestLap}, ${firstDnf}
+        ${race.id},
+        ${officialResults.raceP1 ?? null},
+        ${officialResults.raceP2 ?? null},
+        ${officialResults.raceP3 ?? null},
+        ${fastestLap ?? null},
+        ${firstDnf ?? null}
       )
       ON CONFLICT (race_id) DO UPDATE SET
         race_p1 = EXCLUDED.race_p1,
@@ -318,11 +310,12 @@ export async function fetchRaceResults() {
       `;
     }));
 
-    // 3. Mark Race COMPLETED (App focus moves to next UPCOMING race)
+    // 3. Mark Race COMPLETED
     await db`UPDATE races SET status = 'COMPLETED' WHERE id = ${race.id}`;
 
     // 4. Notifications
     await createNotificationsForAllPicksInRace(
+      db,
       race.id,
       "RESULTS_IN",
       `${race.name} — Results In! 🏁`,
@@ -333,7 +326,7 @@ export async function fetchRaceResults() {
     logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
 
     // 5. Update Driver Standings
-    await fetchAndUpdateDriverStandings();
+    await fetchAndUpdateDriverStandings(db);
 
   } catch (err) {
     logger.error({ err, job: "fetchRaceResults" }, "Failed Sunday cron (Race Scoring)");
@@ -343,7 +336,7 @@ export async function fetchRaceResults() {
 /**
  * Fetches the current season's race schedule and updates the database.
  */
-export async function fetchAndUpdateSchedule() {
+export async function fetchAndUpdateSchedule(db: Sql) {
   try {
     logger.info({ job: "fetchAndUpdateSchedule" }, "Fetching latest season schedule from Ergast API...");
     const res = await fetch(`${JOLPI_API_BASE}/races.json`);
@@ -437,7 +430,7 @@ export async function fetchAndUpdateSchedule() {
 /**
  * Fetches the current season's driver standings and updates the database.
  */
-export async function fetchAndUpdateDriverStandings() {
+export async function fetchAndUpdateDriverStandings(db: Sql) {
   try {
     logger.info({ job: "fetchAndUpdateDriverStandings" }, "Fetching latest driver standings from Ergast API...");
     const res = await fetch(`${JOLPI_API_BASE}/driverstandings.json`);
