@@ -11,18 +11,11 @@ import postgres from "postgres";
  * The tagged template API is identical to Bun SQL — all existing queries
  * work unchanged (e.g., db`SELECT * FROM races WHERE id = ${id}`).
  */
-const clients = new Map<string, ReturnType<typeof postgres>>();
-
 export function getDb(connectionString: string) {
-  let sql = clients.get(connectionString);
-  if (!sql) {
-    sql = postgres(connectionString, {
-      // Disable prepared statements — required for Hyperdrive and PgBouncer transaction mode.
-      prepare: false,
-    });
-    clients.set(connectionString, sql);
-  }
-  return sql;
+  return postgres(connectionString, {
+    // Disable prepared statements — required for Hyperdrive and PgBouncer transaction mode.
+    prepare: false,
+  });
 }
 
 // Re-export the type for use in route handlers

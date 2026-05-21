@@ -56,7 +56,22 @@ app.use("*", async (c, next) => {
   c.set("db", db);
   c.set("supabase", supabase);
   c.set("env", c.env);
-  await next();
+  
+  try {
+    await next();
+  } finally {
+    // Gracefully close the postgres client after response has been processed.
+    // Use waitUntil so we don't add latency or block the HTTP response flush.
+    const execCtx = c.executionCtx || (c as any).event;
+    if (execCtx && typeof execCtx.waitUntil === "function") {
+      execCtx.waitUntil(
+        db.end().catch((err) => console.error("Error closing db connection in waitUntil:", err))
+      );
+    } else {
+      // Fallback for non-worker environments (e.g. tests)
+      db.end().catch((err) => console.error("Error closing db connection:", err));
+    }
+  }
 });
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
