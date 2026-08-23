@@ -1,21 +1,35 @@
 import { createMiddleware } from "hono/factory";
-import { jwtVerify, createRemoteJWKSet } from "jose";
+import { jwtVerify, createLocalJWKSet } from "jose";
 import type { Context } from "hono";
 import type { UserRow } from "../types/index.ts";
 import type { Bindings, Variables } from "../types/env.ts";
 
-// Cache JWKS per Supabase URL to avoid re-creating on every request
-const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+// Cache the raw JWKS JSON object globally as a pure data structure to avoid context context leaks in Workers
+let cachedJWKSetJSON: any = null;
+let fetchPromise: Promise<any> | null = null;
 
-function getJWKS(supabaseUrl: string) {
-  let jwks = jwksCache.get(supabaseUrl);
-  if (!jwks) {
-    jwks = createRemoteJWKSet(
-      new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`)
-    );
-    jwksCache.set(supabaseUrl, jwks);
+async function getJWKSetJSON(supabaseUrl: string) {
+  if (cachedJWKSetJSON) return cachedJWKSetJSON;
+
+  if (!fetchPromise) {
+    fetchPromise = (async () => {
+      try {
+        const jwksUrl = `${supabaseUrl}/auth/v1/.well-known/jwks.json`;
+        const res = await fetch(jwksUrl);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch JWKS: ${res.statusText}`);
+        }
+        const json = await res.json();
+        cachedJWKSetJSON = json;
+        return json;
+      } catch (err) {
+        fetchPromise = null; // Reset on failure so we can try again
+        throw err;
+      }
+    })();
   }
-  return jwks;
+
+  return fetchPromise;
 }
 
 export interface AuthedUser {
@@ -55,7 +69,8 @@ async function verifyToken(c: AppContext): Promise<AuthedUser | null> {
 
   try {
     const supabaseUrl = c.get("env").SUPABASE_URL;
-    const JWKS = getJWKS(supabaseUrl);
+    const jwkSetJSON = await getJWKSetJSON(supabaseUrl);
+    const JWKS = createLocalJWKSet(jwkSetJSON);
 
     const { payload } = await jwtVerify(token, JWKS, {
       algorithms: ["ES256"],

@@ -18,5 +18,9 @@ export function getDb(connectionString: string) {
   });
 }
 
+const defaultConnStr = process.env.DATABASE_URL || "postgresql://postgres.hfpfzutyaashzkkykbnx:cutest-lucie-term-claimed@aws-1-us-east-1.pooler.supabase.com:5432/postgres";
+export const db = postgres(defaultConnStr, { prepare: false });
+
 // Re-export the type for use in route handlers
 export type Sql = ReturnType<typeof postgres>;
+

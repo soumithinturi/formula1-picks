@@ -265,9 +265,9 @@ export async function submitPick(c: AppContext) {
     RETURNING *
   `;
 
-  // Fire system message to the specific league chat — non-blocking
+  // Fire system message to the specific league chat (awaited to avoid prematurely ending db pool)
   const raceName = (race as any).name || `Race #${data.raceId}`;
-  broadcastPickSystemMessage(db, supabase, user.id, raceName, data.leagueId).catch(console.error);
+  await broadcastPickSystemMessage(db, supabase, user.id, raceName, data.leagueId).catch(console.error);
 
   return c.json(savedPick, 201);
 }

@@ -108,9 +108,9 @@ export async function joinLeague(c: AppContext) {
     VALUES (${league.id}, ${user.id}, NOW())
   `;
 
-  // Trigger push notifications (non-blocking)
+  // Trigger push notifications (awaited to avoid prematurely ending db pool)
   const [currentUser] = await db`SELECT display_name FROM users WHERE id = ${user.id} LIMIT 1`;
-  notifyLeagueJoin(db, league.id, user.id, currentUser?.display_name || "A user").catch(console.error);
+  await notifyLeagueJoin(db, league.id, user.id, currentUser?.display_name || "A user").catch(console.error);
 
   const [updatedLeague] = await db<any[]>`
     SELECT l.*, (SELECT count(*) FROM league_members WHERE league_id = l.id)::int as members_count
