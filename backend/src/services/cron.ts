@@ -111,67 +111,65 @@ export async function fetchQualifyingResults(db: Sql) {
         (sprint_quali_date IS NOT NULL AND sprint_quali_date <= NOW()) OR
         (race_quali_date IS NOT NULL AND race_quali_date <= NOW())
       )
-      ORDER BY date ASC LIMIT 1
+      ORDER BY date ASC
     `;
 
     if (nearbyRaces.length === 0) {
       logger.info({ job: "fetchQualifyingResults" }, "🔍 No upcoming races with completed qualifying sessions found.");
       return;
     }
-    const race = nearbyRaces[0];
-    const round = race.id.toString();
 
-    // 1. Qualifying — use round-specific endpoint to avoid pagination issues
-    const qualRes = await fetch(`${JOLPI_API_BASE}/${round}/qualifying.json`);
-    if (qualRes.ok) {
-      const data: any = await qualRes.json();
-      const targetRace = data?.MRData?.RaceTable?.Races?.[0];
-      const results = targetRace?.QualifyingResults;
-      if (results?.length > 0) {
-        logger.info({ job: "fetchQualifyingResults", race: race.name }, `✅ Automated: Found Quali results for ${race.name}`);
-        await db`
-          INSERT INTO race_results (race_id, race_qualifying_p1)
-          VALUES (${race.id}, ${results[0].Driver.driverId})
-          ON CONFLICT (race_id) DO UPDATE SET
-            race_qualifying_p1 = EXCLUDED.race_qualifying_p1
-        `;
-      }
-    }
+    for (const race of nearbyRaces) {
+      const round = race.id.toString();
 
-    // 2. Sprint Race — round-specific endpoint for same pagination reason.
-    // NOTE: The Jolpi/Ergast API has no sprint qualifying endpoint, so
-    // sprint_qualifying_p1 (pole position) must be entered manually via admin.
-    // We deliberately omit it here to avoid clobbering admin-entered values.
-    if (race.has_sprint) {
-      const sprintRes = await fetch(`${JOLPI_API_BASE}/${round}/sprint.json`);
-      if (sprintRes.ok) {
-        const data: any = await sprintRes.json();
+      // 1. Qualifying — use round-specific endpoint to avoid pagination issues
+      const qualRes = await fetch(`${JOLPI_API_BASE}/${round}/qualifying.json`);
+      if (qualRes.ok) {
+        const data: any = await qualRes.json();
         const targetRace = data?.MRData?.RaceTable?.Races?.[0];
-        const results = targetRace?.SprintResults;
+        const results = targetRace?.QualifyingResults;
         if (results?.length > 0) {
-          logger.info({ job: "fetchQualifyingResults", race: race.name, sprint: true }, `✅ Automated: Found Sprint results for ${race.name}`);
-
-          // Find fastest lap in sprint if available
-          let fastestLap = null;
-          const flResult = results.find((r: any) => r.FastestLap?.rank === "1");
-          if (flResult) fastestLap = flResult.Driver.driverId;
-
+          logger.info({ job: "fetchQualifyingResults", race: race.name }, `✅ Automated: Found Quali results for ${race.name}`);
           await db`
-            INSERT INTO race_results (race_id, sprint_p1, sprint_p2, sprint_p3, sprint_fastest_lap)
-            VALUES (
-              ${race.id},
-              ${results[0].Driver.driverId},
-              ${results[1]?.Driver.driverId || null},
-              ${results[2]?.Driver.driverId || null},
-              ${fastestLap}
-            )
+            INSERT INTO race_results (race_id, race_qualifying_p1)
+            VALUES (${race.id}, ${results[0].Driver.driverId})
             ON CONFLICT (race_id) DO UPDATE SET
-              sprint_p1 = EXCLUDED.sprint_p1,
-              sprint_p2 = EXCLUDED.sprint_p2,
-              sprint_p3 = EXCLUDED.sprint_p3,
-              sprint_fastest_lap = EXCLUDED.sprint_fastest_lap
-            -- sprint_qualifying_p1 is intentionally excluded: must be set manually via admin
+              race_qualifying_p1 = EXCLUDED.race_qualifying_p1
           `;
+        }
+      }
+
+      // 2. Sprint Race — round-specific endpoint for same pagination reason.
+      if (race.has_sprint) {
+        const sprintRes = await fetch(`${JOLPI_API_BASE}/${round}/sprint.json`);
+        if (sprintRes.ok) {
+          const data: any = await sprintRes.json();
+          const targetRace = data?.MRData?.RaceTable?.Races?.[0];
+          const results = targetRace?.SprintResults;
+          if (results?.length > 0) {
+            logger.info({ job: "fetchQualifyingResults", race: race.name, sprint: true }, `✅ Automated: Found Sprint results for ${race.name}`);
+
+            // Find fastest lap in sprint if available
+            let fastestLap = null;
+            const flResult = results.find((r: any) => r.FastestLap?.rank === "1");
+            if (flResult) fastestLap = flResult.Driver.driverId;
+
+            await db`
+              INSERT INTO race_results (race_id, sprint_p1, sprint_p2, sprint_p3, sprint_fastest_lap)
+              VALUES (
+                ${race.id},
+                ${results[0].Driver.driverId},
+                ${results[1]?.Driver.driverId || null},
+                ${results[2]?.Driver.driverId || null},
+                ${fastestLap}
+              )
+              ON CONFLICT (race_id) DO UPDATE SET
+                sprint_p1 = EXCLUDED.sprint_p1,
+                sprint_p2 = EXCLUDED.sprint_p2,
+                sprint_p3 = EXCLUDED.sprint_p3,
+                sprint_fastest_lap = EXCLUDED.sprint_fastest_lap
+            `;
+          }
         }
       }
     }
@@ -189,145 +187,146 @@ export async function fetchRaceResults(db: Sql) {
       SELECT * FROM races 
       WHERE status = 'UPCOMING'
       AND date <= NOW()
-      ORDER BY date ASC LIMIT 1
+      ORDER BY date ASC
     `;
 
     if (nearbyRaces.length === 0) {
       logger.info({ job: "fetchRaceResults" }, "🔍 No recently finished races found for scoring.");
       return;
     }
-    const race = nearbyRaces[0];
-    const round = race.id.toString();
 
-    logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
-    const res = await fetch(`${JOLPI_API_BASE}/${round}/results.json`);
-    if (!res.ok) return;
+    for (const race of nearbyRaces) {
+      const round = race.id.toString();
 
-    const data: any = await res.json();
-    const targetRaceData = data?.MRData?.RaceTable?.Races?.[0];
-    const resultsData = targetRaceData?.Results;
+      logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
+      const res = await fetch(`${JOLPI_API_BASE}/${round}/results.json`);
+      if (!res.ok) continue;
 
-    if (!resultsData || resultsData.length === 0) {
-      logger.info({ job: "fetchRaceResults", race: race.name }, `⚠️ No official results for ${race.name} yet.`);
-      return;
-    }
+      const data: any = await res.json();
+      const targetRaceData = data?.MRData?.RaceTable?.Races?.[0];
+      const resultsData = targetRaceData?.Results;
 
-    // Determine First DNF
-    const retired = resultsData.filter((r: any) => {
-      const status = r.status.toLowerCase();
-      return !status.includes("finished") &&
-        !status.includes("laps") &&
-        !status.includes("disqualified") &&
-        !status.includes("not start");
-    });
+      if (!resultsData || resultsData.length === 0) {
+        logger.info({ job: "fetchRaceResults", race: race.name }, `⚠️ No official results for ${race.name} yet.`);
+        continue;
+      }
 
-    let firstDnf = null;
-    if (retired.length > 0) {
-      const sortedByLaps = retired.sort((a: any, b: any) => parseInt(a.laps) - parseInt(b.laps));
-      firstDnf = sortedByLaps[0].Driver.driverId;
-      logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
-    }
+      // Determine First DNF
+      const retired = resultsData.filter((r: any) => {
+        const status = r.status.toLowerCase();
+        return !status.includes("finished") &&
+          !status.includes("laps") &&
+          !status.includes("disqualified") &&
+          !status.includes("not start");
+      });
 
-    // Find Fastest Lap
-    const flResult = resultsData.find((r: any) => r.FastestLap?.rank === "1");
-    const fastestLap = flResult?.Driver?.driverId || null;
+      let firstDnf = null;
+      if (retired.length > 0) {
+        const sortedByLaps = retired.sort((a: any, b: any) => parseInt(a.laps) - parseInt(b.laps));
+        firstDnf = sortedByLaps[0].Driver.driverId;
+        logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
+      }
 
-    const officialResults: PickSelections = {
-      sprintQualifyingP1: null,
-      sprintP1: null,
-      sprintP2: null,
-      sprintP3: null,
-      sprintFastestLap: null,
-      raceQualifyingP1: null,
-      raceP1: resultsData[0].Driver.driverId,
-      raceP2: resultsData[1]?.Driver.driverId || null,
-      raceP3: resultsData[2]?.Driver.driverId || null,
-      fastestLap,
-      firstDnf,
-    };
+      // Find Fastest Lap
+      const flResult = resultsData.find((r: any) => r.FastestLap?.rank === "1");
+      const fastestLap = flResult?.Driver?.driverId || null;
 
-    // 1. Update race_results table
-    await db`
-      INSERT INTO race_results (
-        race_id, race_p1, race_p2, race_p3, fastest_lap, first_dnf
-      ) VALUES (
-        ${race.id},
-        ${officialResults.raceP1 ?? null},
-        ${officialResults.raceP2 ?? null},
-        ${officialResults.raceP3 ?? null},
-        ${fastestLap ?? null},
-        ${firstDnf ?? null}
-      )
-      ON CONFLICT (race_id) DO UPDATE SET
-        race_p1 = EXCLUDED.race_p1,
-        race_p2 = EXCLUDED.race_p2,
-        race_p3 = EXCLUDED.race_p3,
-        fastest_lap = EXCLUDED.fastest_lap,
-        first_dnf = EXCLUDED.first_dnf
-    `;
-
-    // 2. Score All Picks
-    const picks = await db<PickRow[]>`SELECT * FROM picks WHERE race_id = ${race.id}`;
-    const leagues = await db<LeagueRow[]>`SELECT id, scoring_config FROM leagues`;
-    const leagueMap = new Map<string, ScoringConfig>(
-      leagues.map(l => [l.id, typeof l.scoring_config === 'string' ? JSON.parse(l.scoring_config) : l.scoring_config])
-    );
-
-    // Fetch full existing results for complete scoring (merging Quali/Sprint data we saved earlier)
-    const [savedResults] = await db<any[]>`SELECT * FROM race_results WHERE race_id = ${race.id}`;
-    const fullOfficial: PickSelections = {
-      ...officialResults,
-      sprintQualifyingP1: savedResults?.sprint_qualifying_p1,
-      sprintP1: savedResults?.sprint_p1,
-      sprintP2: savedResults?.sprint_p2,
-      sprintP3: savedResults?.sprint_p3,
-      sprintFastestLap: savedResults?.sprint_fastest_lap,
-      raceQualifyingP1: savedResults?.race_qualifying_p1,
-    };
-
-    await Promise.all(picks.map(pick => {
-      const config = leagueMap.get(pick.league_id);
-      const userPick: PickSelections = {
-        sprintQualifyingP1: pick.sprint_qualifying_p1,
-        sprintP1: pick.sprint_p1,
-        sprintP2: pick.sprint_p2,
-        sprintP3: pick.sprint_p3,
-        sprintFastestLap: pick.sprint_fastest_lap,
-        raceQualifyingP1: pick.race_qualifying_p1,
-        raceP1: pick.race_p1,
-        raceP2: pick.race_p2,
-        raceP3: pick.race_p3,
-        fastestLap: pick.fastest_lap,
-        firstDnf: pick.first_dnf,
+      const officialResults: PickSelections = {
+        sprintQualifyingP1: null,
+        sprintP1: null,
+        sprintP2: null,
+        sprintP3: null,
+        sprintFastestLap: null,
+        raceQualifyingP1: null,
+        raceP1: resultsData[0].Driver.driverId,
+        raceP2: resultsData[1]?.Driver.driverId || null,
+        raceP3: resultsData[2]?.Driver.driverId || null,
+        fastestLap,
+        firstDnf,
       };
-      const points = calculatePoints(userPick, fullOfficial, config);
-      return db`
-        UPDATE picks SET 
-          total_points = ${points.score},
-          correct_predictions = ${points.correct},
-          total_predictions = ${points.total}
-        WHERE id = ${pick.id}
+
+      // 1. Update race_results table
+      await db`
+        INSERT INTO race_results (
+          race_id, race_p1, race_p2, race_p3, fastest_lap, first_dnf
+        ) VALUES (
+          ${race.id},
+          ${officialResults.raceP1 ?? null},
+          ${officialResults.raceP2 ?? null},
+          ${officialResults.raceP3 ?? null},
+          ${fastestLap ?? null},
+          ${firstDnf ?? null}
+        )
+        ON CONFLICT (race_id) DO UPDATE SET
+          race_p1 = EXCLUDED.race_p1,
+          race_p2 = EXCLUDED.race_p2,
+          race_p3 = EXCLUDED.race_p3,
+          fastest_lap = EXCLUDED.fastest_lap,
+          first_dnf = EXCLUDED.first_dnf
       `;
-    }));
 
-    // 3. Mark Race COMPLETED
-    await db`UPDATE races SET status = 'COMPLETED' WHERE id = ${race.id}`;
+      // 2. Score All Picks
+      const picks = await db<PickRow[]>`SELECT * FROM picks WHERE race_id = ${race.id}`;
+      const leagues = await db<LeagueRow[]>`SELECT id, scoring_config FROM leagues`;
+      const leagueMap = new Map<string, ScoringConfig>(
+        leagues.map(l => [l.id, typeof l.scoring_config === 'string' ? JSON.parse(l.scoring_config) : l.scoring_config])
+      );
 
-    // 4. Notifications
-    await createNotificationsForAllPicksInRace(
-      db,
-      race.id,
-      "RESULTS_IN",
-      `${race.name} — Results In! 🏁`,
-      "Automated scoring complete. Check your league leaderboards now!",
-      { raceId: race.id }
-    );
+      // Fetch full existing results for complete scoring (merging Quali/Sprint data we saved earlier)
+      const [savedResults] = await db<any[]>`SELECT * FROM race_results WHERE race_id = ${race.id}`;
+      const fullOfficial: PickSelections = {
+        ...officialResults,
+        sprintQualifyingP1: savedResults?.sprint_qualifying_p1,
+        sprintP1: savedResults?.sprint_p1,
+        sprintP2: savedResults?.sprint_p2,
+        sprintP3: savedResults?.sprint_p3,
+        sprintFastestLap: savedResults?.sprint_fastest_lap,
+        raceQualifyingP1: savedResults?.race_qualifying_p1,
+      };
 
-    logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
+      await Promise.all(picks.map(pick => {
+        const config = leagueMap.get(pick.league_id);
+        const userPick: PickSelections = {
+          sprintQualifyingP1: pick.sprint_qualifying_p1,
+          sprintP1: pick.sprint_p1,
+          sprintP2: pick.sprint_p2,
+          sprintP3: pick.sprint_p3,
+          sprintFastestLap: pick.sprint_fastest_lap,
+          raceQualifyingP1: pick.race_qualifying_p1,
+          raceP1: pick.race_p1,
+          raceP2: pick.race_p2,
+          raceP3: pick.race_p3,
+          fastestLap: pick.fastest_lap,
+          firstDnf: pick.first_dnf,
+        };
+        const points = calculatePoints(userPick, fullOfficial, config);
+        return db`
+          UPDATE picks SET 
+            total_points = ${points.score},
+            correct_predictions = ${points.correct},
+            total_predictions = ${points.total}
+          WHERE id = ${pick.id}
+        `;
+      }));
 
-    // 5. Update Driver Standings
-    await fetchAndUpdateDriverStandings(db);
+      // 3. Mark Race COMPLETED
+      await db`UPDATE races SET status = 'COMPLETED' WHERE id = ${race.id}`;
 
+      // 4. Notifications
+      await createNotificationsForAllPicksInRace(
+        db,
+        race.id,
+        "RESULTS_IN",
+        `${race.name} — Results In! 🏁`,
+        "Automated scoring complete. Check your league leaderboards now!",
+        { raceId: race.id }
+      );
+
+      logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
+
+      // 5. Update Driver Standings
+      await fetchAndUpdateDriverStandings(db);
+    }
   } catch (err) {
     logger.error({ err, job: "fetchRaceResults" }, "Failed Sunday cron (Race Scoring)");
   }
