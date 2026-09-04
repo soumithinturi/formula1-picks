@@ -10,20 +10,25 @@ import { DEFAULT_SCORING_CONFIG } from "../types/index.ts";
 export function calculatePoints(
   userPick: PickSelections,
   officialResults: PickSelections,
-  config: ScoringConfig = DEFAULT_SCORING_CONFIG
+  config?: ScoringConfig | null
 ): { score: number; correct: number; total: number } {
   let score = 0;
   let correct = 0;
   let total = 0;
 
+  const safeConfig: ScoringConfig = {
+    ...DEFAULT_SCORING_CONFIG,
+    ...(config || {}),
+  };
+
   // Calculate total possible picks based on the race type and league config
   // For a normal race, these are the typical picks if enabled:
-  if (config.quali?.enabled) total++;
-  if (config.p1?.enabled) total++;
-  if (config.p2?.enabled) total++;
-  if (config.p3?.enabled) total++;
-  if (config.fastestLap?.enabled) total++;
-  if (config.firstDNF?.enabled) total++;
+  if (safeConfig.quali?.enabled) total++;
+  if (safeConfig.p1?.enabled) total++;
+  if (safeConfig.p2?.enabled) total++;
+  if (safeConfig.p3?.enabled) total++;
+  if (safeConfig.fastestLap?.enabled) total++;
+  if (safeConfig.firstDNF?.enabled) total++;
 
   // If we have sprint results, we also add sprint pick totals.
   // We can infer if it was a sprint race by checking if Sprint P1 was recorded in official results.
@@ -32,35 +37,40 @@ export function calculatePoints(
     // We count these explicitly since they don't have individual toggles in the config yet, 
     // except sprintFastestLap
     total += 4; // Sprint Pole, P1, P2, P3
-    if (config.sprintFastestLap?.enabled) total++;
+    if (safeConfig.sprintFastestLap?.enabled) total++;
   }
 
   // Helper to check picks and assign points/correctness
-  const checkPick = (userValue: string | null | undefined, officialValue: string | null | undefined, configRule: { enabled: boolean, points: number }) => {
+  const checkPick = (
+    userValue: string | null | undefined,
+    officialValue: string | null | undefined,
+    configRule?: { enabled: boolean; points: number } | null
+  ) => {
+    const rule = configRule || { enabled: false, points: 0 };
     if (userValue && officialValue && userValue === officialValue) {
-      if (configRule.enabled || configRule.points === 0) { // points=0 means it's always enabled but worth 0 points (like sprint positions currently)
+      if (rule.enabled || rule.points === 0) { // points=0 means it's always enabled but worth 0 points (like sprint positions currently)
         correct++;
-        if (configRule.enabled) {
-          score += configRule.points;
+        if (rule.enabled) {
+          score += rule.points;
         }
       }
     }
   };
 
   // Sprint picks
-  checkPick(userPick.sprintQualifyingP1, officialResults.sprintQualifyingP1, config.quali);
-  checkPick(userPick.sprintP1, officialResults.sprintP1, config.p1);
-  checkPick(userPick.sprintP2, officialResults.sprintP2, config.p2);
-  checkPick(userPick.sprintP3, officialResults.sprintP3, config.p3);
-  checkPick(userPick.sprintFastestLap, officialResults.sprintFastestLap, config.sprintFastestLap);
+  checkPick(userPick.sprintQualifyingP1, officialResults.sprintQualifyingP1, safeConfig.quali);
+  checkPick(userPick.sprintP1, officialResults.sprintP1, safeConfig.p1);
+  checkPick(userPick.sprintP2, officialResults.sprintP2, safeConfig.p2);
+  checkPick(userPick.sprintP3, officialResults.sprintP3, safeConfig.p3);
+  checkPick(userPick.sprintFastestLap, officialResults.sprintFastestLap, safeConfig.sprintFastestLap);
 
   // Race picks
-  checkPick(userPick.raceQualifyingP1, officialResults.raceQualifyingP1, config.quali);
-  checkPick(userPick.raceP1, officialResults.raceP1, config.p1);
-  checkPick(userPick.raceP2, officialResults.raceP2, config.p2);
-  checkPick(userPick.raceP3, officialResults.raceP3, config.p3);
-  checkPick(userPick.fastestLap, officialResults.fastestLap, config.fastestLap);
-  checkPick(userPick.firstDnf, officialResults.firstDnf, config.firstDNF);
+  checkPick(userPick.raceQualifyingP1, officialResults.raceQualifyingP1, safeConfig.quali);
+  checkPick(userPick.raceP1, officialResults.raceP1, safeConfig.p1);
+  checkPick(userPick.raceP2, officialResults.raceP2, safeConfig.p2);
+  checkPick(userPick.raceP3, officialResults.raceP3, safeConfig.p3);
+  checkPick(userPick.fastestLap, officialResults.fastestLap, safeConfig.fastestLap);
+  checkPick(userPick.firstDnf, officialResults.firstDnf, safeConfig.firstDNF);
 
   // Bonus: Perfect Order (doesn't add to correct/total, just points)
   const hasPerfectOrder =
@@ -71,8 +81,8 @@ export function calculatePoints(
     userPick.raceP2 === officialResults.raceP2 &&
     userPick.raceP3 === officialResults.raceP3;
 
-  if (config.perfectOrder.enabled && hasPerfectOrder) {
-    score += config.perfectOrder.points;
+  if (safeConfig.perfectOrder?.enabled && hasPerfectOrder) {
+    score += safeConfig.perfectOrder.points;
   }
 
   const hasSprintPerfectOrder =
@@ -84,13 +94,13 @@ export function calculatePoints(
     userPick.sprintP2 === officialResults.sprintP2 &&
     userPick.sprintP3 === officialResults.sprintP3;
 
-  if (config.perfectOrder.enabled && hasSprintPerfectOrder) {
-    score += config.perfectOrder.points;
+  if (safeConfig.perfectOrder?.enabled && hasSprintPerfectOrder) {
+    score += safeConfig.perfectOrder.points;
   }
 
   // Bonus: Podium (Any driver in top 3 predicted in any top 3 position)
   // Already counted in the "correct" counts above if exactly matching, but podium awards points for being in the top 3 at all
-  if (config.podium.enabled) {
+  if (safeConfig.podium?.enabled) {
     const officialTop3 = [officialResults.raceP1, officialResults.raceP2, officialResults.raceP3].filter(Boolean);
     const userTop3 = [userPick.raceP1, userPick.raceP2, userPick.raceP3].filter(Boolean);
 
@@ -101,7 +111,7 @@ export function calculatePoints(
       }
     }
     // E.g. 1 point for each correct podium driver, or flat bonus? The UI implies points per driver since it's "Points awarded for any driver who finishes in the top 3"
-    score += podiumMatches * config.podium.points;
+    score += podiumMatches * safeConfig.podium.points;
 
     if (hasSprint) {
       const officialSprintTop3 = [officialResults.sprintP1, officialResults.sprintP2, officialResults.sprintP3].filter(Boolean);
@@ -113,7 +123,7 @@ export function calculatePoints(
           sprintPodiumMatches++;
         }
       }
-      score += sprintPodiumMatches * config.podium.points;
+      score += sprintPodiumMatches * safeConfig.podium.points;
     }
   }
 

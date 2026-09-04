@@ -69,7 +69,11 @@ export async function submitResults(c: AppContext) {
     picks.map((pick) => {
       let config = leagueConfigMap.get(pick.league_id);
       if (typeof config === "string") {
-        config = JSON.parse(config);
+        try {
+          config = JSON.parse(config);
+        } catch {
+          config = null as any;
+        }
       }
       const userPick = {
         sprintQualifyingP1: pick.sprint_qualifying_p1,

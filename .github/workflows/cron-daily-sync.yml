@@ -1,0 +1,45 @@
+name: F1 Cron - Daily Schedule & Standings Sync
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which sync to run manually"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - schedule
+          - standings
+
+jobs:
+  schedule-sync:
+    name: Sync Season Schedule
+    if: |
+      github.event_name == 'schedule' ||
+      github.event.inputs.job == 'all' ||
+      github.event.inputs.job == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/v1/internal/cron/schedule
+        run: |
+          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/schedule" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
+
+  standings-sync:
+    name: Sync Driver Standings
+    if: |
+      github.event_name == 'schedule' ||
+      github.event.inputs.job == 'all' ||
+      github.event.inputs.job == 'standings'
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/v1/internal/cron/standings
+        run: |
+          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/standings" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"

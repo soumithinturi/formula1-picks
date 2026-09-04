@@ -18,80 +18,82 @@ export async function checkUpcomingSessionsForNotifications(db: Sql) {
     const upcomingRaces = await db<RaceRow[]>`
       SELECT * FROM races 
       WHERE status = 'UPCOMING'
+      AND date >= (NOW() - interval '2 days')
       AND date <= (NOW() + interval '7 days')
-      ORDER BY date ASC LIMIT 1
+      ORDER BY date ASC
     `;
 
     if (upcomingRaces.length === 0) return;
-    const race = upcomingRaces[0];
-
-    // Array of sessions we track
-    const sessions = [
-      { name: "Sprint Quali", time: race.sprint_quali_date, column: "notify_sprint_quali_cadence" },
-      { name: "Sprint", time: (race as any).sprint_date, column: "notify_sprint_cadence" },
-      { name: "Race Quali", time: race.race_quali_date, column: "notify_race_quali_cadence" },
-      { name: "Race", time: race.race_deadline, column: "notify_race_cadence" }
-    ];
 
     const nowMs = Date.now();
 
-    for (const session of sessions) {
-      if (!session.time) continue;
+    for (const race of upcomingRaces) {
+      // Array of sessions we track
+      const sessions = [
+        { name: "Sprint Quali", time: race.sprint_quali_date, column: "notify_sprint_quali_cadence" },
+        { name: "Sprint", time: (race as any).sprint_date, column: "notify_sprint_cadence" },
+        { name: "Race Quali", time: race.race_quali_date, column: "notify_race_quali_cadence" },
+        { name: "Race", time: race.race_deadline, column: "notify_race_cadence" }
+      ];
 
-      const sessionTimeMs = new Date(session.time).getTime();
-      const diffMinutes = Math.floor((sessionTimeMs - nowMs) / 60000);
+      for (const session of sessions) {
+        if (!session.time) continue;
 
-      // We only care if it's within a timeframe users might have set
-      if (diffMinutes < 0 || diffMinutes > 24 * 60) continue;
+        const sessionTimeMs = new Date(session.time).getTime();
+        const diffMinutes = Math.floor((sessionTimeMs - nowMs) / 60000);
 
-      // NOTE: We validate the column name against an allowlist and use a raw
-      // query string for the identifier, as tagged templates don't support
-      // dynamic identifiers (columns/tables).
-      const ALLOWED_CADENCE_COLUMNS = new Set([
-        "notify_sprint_quali_cadence",
-        "notify_sprint_cadence",
-        "notify_race_quali_cadence",
-        "notify_race_cadence",
-      ]);
-      if (!ALLOWED_CADENCE_COLUMNS.has(session.column)) {
-        logger.warn({ job: "notifications", column: session.column }, "Invalid cadence column name, skipping.");
-        continue;
-      }
+        // We only care if it's within a timeframe users might have set
+        if (diffMinutes < 0 || diffMinutes > 24 * 60) continue;
 
-      // NOTE: We use db.unsafe() for the dynamic column identifier,
-      // keeping the value parameter separate.
-      const subscriptions = await db.unsafe(`
-        SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${session.column} as cadence
-        FROM user_notification_settings uns
-        JOIN user_push_subscriptions ups ON uns.user_id = ups.user_id
-        WHERE uns.${session.column} IS NOT NULL
-          AND uns.${session.column} = $1
-      `, [diffMinutes]);
+        // NOTE: We validate the column name against an allowlist and use a raw
+        // query string for the identifier, as tagged templates don't support
+        // dynamic identifiers (columns/tables).
+        const ALLOWED_CADENCE_COLUMNS = new Set([
+          "notify_sprint_quali_cadence",
+          "notify_sprint_cadence",
+          "notify_race_quali_cadence",
+          "notify_race_cadence",
+        ]);
+        if (!ALLOWED_CADENCE_COLUMNS.has(session.column)) {
+          logger.warn({ job: "notifications", column: session.column }, "Invalid cadence column name, skipping.");
+          continue;
+        }
 
-      if (subscriptions.length > 0) {
-        logger.info({
-          job: "notifications",
-          session: session.name,
-          count: subscriptions.length,
-          minutes: diffMinutes
-        }, `Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
-        const payload = {
-          title: "Session Starting Soon!",
-          body: `${race.name} ${session.name} begins in ${diffMinutes} minutes. Lock in your picks now!`,
-          url: "/"
-        };
+        // NOTE: We use db.unsafe() for the dynamic column identifier,
+        // keeping the value parameter separate.
+        const subscriptions = await db.unsafe(`
+          SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${session.column} as cadence
+          FROM user_notification_settings uns
+          JOIN user_push_subscriptions ups ON uns.user_id = ups.user_id
+          WHERE uns.${session.column} IS NOT NULL
+            AND uns.${session.column} = $1
+        `, [diffMinutes]);
 
-        const promises = subscriptions.map((sub: any) =>
-          sendPushNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            payload
-          ).catch(async (err) => {
-            if (err?.statusCode === 410) {
-              await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
-            }
-          })
-        );
-        await Promise.all(promises);
+        if (subscriptions.length > 0) {
+          logger.info({
+            job: "notifications",
+            session: session.name,
+            count: subscriptions.length,
+            minutes: diffMinutes
+          }, `Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
+          const payload = {
+            title: "Session Starting Soon!",
+            body: `${race.name} ${session.name} begins in ${diffMinutes} minutes. Lock in your picks now!`,
+            url: "/"
+          };
+
+          const promises = subscriptions.map((sub: any) =>
+            sendPushNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            ).catch(async (err) => {
+              if (err?.statusCode === 410) {
+                await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
+              }
+            })
+          );
+          await Promise.all(promises);
+        }
       }
     }
   } catch (err) {
@@ -196,136 +198,154 @@ export async function fetchRaceResults(db: Sql) {
     }
 
     for (const race of nearbyRaces) {
-      const round = race.id.toString();
+      try {
+        const round = race.id.toString();
 
-      logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
-      const res = await fetch(`${JOLPI_API_BASE}/${round}/results.json`);
-      if (!res.ok) continue;
+        logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
+        const res = await fetch(`${JOLPI_API_BASE}/${round}/results.json`);
+        if (!res.ok) continue;
 
-      const data: any = await res.json();
-      const targetRaceData = data?.MRData?.RaceTable?.Races?.[0];
-      const resultsData = targetRaceData?.Results;
+        const data: any = await res.json();
+        const targetRaceData = data?.MRData?.RaceTable?.Races?.[0];
+        const resultsData = targetRaceData?.Results;
 
-      if (!resultsData || resultsData.length === 0) {
-        logger.info({ job: "fetchRaceResults", race: race.name }, `⚠️ No official results for ${race.name} yet.`);
-        continue;
-      }
+        if (!resultsData || resultsData.length === 0) {
+          logger.info({ job: "fetchRaceResults", race: race.name }, `⚠️ No official results for ${race.name} yet.`);
+          continue;
+        }
 
-      // Determine First DNF
-      const retired = resultsData.filter((r: any) => {
-        const status = r.status.toLowerCase();
-        return !status.includes("finished") &&
-          !status.includes("laps") &&
-          !status.includes("disqualified") &&
-          !status.includes("not start");
-      });
+        // Determine First DNF
+        const retired = resultsData.filter((r: any) => {
+          const status = r.status.toLowerCase();
+          return !status.includes("finished") &&
+            !status.includes("laps") &&
+            !status.includes("disqualified") &&
+            !status.includes("not start");
+        });
 
-      let firstDnf = null;
-      if (retired.length > 0) {
-        const sortedByLaps = retired.sort((a: any, b: any) => parseInt(a.laps) - parseInt(b.laps));
-        firstDnf = sortedByLaps[0].Driver.driverId;
-        logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
-      }
+        let firstDnf = null;
+        if (retired.length > 0) {
+          const sortedByLaps = retired.sort((a: any, b: any) => parseInt(a.laps) - parseInt(b.laps));
+          firstDnf = sortedByLaps[0].Driver.driverId;
+          logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
+        }
 
-      // Find Fastest Lap
-      const flResult = resultsData.find((r: any) => r.FastestLap?.rank === "1");
-      const fastestLap = flResult?.Driver?.driverId || null;
+        // Find Fastest Lap
+        const flResult = resultsData.find((r: any) => r.FastestLap?.rank === "1");
+        const fastestLap = flResult?.Driver?.driverId || null;
 
-      const officialResults: PickSelections = {
-        sprintQualifyingP1: null,
-        sprintP1: null,
-        sprintP2: null,
-        sprintP3: null,
-        sprintFastestLap: null,
-        raceQualifyingP1: null,
-        raceP1: resultsData[0].Driver.driverId,
-        raceP2: resultsData[1]?.Driver.driverId || null,
-        raceP3: resultsData[2]?.Driver.driverId || null,
-        fastestLap,
-        firstDnf,
-      };
-
-      // 1. Update race_results table
-      await db`
-        INSERT INTO race_results (
-          race_id, race_p1, race_p2, race_p3, fastest_lap, first_dnf
-        ) VALUES (
-          ${race.id},
-          ${officialResults.raceP1 ?? null},
-          ${officialResults.raceP2 ?? null},
-          ${officialResults.raceP3 ?? null},
-          ${fastestLap ?? null},
-          ${firstDnf ?? null}
-        )
-        ON CONFLICT (race_id) DO UPDATE SET
-          race_p1 = EXCLUDED.race_p1,
-          race_p2 = EXCLUDED.race_p2,
-          race_p3 = EXCLUDED.race_p3,
-          fastest_lap = EXCLUDED.fastest_lap,
-          first_dnf = EXCLUDED.first_dnf
-      `;
-
-      // 2. Score All Picks
-      const picks = await db<PickRow[]>`SELECT * FROM picks WHERE race_id = ${race.id}`;
-      const leagues = await db<LeagueRow[]>`SELECT id, scoring_config FROM leagues`;
-      const leagueMap = new Map<string, ScoringConfig>(
-        leagues.map(l => [l.id, typeof l.scoring_config === 'string' ? JSON.parse(l.scoring_config) : l.scoring_config])
-      );
-
-      // Fetch full existing results for complete scoring (merging Quali/Sprint data we saved earlier)
-      const [savedResults] = await db<any[]>`SELECT * FROM race_results WHERE race_id = ${race.id}`;
-      const fullOfficial: PickSelections = {
-        ...officialResults,
-        sprintQualifyingP1: savedResults?.sprint_qualifying_p1,
-        sprintP1: savedResults?.sprint_p1,
-        sprintP2: savedResults?.sprint_p2,
-        sprintP3: savedResults?.sprint_p3,
-        sprintFastestLap: savedResults?.sprint_fastest_lap,
-        raceQualifyingP1: savedResults?.race_qualifying_p1,
-      };
-
-      await Promise.all(picks.map(pick => {
-        const config = leagueMap.get(pick.league_id);
-        const userPick: PickSelections = {
-          sprintQualifyingP1: pick.sprint_qualifying_p1,
-          sprintP1: pick.sprint_p1,
-          sprintP2: pick.sprint_p2,
-          sprintP3: pick.sprint_p3,
-          sprintFastestLap: pick.sprint_fastest_lap,
-          raceQualifyingP1: pick.race_qualifying_p1,
-          raceP1: pick.race_p1,
-          raceP2: pick.race_p2,
-          raceP3: pick.race_p3,
-          fastestLap: pick.fastest_lap,
-          firstDnf: pick.first_dnf,
+        const officialResults: PickSelections = {
+          sprintQualifyingP1: null,
+          sprintP1: null,
+          sprintP2: null,
+          sprintP3: null,
+          sprintFastestLap: null,
+          raceQualifyingP1: null,
+          raceP1: resultsData[0].Driver.driverId,
+          raceP2: resultsData[1]?.Driver.driverId || null,
+          raceP3: resultsData[2]?.Driver.driverId || null,
+          fastestLap,
+          firstDnf,
         };
-        const points = calculatePoints(userPick, fullOfficial, config);
-        return db`
-          UPDATE picks SET 
-            total_points = ${points.score},
-            correct_predictions = ${points.correct},
-            total_predictions = ${points.total}
-          WHERE id = ${pick.id}
+
+        // 1. Update race_results table
+        await db`
+          INSERT INTO race_results (
+            race_id, race_p1, race_p2, race_p3, fastest_lap, first_dnf
+          ) VALUES (
+            ${race.id},
+            ${officialResults.raceP1 ?? null},
+            ${officialResults.raceP2 ?? null},
+            ${officialResults.raceP3 ?? null},
+            ${fastestLap ?? null},
+            ${firstDnf ?? null}
+          )
+          ON CONFLICT (race_id) DO UPDATE SET
+            race_p1 = EXCLUDED.race_p1,
+            race_p2 = EXCLUDED.race_p2,
+            race_p3 = EXCLUDED.race_p3,
+            fastest_lap = EXCLUDED.fastest_lap,
+            first_dnf = EXCLUDED.first_dnf
         `;
-      }));
 
-      // 3. Mark Race COMPLETED
-      await db`UPDATE races SET status = 'COMPLETED' WHERE id = ${race.id}`;
+        // 2. Score All Picks
+        const picks = await db<PickRow[]>`SELECT * FROM picks WHERE race_id = ${race.id}`;
+        const leagues = await db<LeagueRow[]>`SELECT id, scoring_config FROM leagues`;
+        const leagueMap = new Map<string, ScoringConfig>(
+          leagues.map(l => {
+            let config = l.scoring_config;
+            if (typeof config === 'string') {
+              try {
+                config = JSON.parse(config);
+              } catch {
+                config = null as any;
+              }
+            }
+            return [l.id, config];
+          })
+        );
 
-      // 4. Notifications
-      await createNotificationsForAllPicksInRace(
-        db,
-        race.id,
-        "RESULTS_IN",
-        `${race.name} — Results In! 🏁`,
-        "Automated scoring complete. Check your league leaderboards now!",
-        { raceId: race.id }
-      );
+        // Fetch full existing results for complete scoring (merging Quali/Sprint data we saved earlier)
+        const [savedResults] = await db<any[]>`SELECT * FROM race_results WHERE race_id = ${race.id}`;
+        const fullOfficial: PickSelections = {
+          ...officialResults,
+          sprintQualifyingP1: savedResults?.sprint_qualifying_p1,
+          sprintP1: savedResults?.sprint_p1,
+          sprintP2: savedResults?.sprint_p2,
+          sprintP3: savedResults?.sprint_p3,
+          sprintFastestLap: savedResults?.sprint_fastest_lap,
+          raceQualifyingP1: savedResults?.race_qualifying_p1,
+        };
 
-      logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
+        await Promise.all(picks.map(async (pick) => {
+          try {
+            const config = leagueMap.get(pick.league_id);
+            const userPick: PickSelections = {
+              sprintQualifyingP1: pick.sprint_qualifying_p1,
+              sprintP1: pick.sprint_p1,
+              sprintP2: pick.sprint_p2,
+              sprintP3: pick.sprint_p3,
+              sprintFastestLap: pick.sprint_fastest_lap,
+              raceQualifyingP1: pick.race_qualifying_p1,
+              raceP1: pick.race_p1,
+              raceP2: pick.race_p2,
+              raceP3: pick.race_p3,
+              fastestLap: pick.fastest_lap,
+              firstDnf: pick.first_dnf,
+            };
+            const points = calculatePoints(userPick, fullOfficial, config);
+            await db`
+              UPDATE picks SET 
+                total_points = ${points.score},
+                correct_predictions = ${points.correct},
+                total_predictions = ${points.total}
+              WHERE id = ${pick.id}
+            `;
+          } catch (pickErr) {
+            logger.error({ pickErr, pickId: pick.id }, `Failed scoring pick ${pick.id}`);
+          }
+        }));
 
-      // 5. Update Driver Standings
-      await fetchAndUpdateDriverStandings(db);
+        // 3. Mark Race COMPLETED
+        await db`UPDATE races SET status = 'COMPLETED' WHERE id = ${race.id}`;
+
+        // 4. Notifications
+        await createNotificationsForAllPicksInRace(
+          db,
+          race.id,
+          "RESULTS_IN",
+          `${race.name} — Results In! 🏁`,
+          "Automated scoring complete. Check your league leaderboards now!",
+          { raceId: race.id }
+        );
+
+        logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
+
+        // 5. Update Driver Standings
+        await fetchAndUpdateDriverStandings(db);
+      } catch (raceErr) {
+        logger.error({ raceErr, raceId: race.id, raceName: race.name }, `Failed processing race results for ${race.name}`);
+      }
     }
   } catch (err) {
     logger.error({ err, job: "fetchRaceResults" }, "Failed Sunday cron (Race Scoring)");

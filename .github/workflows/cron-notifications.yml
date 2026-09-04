@@ -1,0 +1,17 @@
+name: F1 Cron - Push Notifications
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  notifications:
+    name: Push Notifications Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/v1/internal/cron/notifications
+        run: |
+          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/notifications" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"

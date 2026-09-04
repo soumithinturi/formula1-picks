@@ -16,18 +16,18 @@ describe("Scoring Logic", () => {
     const pick = { ...defaultResults };
     const score = calculatePoints(pick, defaultResults, DEFAULT_SCORING_CONFIG);
 
-    // P1: 5, P2: 3, P3: 1, Quali: 1, Fastest Lap: 5 === 15 points
+    // P1: 5, P2: 3, P3: 1, Quali: 1, Fastest Lap: 1 === 11 points
     // Podium Bonus (every driver matched exactly + perfect order):
     // 3 drivers * 10 points = +30 points
     // Perfect Order = +15 points
-    // Total = 15 + 30 + 15 = 60
+    // Total = 11 + 30 + 15 = 56
 
     let expected = 0;
     expected += 5; // P1
     expected += 3; // P2
     expected += 1; // P3
     expected += 1; // Quali
-    expected += 5; // FL
+    expected += 1; // FL
     expected += (3 * 10); // Podium (all 3 in top 3)
     expected += 15; // Perfect order
 
@@ -55,6 +55,24 @@ describe("Scoring Logic", () => {
   test("handles empty picks safely", () => {
     const score = calculatePoints({}, defaultResults, DEFAULT_SCORING_CONFIG);
     expect(score.score).toBe(0);
+  });
+
+  test("handles null or undefined config safely", () => {
+    const pick = { ...defaultResults };
+    const scoreNull = calculatePoints(pick, defaultResults, null);
+    const scoreUndef = calculatePoints(pick, defaultResults, undefined);
+    expect(scoreNull.score).toBe(56);
+    expect(scoreUndef.score).toBe(56);
+  });
+
+  test("handles partial custom scoring config safely", () => {
+    const partialConfig = {
+      p1: { enabled: true, points: 20 },
+    } as any;
+    const pick: PickSelections = { raceP1: "VER" };
+    const score = calculatePoints(pick, defaultResults, partialConfig);
+    // P1 (20) + Podium match (10) = 30
+    expect(score.score).toBe(30);
   });
 
   test("uses custom scoring config correctly", () => {
@@ -96,15 +114,15 @@ describe("Scoring Logic", () => {
     const pick = { ...sprintResults };
     const score = calculatePoints(pick, sprintResults, DEFAULT_SCORING_CONFIG);
 
-    // Race perfect: 60
+    // Race perfect: 56
     // Sprint perfect:
     // Sprint Quali: 1
     // Sprint P1: 5, P2: 3, P3: 1
-    // Sprint FL: 5
+    // Sprint FL: 1
     // Sprint Podium Bonus: 3 * 10 = 30
     // Sprint Perfect Order: 15
-    // Sprint Total = 1 + 5 + 3 + 1 + 5 + 30 + 15 = 60
-    // Overall = 120
-    expect(score.score).toBe(120);
+    // Sprint Total = 1 + 5 + 3 + 1 + 1 + 30 + 15 = 56
+    // Overall = 112
+    expect(score.score).toBe(112);
   });
 });

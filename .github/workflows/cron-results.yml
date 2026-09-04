@@ -1,0 +1,17 @@
+name: F1 Cron - Results & Scoring
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  results:
+    name: Poll Race Results & Score
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/v1/internal/cron/results
+        run: |
+          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/results" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
