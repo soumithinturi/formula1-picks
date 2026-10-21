@@ -116,32 +116,20 @@ export async function deleteProfile(c: AppContext) {
   const userId = c.get("user").id;
 
   try {
-    const [deletedUser] = await db`
-      DELETE FROM public.users 
-      WHERE id = ${userId} 
-      RETURNING id
-    `;
-
-    if (!deletedUser) {
-      return c.json({ error: "User not found or already deleted" }, 404);
-    }
-
+    // Auth first: if this fails nothing has been deleted and the user can retry. If the DB delete
+    // fails afterwards, the leftover row is harmless because they can no longer sign in.
     const { error: authError } = await supabase.auth.admin.deleteUser(userId);
 
     if (authError) {
       console.error("Failed to delete user from Supabase Auth:", authError);
-      return c.json({
-        error: "Failed to fully delete account from Auth provider. Check SUPABASE_SECRET_KEY.",
-        details: authError.message
-      }, 500);
+      return c.json({ error: "Failed to delete account. Please try again." }, 500);
     }
+
+    await db`DELETE FROM public.users WHERE id = ${userId}`;
 
     return c.json({ success: true, message: "Account deleted successfully." });
   } catch (err: any) {
     console.error("Account deletion error:", err);
-    return c.json({
-      error: "An unexpected error occurred deleting the account.",
-      details: err?.message || String(err)
-    }, 500);
+    return c.json({ error: "An unexpected error occurred deleting the account." }, 500);
   }
 }

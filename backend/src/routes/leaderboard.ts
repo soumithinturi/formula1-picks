@@ -36,7 +36,6 @@ export async function getLeaderboard(c: AppContext) {
     SELECT
       u.id AS "userId",
       u.display_name AS "displayName",
-      u.contact,
       u.avatar_url AS "avatarUrl",
       COUNT(p.id)::int AS "totalPredictions",
       COALESCE(SUM(p.correct_predictions), 0)::int AS "leagueCorrectPredictions",
@@ -48,8 +47,8 @@ export async function getLeaderboard(c: AppContext) {
       AND p.league_id = ${leagueId}
       ${raceId ? db`AND p.race_id = ${raceId}` : db``}
     WHERE lm.league_id = ${leagueId}
-    GROUP BY u.id, u.display_name, u.contact, u.avatar_url
-    ORDER BY "totalPoints" DESC
+    GROUP BY u.id, u.display_name, u.avatar_url
+    ORDER BY "totalPoints" DESC, "displayName"
   `;
 
   return c.json(standings);

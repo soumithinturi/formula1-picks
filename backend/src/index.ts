@@ -41,8 +41,8 @@ app.use("*", cors({
     if (origin === PROD_ORIGIN) return origin;
     // Support any *.sintur-labs.workers.dev preview/staging origin
     if (origin?.endsWith(".sintur-labs.workers.dev")) return origin;
-    // Echo bad origin so the browser blocks it cleanly
-    return origin ?? PROD_ORIGIN;
+    // Unknown origin: send no Allow-Origin header, so the browser blocks it.
+    return null;
   },
   allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization", "x-client-info", "apikey"],

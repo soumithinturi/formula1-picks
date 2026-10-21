@@ -10,8 +10,16 @@ import {
   type LeagueRow,
 } from "../types/index.ts";
 import { notifyLeagueJoin } from "../services/pushService.ts";
+import { parseScoringConfig } from "../services/scoring.ts";
 
 type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
+
+// No look-alike characters (0/O, 1/I). 32 symbols, so a random byte maps evenly with `% 32`.
+const INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateInviteCode(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => INVITE_ALPHABET[b % 32]).join("");
+}
 
 /**
  * POST /api/v1/leagues
@@ -27,28 +35,30 @@ export async function createLeague(c: AppContext) {
 
   try {
     const scoringConfig = data.scoringConfig ?? DEFAULT_SCORING_CONFIG;
-    const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const inviteCode = generateInviteCode();
 
-    const [league] = await db<LeagueRow[]>`
-      INSERT INTO leagues (name, created_by, invite_code, scoring_config, created_at)
-      VALUES (${data.name}, ${user.id}, ${inviteCode}, ${JSON.stringify(scoringConfig)}::jsonb, NOW())
-      RETURNING *
-    `;
-
-    // Auto-join the creator as a member
-    await db`
-      INSERT INTO league_members (league_id, user_id, joined_at)
-      VALUES (${league.id}, ${user.id}, NOW())
-    `;
+    // League and creator membership are created together or not at all.
+    const league = await db.begin(async (tx) => {
+      const [row] = await tx<LeagueRow[]>`
+        INSERT INTO leagues (name, created_by, invite_code, scoring_config, created_at)
+        VALUES (${data.name}, ${user.id}, ${inviteCode}, ${JSON.stringify(scoringConfig)}::jsonb, NOW())
+        RETURNING *
+      `;
+      await tx`
+        INSERT INTO league_members (league_id, user_id, joined_at)
+        VALUES (${row.id}, ${user.id}, NOW())
+      `;
+      return row;
+    });
 
     return c.json({
       ...league,
       members_count: 1,
-      scoring_config: typeof league.scoring_config === "string" ? JSON.parse(league.scoring_config) : league.scoring_config
+      scoring_config: parseScoringConfig(league.scoring_config)
     }, 201);
   } catch (err: any) {
     console.error("League creation error:", err);
-    return c.json({ error: err.message || String(err) }, 500);
+    return c.json({ error: "Failed to create league" }, 500);
   }
 }
 
@@ -69,7 +79,7 @@ export async function listLeagues(c: AppContext) {
   `;
   return c.json(leagues.map(l => ({
     ...l,
-    scoring_config: typeof l.scoring_config === "string" ? JSON.parse(l.scoring_config) : l.scoring_config
+    scoring_config: parseScoringConfig(l.scoring_config)
   })));
 }
 
@@ -119,7 +129,7 @@ export async function joinLeague(c: AppContext) {
 
   return c.json({
     ...updatedLeague,
-    scoring_config: typeof updatedLeague.scoring_config === "string" ? JSON.parse(updatedLeague.scoring_config) : updatedLeague.scoring_config
+    scoring_config: parseScoringConfig(updatedLeague.scoring_config)
   });
 }
 
@@ -134,6 +144,13 @@ export async function previewLeague(c: Context<{ Bindings: Bindings; Variables: 
 
   if (!code) {
     return c.json({ error: "Missing invite code" }, 400);
+  }
+
+  // No login here, so the caller's IP is the only key available.
+  const ip = c.req.header("cf-connecting-ip") ?? "unknown";
+  const { success } = await c.get("env").INVITE_LIMITER.limit({ key: ip });
+  if (!success) {
+    return c.json({ error: "Too many requests" }, 429);
   }
 
   try {
@@ -206,9 +223,7 @@ export async function updateLeague(c: AppContext) {
 
     return c.json({
       ...updatedLeague,
-      scoring_config: typeof updatedLeague.scoring_config === "string"
-        ? JSON.parse(updatedLeague.scoring_config)
-        : updatedLeague.scoring_config
+      scoring_config: parseScoringConfig(updatedLeague.scoring_config)
     });
   } catch (err: any) {
     console.error("League update error:", err);
@@ -274,11 +289,12 @@ export async function deleteLeague(c: AppContext) {
       return c.json({ error: "Only the league creator can delete the league" }, 403);
     }
 
-    // Delete picks first (due to NO ACTION constraint on league_id)
-    await db`DELETE FROM picks WHERE league_id = ${id}`;
-
-    // Delete the league (cascades to league_members and chat_messages)
-    await db`DELETE FROM leagues WHERE id = ${id}`;
+    // Picks first (NO ACTION constraint on league_id), then the league (cascades to
+    // league_members and chat_messages). One transaction so a failure can't leave a league without picks.
+    await db.begin(async (tx) => {
+      await tx`DELETE FROM picks WHERE league_id = ${id}`;
+      await tx`DELETE FROM leagues WHERE id = ${id}`;
+    });
 
     return c.json({ success: true });
   } catch (err: any) {

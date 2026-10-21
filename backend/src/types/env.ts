@@ -9,6 +9,9 @@ export interface Bindings {
   // Hyperdrive provides a pooled connection string for Supabase Postgres
   HYPERDRIVE: Hyperdrive;
 
+  // Rate limiter for the unauthenticated invite-code lookup (see wrangler.jsonc `ratelimits`)
+  INVITE_LIMITER: RateLimit;
+
   // Supabase
   SUPABASE_URL: string;
   SUPABASE_SECRET_KEY: string;

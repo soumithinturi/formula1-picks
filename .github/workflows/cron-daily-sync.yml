@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: POST /api/v1/internal/cron/schedule
         run: |
-          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/schedule" \
+          curl -fsS -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/schedule" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"
 
@@ -40,6 +40,6 @@ jobs:
     steps:
       - name: POST /api/v1/internal/cron/standings
         run: |
-          curl -s -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/standings" \
+          curl -fsS -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/standings" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"

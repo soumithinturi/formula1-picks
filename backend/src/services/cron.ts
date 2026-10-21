@@ -1,17 +1,35 @@
 import type { Sql } from "../db/index.ts";
 import { logger } from "./logger.ts";
-import type { RaceRow, PickRow, LeagueRow, ScoringConfig, PickSelections } from "../types/index.ts";
-import { calculatePoints } from "./scoring.ts";
-import { createNotificationsForAllPicksInRace } from "./notifications.ts";
+import type { RaceRow, PickSelections } from "../types/index.ts";
+import { scoreRacePicks, completeRace, rowToSelections } from "./results.ts";
 import { sendPushNotification } from "./pushService.ts";
 
-const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
+// "current" follows Jolpica's latest season, so no yearly edit is needed. Race rows carry their own
+// season and round, and result fetches use those instead.
+const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1";
+
+/** Jolpica session `{ date, time? }` as an ISO timestamp; no time means midnight UTC. */
+export function sessionTime(s?: { date: string; time?: string } | null): string | null {
+  return s ? `${s.date}T${s.time ?? "00:00:00Z"}` : null;
+}
+
+/**
+ * Driver who retired on the fewest laps, or null if everyone was classified.
+ * Jolpica statuses: "Finished", "+1 Lap", "+2 Laps" (classified); anything else is a retirement.
+ */
+export function findFirstDnf(results: { status: string; laps: string; Driver: { driverId: string } }[]): string | null {
+  const retired = results.filter(
+    (r) => !/^(finished|\+\d+ laps?|disqualified|did not start)$/i.test(r.status.trim())
+  );
+  retired.sort((a, b) => parseInt(a.laps) - parseInt(b.laps));
+  return retired[0]?.Driver.driverId ?? null;
+}
 
 
 
 /**
  * Checks upcoming sessions and users' notification cadences to send push notifications.
- * Invoked via webhook (POST /api/v1/internal/cron/notifications) every minute.
+ * Invoked via webhook (POST /api/v1/internal/cron/notifications) every 5 minutes; GitHub may run it late, so reminders fire once the time left drops to the chosen cadence.
  */
 export async function checkUpcomingSessionsForNotifications(db: Sql) {
   try {
@@ -42,8 +60,9 @@ export async function checkUpcomingSessionsForNotifications(db: Sql) {
         const sessionTimeMs = new Date(session.time).getTime();
         const diffMinutes = Math.floor((sessionTimeMs - nowMs) / 60000);
 
-        // We only care if it's within a timeframe users might have set
-        if (diffMinutes < 0 || diffMinutes > 24 * 60) continue;
+        // Only within the window users can set. The 10 minutes after the start are a grace period
+        // for "Start" (cadence 0) reminders, since the cron runs late.
+        if (diffMinutes < -10 || diffMinutes > 24 * 60) continue;
 
         // NOTE: We validate the column name against an allowlist and use a raw
         // query string for the identifier, as tagged templates don't support
@@ -59,45 +78,55 @@ export async function checkUpcomingSessionsForNotifications(db: Sql) {
           continue;
         }
 
-        // NOTE: We use db.unsafe() for the dynamic column identifier,
-        // keeping the value parameter separate.
-        const subscriptions = await db.unsafe(`
-          SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${session.column} as cadence
-          FROM user_notification_settings uns
-          JOIN user_push_subscriptions ups ON uns.user_id = ups.user_id
-          WHERE uns.${session.column} IS NOT NULL
-            AND uns.${session.column} = $1
-        `, [diffMinutes]);
+        // Claim every user whose reminder is due (cadence >= minutes left) and not yet notified for
+        // this session. The primary key makes the claim safe if two cron runs overlap. The column
+        // name is checked against the allowlist above; values stay parameters.
+        const due = await db.unsafe(`
+          INSERT INTO notification_sent (user_id, race_id, session)
+          SELECT user_id, $2::int, $3::text
+          FROM user_notification_settings
+          WHERE ${session.column} IS NOT NULL AND ${session.column} >= $1
+            AND ($1 >= 0 OR ${session.column} = 0)
+          ON CONFLICT DO NOTHING
+          RETURNING user_id
+        `, [diffMinutes, race.id, session.name]);
+        if (due.length === 0) continue;
 
-        if (subscriptions.length > 0) {
-          logger.info({
-            job: "notifications",
-            session: session.name,
-            count: subscriptions.length,
-            minutes: diffMinutes
-          }, `Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
-          const payload = {
-            title: "Session Starting Soon!",
-            body: `${race.name} ${session.name} begins in ${diffMinutes} minutes. Lock in your picks now!`,
-            url: "/"
-          };
+        const subscriptions = await db`
+          SELECT id, endpoint, p256dh, auth FROM user_push_subscriptions
+          WHERE user_id IN ${db(due.map((d: any) => d.user_id))}
+        `;
 
-          const promises = subscriptions.map((sub: any) =>
-            sendPushNotification(
+        logger.info({
+          job: "notifications",
+          session: session.name,
+          count: subscriptions.length,
+          minutes: diffMinutes
+        }, `Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
+        const payload = {
+          title: "Session Starting Soon!",
+          body: diffMinutes <= 0
+            ? `${race.name} ${session.name} is starting now. Lock in your picks!`
+            : `${race.name} ${session.name} begins in ${diffMinutes} minutes. Lock in your picks now!`,
+          url: "/"
+        };
+
+        await Promise.all(subscriptions.map(async (sub: any) => {
+          try {
+            const ok = await sendPushNotification(
               { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
               payload
-            ).catch(async (err) => {
-              if (err?.statusCode === 410) {
-                await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
-              }
-            })
-          );
-          await Promise.all(promises);
-        }
+            );
+            if (!ok) await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
+          } catch (err) {
+            logger.warn({ err, job: "notifications", subId: sub.id }, "Push send failed");
+          }
+        }));
       }
     }
   } catch (err) {
     logger.error({ err, job: "notifications" }, "Failed notification cron");
+    throw err;
   }
 }
 
@@ -122,7 +151,7 @@ export async function fetchQualifyingResults(db: Sql) {
     }
 
     for (const race of nearbyRaces) {
-      const round = race.id.toString();
+      const round = `${race.season}/${race.round}`;
 
       // 1. Qualifying — use round-specific endpoint to avoid pagination issues
       const qualRes = await fetch(`${JOLPI_API_BASE}/${round}/qualifying.json`);
@@ -177,6 +206,7 @@ export async function fetchQualifyingResults(db: Sql) {
     }
   } catch (err) {
     logger.error({ err, job: "fetchQualifyingResults" }, "Failed Saturday cron (Qualifying/Sprint Fetching)");
+    throw err;
   }
 }
 
@@ -197,9 +227,10 @@ export async function fetchRaceResults(db: Sql) {
       return;
     }
 
+    let failedRaces = 0;
     for (const race of nearbyRaces) {
       try {
-        const round = race.id.toString();
+        const round = `${race.season}/${race.round}`;
 
         logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
         const res = await fetch(`${JOLPI_API_BASE}/${round}/results.json`);
@@ -215,19 +246,9 @@ export async function fetchRaceResults(db: Sql) {
         }
 
         // Determine First DNF
-        const retired = resultsData.filter((r: any) => {
-          const status = r.status.toLowerCase();
-          return !status.includes("finished") &&
-            !status.includes("laps") &&
-            !status.includes("disqualified") &&
-            !status.includes("not start");
-        });
-
-        let firstDnf = null;
-        if (retired.length > 0) {
-          const sortedByLaps = retired.sort((a: any, b: any) => parseInt(a.laps) - parseInt(b.laps));
-          firstDnf = sortedByLaps[0].Driver.driverId;
-          logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
+        const firstDnf = findFirstDnf(resultsData);
+        if (firstDnf) {
+          logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf}`);
         }
 
         // Find Fastest Lap
@@ -268,100 +289,45 @@ export async function fetchRaceResults(db: Sql) {
             first_dnf = EXCLUDED.first_dnf
         `;
 
-        // 2. Score All Picks
-        const picks = await db<PickRow[]>`SELECT * FROM picks WHERE race_id = ${race.id}`;
-        const leagues = await db<LeagueRow[]>`SELECT id, scoring_config FROM leagues`;
-        const leagueMap = new Map<string, ScoringConfig>(
-          leagues.map(l => {
-            let config = l.scoring_config;
-            if (typeof config === 'string') {
-              try {
-                config = JSON.parse(config);
-              } catch {
-                config = null as any;
-              }
-            }
-            return [l.id, config];
-          })
-        );
+        // 2. Score all picks against the full saved row (includes quali/sprint saved earlier)
+        const [saved] = await db`SELECT * FROM race_results WHERE race_id = ${race.id}`;
+        await scoreRacePicks(db, race.id, rowToSelections(saved));
 
-        // Fetch full existing results for complete scoring (merging Quali/Sprint data we saved earlier)
-        const [savedResults] = await db<any[]>`SELECT * FROM race_results WHERE race_id = ${race.id}`;
-        const fullOfficial: PickSelections = {
-          ...officialResults,
-          sprintQualifyingP1: savedResults?.sprint_qualifying_p1,
-          sprintP1: savedResults?.sprint_p1,
-          sprintP2: savedResults?.sprint_p2,
-          sprintP3: savedResults?.sprint_p3,
-          sprintFastestLap: savedResults?.sprint_fastest_lap,
-          raceQualifyingP1: savedResults?.race_qualifying_p1,
-        };
-
-        await Promise.all(picks.map(async (pick) => {
-          try {
-            const config = leagueMap.get(pick.league_id);
-            const userPick: PickSelections = {
-              sprintQualifyingP1: pick.sprint_qualifying_p1,
-              sprintP1: pick.sprint_p1,
-              sprintP2: pick.sprint_p2,
-              sprintP3: pick.sprint_p3,
-              sprintFastestLap: pick.sprint_fastest_lap,
-              raceQualifyingP1: pick.race_qualifying_p1,
-              raceP1: pick.race_p1,
-              raceP2: pick.race_p2,
-              raceP3: pick.race_p3,
-              fastestLap: pick.fastest_lap,
-              firstDnf: pick.first_dnf,
-            };
-            const points = calculatePoints(userPick, fullOfficial, config);
-            await db`
-              UPDATE picks SET 
-                total_points = ${points.score},
-                correct_predictions = ${points.correct},
-                total_predictions = ${points.total}
-              WHERE id = ${pick.id}
-            `;
-          } catch (pickErr) {
-            logger.error({ pickErr, pickId: pick.id }, `Failed scoring pick ${pick.id}`);
-          }
-        }));
-
-        // 3. Mark Race COMPLETED
-        await db`UPDATE races SET status = 'COMPLETED' WHERE id = ${race.id}`;
-
-        // 4. Notifications
-        await createNotificationsForAllPicksInRace(
+        // 3. Mark COMPLETED and notify once, even if two cron runs overlap
+        await completeRace(
           db,
           race.id,
-          "RESULTS_IN",
           `${race.name} — Results In! 🏁`,
-          "Automated scoring complete. Check your league leaderboards now!",
-          { raceId: race.id }
+          "Automated scoring complete. Check your league leaderboards now!"
         );
 
         logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
 
         // 5. Update Driver Standings
-        await fetchAndUpdateDriverStandings(db);
+        // Race is already scored; the daily standings cron retries if this fails.
+        await fetchAndUpdateDriverStandings(db).catch(() => {});
       } catch (raceErr) {
         logger.error({ raceErr, raceId: race.id, raceName: race.name }, `Failed processing race results for ${race.name}`);
+        failedRaces++;
       }
     }
+    if (failedRaces > 0) throw new Error(`${failedRaces} race(s) failed processing`);
   } catch (err) {
     logger.error({ err, job: "fetchRaceResults" }, "Failed Sunday cron (Race Scoring)");
+    throw err;
   }
 }
 
 /**
  * Fetches the current season's race schedule and updates the database.
+ * Races are matched on (season, round); `id` is a database sequence.
  */
 export async function fetchAndUpdateSchedule(db: Sql) {
   try {
     logger.info({ job: "fetchAndUpdateSchedule" }, "Fetching latest season schedule from Ergast API...");
-    const res = await fetch(`${JOLPI_API_BASE}/races.json`);
+    const res = await fetch(`${JOLPI_API_BASE}/current/races.json`);
     if (!res.ok) {
-      logger.error({ job: "fetchAndUpdateSchedule", status: res.status }, `Ergast API failed with status ${res.status}`);
-      return;
+      throw new Error(`Ergast API failed with status ${res.status}`);
     }
 
     const data: any = await res.json();
@@ -372,54 +338,28 @@ export async function fetchAndUpdateSchedule(db: Sql) {
       return;
     }
 
+    const season = parseInt(races[0].season);
+
     for (const r of races) {
-      const raceId = parseInt(r.round);
-      const name = r.raceName;
-      const date = r.date + (r.time ? `T${r.time}` : "T00:00:00Z");
-      const has_sprint = !!r.Sprint;
-
-      const race_quali_date = r.Qualifying
-        ? r.Qualifying.date + (r.Qualifying.time ? `T${r.Qualifying.time}` : "T00:00:00Z")
-        : null;
-
-      const sprint_date = r.Sprint
-        ? r.Sprint.date + (r.Sprint.time ? `T${r.Sprint.time}` : "T00:00:00Z")
-        : null;
-
-      const sprint_quali_date = r.SprintQualifying
-        ? r.SprintQualifying.date + (r.SprintQualifying.time ? `T${r.SprintQualifying.time}` : "T00:00:00Z")
-        : null;
-
-      const fp1_date = r.FirstPractice
-        ? r.FirstPractice.date + (r.FirstPractice.time ? `T${r.FirstPractice.time}` : "T00:00:00Z")
-        : null;
-
-      const fp2_date = r.SecondPractice
-        ? r.SecondPractice.date + (r.SecondPractice.time ? `T${r.SecondPractice.time}` : "T00:00:00Z")
-        : null;
-
-      const fp3_date = r.ThirdPractice
-        ? r.ThirdPractice.date + (r.ThirdPractice.time ? `T${r.ThirdPractice.time}` : "T00:00:00Z")
-        : null;
+      const round = parseInt(r.round);
+      const date = sessionTime(r)!;
+      const sprint_date = sessionTime(r.Sprint);
 
       // sprint_deadline = when the sprint RACE starts (locks sprint podium picks).
       // sprint_quali_date separately locks sprint pole position picks.
-      const sprint_deadline = sprint_date;
-      const race_deadline = date;
-
       await db`
         INSERT INTO races (
-          id, name, date, has_sprint, status,
+          season, round, name, date, has_sprint, status,
           sprint_deadline, race_deadline,
           sprint_date, sprint_quali_date, race_quali_date,
           fp1_date, fp2_date, fp3_date
         ) VALUES (
-          ${raceId}, ${name}, ${date}, ${has_sprint}, 'UPCOMING',
-          ${sprint_deadline}, ${race_deadline},
-          ${sprint_date}, ${sprint_quali_date}, ${race_quali_date},
-          ${fp1_date}, ${fp2_date}, ${fp3_date}
+          ${season}, ${round}, ${r.raceName}, ${date}, ${!!r.Sprint}, 'UPCOMING',
+          ${sprint_date}, ${date},
+          ${sprint_date}, ${sessionTime(r.SprintQualifying)}, ${sessionTime(r.Qualifying)},
+          ${sessionTime(r.FirstPractice)}, ${sessionTime(r.SecondPractice)}, ${sessionTime(r.ThirdPractice)}
         )
-        ON CONFLICT (id) DO UPDATE SET
+        ON CONFLICT (season, round) DO UPDATE SET
           name = EXCLUDED.name,
           date = EXCLUDED.date,
           has_sprint = EXCLUDED.has_sprint,
@@ -436,13 +376,20 @@ export async function fetchAndUpdateSchedule(db: Sql) {
       `;
     }
 
-    // Clean up any extraneous races in case the payload shrunk (e.g., from 24 to 22 rounds)
+    // Drop rounds that left this season's calendar (e.g. 24 -> 22), but never one that already
+    // has picks or results.
     const maxRound = Math.max(...races.map((r: any) => parseInt(r.round)));
-    await db`DELETE FROM races WHERE id > ${maxRound}`;
+    await db`
+      DELETE FROM races r
+      WHERE r.season = ${season} AND r.round > ${maxRound}
+        AND NOT EXISTS (SELECT 1 FROM picks p WHERE p.race_id = r.id)
+        AND NOT EXISTS (SELECT 1 FROM race_results rr WHERE rr.race_id = r.id)
+    `;
 
-    logger.info({ job: "fetchAndUpdateSchedule", count: races.length }, `✅ Successfully updated season schedule.`);
+    logger.info({ job: "fetchAndUpdateSchedule", season, count: races.length }, `✅ Successfully updated season schedule.`);
   } catch (err) {
     logger.error({ err, job: "fetchAndUpdateSchedule" }, "Failed to update season schedule");
+    throw err;
   }
 }
 
@@ -452,10 +399,9 @@ export async function fetchAndUpdateSchedule(db: Sql) {
 export async function fetchAndUpdateDriverStandings(db: Sql) {
   try {
     logger.info({ job: "fetchAndUpdateDriverStandings" }, "Fetching latest driver standings from Ergast API...");
-    const res = await fetch(`${JOLPI_API_BASE}/driverstandings.json`);
+    const res = await fetch(`${JOLPI_API_BASE}/current/driverstandings.json`);
     if (!res.ok) {
-      logger.error({ job: "fetchAndUpdateDriverStandings", status: res.status }, `Ergast API failed with status ${res.status}`);
-      return;
+      throw new Error(`Ergast API failed with status ${res.status}`);
     }
 
     const data: any = await res.json();
@@ -487,5 +433,6 @@ export async function fetchAndUpdateDriverStandings(db: Sql) {
     logger.info({ job: "fetchAndUpdateDriverStandings", count: driverStandings.length }, `✅ Successfully updated driver standings.`);
   } catch (err) {
     logger.error({ err, job: "fetchAndUpdateDriverStandings" }, "Failed to update driver standings");
+    throw err;
   }
 }

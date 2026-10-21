@@ -14,10 +14,18 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
+      // For `wrangler dev`, set CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE in
+      // backend/.dev.vars (gitignored). Never commit a connection string here.
       "id": "3c3e600e1e6f4ba1a7337c2a432facff",
-      // Used by `wrangler dev` only — points directly to Supabase pooler.
-      // Production traffic goes through the real Hyperdrive binding above.
-      "localConnectionString": "postgresql://postgres.hfpfzutyaashzkkykbnx:cutest-lucie-term-claimed@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
+    },
+  ],
+  // Workers Rate Limiting — per-location, approximate. Guards the unauthenticated invite lookup
+  // against code guessing. period must be 10 or 60 (seconds).
+  "ratelimits": [
+    {
+      "name": "INVITE_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 30, "period": 60 },
     },
   ],
 }
