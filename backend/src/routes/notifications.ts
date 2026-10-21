@@ -1,7 +1,13 @@
 import type { Context } from "hono";
 import type { Bindings, Variables } from "../types/env.ts";
 
-import type { NotificationRow } from "../types/index.ts";
+import { parseBody } from "../middleware/auth.ts";
+import {
+  NotificationSettingsSchema,
+  PushSubscriptionSchema,
+  UnsubscribePushSchema,
+  type NotificationRow,
+} from "../types/index.ts";
 
 type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
@@ -53,11 +59,8 @@ export async function subscribePush(c: AppContext) {
   const db = c.get("db");
   const userId = c.get("user").id;
 
-  const subscription = await c.req.json() as any;
-
-  if (!subscription || !subscription.endpoint) {
-    return c.json({ error: "Invalid subscription payload" }, 400);
-  }
+  const { data: subscription, error } = await parseBody(c, PushSubscriptionSchema);
+  if (error) return error;
 
   await db`
     INSERT INTO user_push_subscriptions (user_id, endpoint, p256dh, auth)
@@ -81,12 +84,9 @@ export async function unsubscribePush(c: AppContext) {
   const db = c.get("db");
   const userId = c.get("user").id;
 
-  const body = await c.req.json() as { endpoint: string };
-  const { endpoint } = body;
-
-  if (!endpoint) {
-    return c.json({ error: "Missing endpoint" }, 400);
-  }
+  const { data, error } = await parseBody(c, UnsubscribePushSchema);
+  if (error) return error;
+  const { endpoint } = data;
 
   await db`
     DELETE FROM user_push_subscriptions
@@ -132,7 +132,8 @@ export async function updateNotificationSettings(c: AppContext) {
   const db = c.get("db");
   const userId = c.get("user").id;
 
-  const settings = await c.req.json() as any;
+  const { data: settings, error } = await parseBody(c, NotificationSettingsSchema);
+  if (error) return error;
 
   await db`
     INSERT INTO user_notification_settings (

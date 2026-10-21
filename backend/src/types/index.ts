@@ -255,3 +255,23 @@ export interface NotificationRow {
   is_read: boolean;
   created_at: string;
 }
+
+// ─── Push & Notification Settings ────────────────────────────────────────────
+
+export const PushSubscriptionSchema = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
+});
+
+export const UnsubscribePushSchema = z.object({ endpoint: z.string().min(1) });
+
+// Minutes before the session; null turns the reminder off.
+const CadenceSchema = z.number().int().min(0).max(1440).nullable().optional();
+
+export const NotificationSettingsSchema = z.object({
+  notify_league_joins: z.boolean().optional(),
+  notify_sprint_quali_cadence: CadenceSchema,
+  notify_sprint_cadence: CadenceSchema,
+  notify_race_quali_cadence: CadenceSchema,
+  notify_race_cadence: CadenceSchema,
+});

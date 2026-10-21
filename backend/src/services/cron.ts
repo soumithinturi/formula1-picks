@@ -1,8 +1,7 @@
 import type { Sql } from "../db/index.ts";
 import { logger } from "./logger.ts";
-import type { RaceRow, PickRow, LeagueRow, ScoringConfig, PickSelections } from "../types/index.ts";
-import { calculatePoints } from "./scoring.ts";
-import { createNotificationsForAllPicksInRace } from "./notifications.ts";
+import type { RaceRow, PickSelections } from "../types/index.ts";
+import { scoreRacePicks, completeRace, rowToSelections } from "./results.ts";
 import { sendPushNotification } from "./pushService.ts";
 
 const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
@@ -23,7 +22,7 @@ export function findFirstDnf(results: { status: string; laps: string; Driver: { 
 
 /**
  * Checks upcoming sessions and users' notification cadences to send push notifications.
- * Invoked via webhook (POST /api/v1/internal/cron/notifications) every minute.
+ * Invoked via webhook (POST /api/v1/internal/cron/notifications) every 5 minutes; GitHub may run it late, so reminders fire once the time left drops to the chosen cadence.
  */
 export async function checkUpcomingSessionsForNotifications(db: Sql) {
   try {
@@ -54,8 +53,9 @@ export async function checkUpcomingSessionsForNotifications(db: Sql) {
         const sessionTimeMs = new Date(session.time).getTime();
         const diffMinutes = Math.floor((sessionTimeMs - nowMs) / 60000);
 
-        // We only care if it's within a timeframe users might have set
-        if (diffMinutes < 0 || diffMinutes > 24 * 60) continue;
+        // Only within the window users can set. The 10 minutes after the start are a grace period
+        // for "Start" (cadence 0) reminders, since the cron runs late.
+        if (diffMinutes < -10 || diffMinutes > 24 * 60) continue;
 
         // NOTE: We validate the column name against an allowlist and use a raw
         // query string for the identifier, as tagged templates don't support
@@ -71,41 +71,50 @@ export async function checkUpcomingSessionsForNotifications(db: Sql) {
           continue;
         }
 
-        // NOTE: We use db.unsafe() for the dynamic column identifier,
-        // keeping the value parameter separate.
-        const subscriptions = await db.unsafe(`
-          SELECT ups.endpoint, ups.p256dh, ups.auth, ups.id, uns.${session.column} as cadence
-          FROM user_notification_settings uns
-          JOIN user_push_subscriptions ups ON uns.user_id = ups.user_id
-          WHERE uns.${session.column} IS NOT NULL
-            AND uns.${session.column} = $1
-        `, [diffMinutes]);
+        // Claim every user whose reminder is due (cadence >= minutes left) and not yet notified for
+        // this session. The primary key makes the claim safe if two cron runs overlap. The column
+        // name is checked against the allowlist above; values stay parameters.
+        const due = await db.unsafe(`
+          INSERT INTO notification_sent (user_id, race_id, session)
+          SELECT user_id, $2::int, $3::text
+          FROM user_notification_settings
+          WHERE ${session.column} IS NOT NULL AND ${session.column} >= $1
+            AND ($1 >= 0 OR ${session.column} = 0)
+          ON CONFLICT DO NOTHING
+          RETURNING user_id
+        `, [diffMinutes, race.id, session.name]);
+        if (due.length === 0) continue;
 
-        if (subscriptions.length > 0) {
-          logger.info({
-            job: "notifications",
-            session: session.name,
-            count: subscriptions.length,
-            minutes: diffMinutes
-          }, `Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
-          const payload = {
-            title: "Session Starting Soon!",
-            body: `${race.name} ${session.name} begins in ${diffMinutes} minutes. Lock in your picks now!`,
-            url: "/"
-          };
+        const subscriptions = await db`
+          SELECT id, endpoint, p256dh, auth FROM user_push_subscriptions
+          WHERE user_id IN ${db(due.map((d: any) => d.user_id))}
+        `;
 
-          const promises = subscriptions.map((sub: any) =>
-            sendPushNotification(
+        logger.info({
+          job: "notifications",
+          session: session.name,
+          count: subscriptions.length,
+          minutes: diffMinutes
+        }, `Sending ${subscriptions.length} notifications for ${session.name} starting in ${diffMinutes}m`);
+        const payload = {
+          title: "Session Starting Soon!",
+          body: diffMinutes <= 0
+            ? `${race.name} ${session.name} is starting now. Lock in your picks!`
+            : `${race.name} ${session.name} begins in ${diffMinutes} minutes. Lock in your picks now!`,
+          url: "/"
+        };
+
+        await Promise.all(subscriptions.map(async (sub: any) => {
+          try {
+            const ok = await sendPushNotification(
               { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
               payload
-            ).catch(async (err) => {
-              if (err?.statusCode === 410) {
-                await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
-              }
-            })
-          );
-          await Promise.all(promises);
-        }
+            );
+            if (!ok) await db`DELETE FROM user_push_subscriptions WHERE id = ${sub.id}`;
+          } catch (err) {
+            logger.warn({ err, job: "notifications", subId: sub.id }, "Push send failed");
+          }
+        }));
       }
     }
   } catch (err) {
@@ -273,75 +282,16 @@ export async function fetchRaceResults(db: Sql) {
             first_dnf = EXCLUDED.first_dnf
         `;
 
-        // 2. Score All Picks
-        const picks = await db<PickRow[]>`SELECT * FROM picks WHERE race_id = ${race.id}`;
-        const leagues = await db<LeagueRow[]>`SELECT id, scoring_config FROM leagues`;
-        const leagueMap = new Map<string, ScoringConfig>(
-          leagues.map(l => {
-            let config = l.scoring_config;
-            if (typeof config === 'string') {
-              try {
-                config = JSON.parse(config);
-              } catch {
-                config = null as any;
-              }
-            }
-            return [l.id, config];
-          })
-        );
+        // 2. Score all picks against the full saved row (includes quali/sprint saved earlier)
+        const [saved] = await db`SELECT * FROM race_results WHERE race_id = ${race.id}`;
+        await scoreRacePicks(db, race.id, rowToSelections(saved));
 
-        // Fetch full existing results for complete scoring (merging Quali/Sprint data we saved earlier)
-        const [savedResults] = await db<any[]>`SELECT * FROM race_results WHERE race_id = ${race.id}`;
-        const fullOfficial: PickSelections = {
-          ...officialResults,
-          sprintQualifyingP1: savedResults?.sprint_qualifying_p1,
-          sprintP1: savedResults?.sprint_p1,
-          sprintP2: savedResults?.sprint_p2,
-          sprintP3: savedResults?.sprint_p3,
-          sprintFastestLap: savedResults?.sprint_fastest_lap,
-          raceQualifyingP1: savedResults?.race_qualifying_p1,
-        };
-
-        await Promise.all(picks.map(async (pick) => {
-          try {
-            const config = leagueMap.get(pick.league_id);
-            const userPick: PickSelections = {
-              sprintQualifyingP1: pick.sprint_qualifying_p1,
-              sprintP1: pick.sprint_p1,
-              sprintP2: pick.sprint_p2,
-              sprintP3: pick.sprint_p3,
-              sprintFastestLap: pick.sprint_fastest_lap,
-              raceQualifyingP1: pick.race_qualifying_p1,
-              raceP1: pick.race_p1,
-              raceP2: pick.race_p2,
-              raceP3: pick.race_p3,
-              fastestLap: pick.fastest_lap,
-              firstDnf: pick.first_dnf,
-            };
-            const points = calculatePoints(userPick, fullOfficial, config);
-            await db`
-              UPDATE picks SET 
-                total_points = ${points.score},
-                correct_predictions = ${points.correct},
-                total_predictions = ${points.total}
-              WHERE id = ${pick.id}
-            `;
-          } catch (pickErr) {
-            logger.error({ pickErr, pickId: pick.id }, `Failed scoring pick ${pick.id}`);
-          }
-        }));
-
-        // 3. Mark Race COMPLETED
-        await db`UPDATE races SET status = 'COMPLETED' WHERE id = ${race.id}`;
-
-        // 4. Notifications
-        await createNotificationsForAllPicksInRace(
+        // 3. Mark COMPLETED and notify once, even if two cron runs overlap
+        await completeRace(
           db,
           race.id,
-          "RESULTS_IN",
           `${race.name} — Results In! 🏁`,
-          "Automated scoring complete. Check your league leaderboards now!",
-          { raceId: race.id }
+          "Automated scoring complete. Check your league leaderboards now!"
         );
 
         logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);

@@ -1,6 +1,16 @@
 import type { ScoringConfig, PickSelections } from "../types/index.ts";
 import { DEFAULT_SCORING_CONFIG } from "../types/index.ts";
 
+/** `scoring_config` comes back from the DB as an object, or a JSON string for older rows. */
+export function parseScoringConfig(raw: unknown): ScoringConfig | null {
+  if (typeof raw !== "string") return (raw as ScoringConfig) ?? null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Calculates the total points for a user's pick against the official results.
  * Uses the league's custom scoring config (falls back to defaults if not provided).

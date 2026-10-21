@@ -4,27 +4,31 @@ import type { Context } from "hono";
 import type { UserRow } from "../types/index.ts";
 import type { Bindings, Variables } from "../types/env.ts";
 
-// Cache the raw JWKS JSON object globally as a pure data structure to avoid context context leaks in Workers
+// Cache the raw JWKS JSON (plain data, not a jose key set) to avoid cross-request context leaks in Workers.
+const JWKS_TTL_MS = 60 * 60 * 1000;
+const JWKS_MIN_REFETCH_MS = 60 * 1000;
 let cachedJWKSetJSON: any = null;
+let cachedAt = 0;
 let fetchPromise: Promise<any> | null = null;
 
-async function getJWKSetJSON(supabaseUrl: string) {
-  if (cachedJWKSetJSON) return cachedJWKSetJSON;
+// `force` is for a token signed by a key we don't have (rotation), but at most once a minute
+// so random key ids can't make us hammer Supabase.
+async function getJWKSetJSON(supabaseUrl: string, force = false) {
+  const age = Date.now() - cachedAt;
+  if (cachedJWKSetJSON && age < JWKS_TTL_MS && !(force && age > JWKS_MIN_REFETCH_MS)) return cachedJWKSetJSON;
 
   if (!fetchPromise) {
     fetchPromise = (async () => {
       try {
-        const jwksUrl = `${supabaseUrl}/auth/v1/.well-known/jwks.json`;
-        const res = await fetch(jwksUrl);
+        const res = await fetch(`${supabaseUrl}/auth/v1/.well-known/jwks.json`);
         if (!res.ok) {
           throw new Error(`Failed to fetch JWKS: ${res.statusText}`);
         }
-        const json = await res.json();
-        cachedJWKSetJSON = json;
-        return json;
-      } catch (err) {
-        fetchPromise = null; // Reset on failure so we can try again
-        throw err;
+        cachedJWKSetJSON = await res.json();
+        cachedAt = Date.now();
+        return cachedJWKSetJSON;
+      } finally {
+        fetchPromise = null; // allow the next call to retry or refresh
       }
     })();
   }
@@ -69,12 +73,16 @@ async function verifyToken(c: AppContext): Promise<AuthedUser | null> {
 
   try {
     const supabaseUrl = c.get("env").SUPABASE_URL;
-    const jwkSetJSON = await getJWKSetJSON(supabaseUrl);
-    const JWKS = createLocalJWKSet(jwkSetJSON);
+    const verify = async (force: boolean) =>
+      jwtVerify(token, createLocalJWKSet(await getJWKSetJSON(supabaseUrl, force)), { algorithms: ["ES256"] });
 
-    const { payload } = await jwtVerify(token, JWKS, {
-      algorithms: ["ES256"],
-    });
+    let payload;
+    try {
+      ({ payload } = await verify(false));
+    } catch (err: any) {
+      if (err?.code !== "ERR_JWKS_NO_MATCHING_KEY") throw err;
+      ({ payload } = await verify(true));
+    }
 
     const sub = payload.sub;
     if (!sub) return null;

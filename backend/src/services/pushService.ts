@@ -29,8 +29,8 @@ export const sendPushNotification = async (
     await webpush.sendNotification(subscription, JSON.stringify(payload));
   } catch (error) {
     console.error("Error sending push notification", error);
-    // You might want to handle 410 Gone errors here to remove invalid subscriptions
-    if ((error as any).statusCode === 410) {
+    // 404/410 mean the browser dropped the subscription
+    if ([404, 410].includes((error as any).statusCode)) {
       // Return false to indicate the subscription is no longer valid
       return false;
     }

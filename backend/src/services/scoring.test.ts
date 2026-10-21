@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { calculatePoints } from "./scoring.ts";
+import { calculatePoints, parseScoringConfig } from "./scoring.ts";
 import { DEFAULT_SCORING_CONFIG, type PickSelections } from "../types/index.ts";
 
 describe("Scoring Logic", () => {
@@ -124,5 +124,17 @@ describe("Scoring Logic", () => {
     // Sprint Total = 1 + 5 + 3 + 1 + 1 + 30 + 15 = 56
     // Overall = 112
     expect(score.score).toBe(112);
+  });
+});
+
+describe("parseScoringConfig", () => {
+  test("passes objects through and parses JSON strings", () => {
+    expect(parseScoringConfig(DEFAULT_SCORING_CONFIG)).toBe(DEFAULT_SCORING_CONFIG);
+    expect(parseScoringConfig(JSON.stringify(DEFAULT_SCORING_CONFIG))).toEqual(DEFAULT_SCORING_CONFIG);
+  });
+
+  test("returns null for broken or missing config so defaults apply", () => {
+    expect(parseScoringConfig("{not json")).toBeNull();
+    expect(parseScoringConfig(undefined)).toBeNull();
   });
 });

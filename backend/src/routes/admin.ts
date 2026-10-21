@@ -2,9 +2,8 @@ import type { Context } from "hono";
 import type { Bindings, Variables } from "../types/env.ts";
 
 import { parseBody } from "../middleware/auth.ts";
-import { ResultSubmissionSchema, type PickRow, type LeagueRow, type ScoringConfig } from "../types/index.ts";
-import { calculatePoints } from "../services/scoring.ts";
-import { createNotificationsForAllPicksInRace } from "../services/notifications.ts";
+import { ResultSubmissionSchema } from "../types/index.ts";
+import { scoreRacePicks, completeRace, rowToSelections } from "../services/results.ts";
 import { sendPushNotification } from "../services/pushService.ts";
 import { fetchAndUpdateDriverStandings } from "../services/cron.ts";
 import { TestNotificationSchema } from "../types/index.ts";
@@ -39,83 +38,31 @@ export async function submitResults(c: AppContext) {
       ${results.fastestLap ?? null}, ${results.firstDnf ?? null}
     )
     ON CONFLICT (race_id) DO UPDATE SET
-      sprint_qualifying_p1 = EXCLUDED.sprint_qualifying_p1,
-      sprint_p1 = EXCLUDED.sprint_p1,
-      sprint_p2 = EXCLUDED.sprint_p2,
-      sprint_p3 = EXCLUDED.sprint_p3,
-      race_qualifying_p1 = EXCLUDED.race_qualifying_p1,
-      race_p1 = EXCLUDED.race_p1,
-      race_p2 = EXCLUDED.race_p2,
-      race_p3 = EXCLUDED.race_p3,
-      fastest_lap = EXCLUDED.fastest_lap,
-      first_dnf = EXCLUDED.first_dnf
+      sprint_qualifying_p1 = COALESCE(EXCLUDED.sprint_qualifying_p1, race_results.sprint_qualifying_p1),
+      sprint_p1 = COALESCE(EXCLUDED.sprint_p1, race_results.sprint_p1),
+      sprint_p2 = COALESCE(EXCLUDED.sprint_p2, race_results.sprint_p2),
+      sprint_p3 = COALESCE(EXCLUDED.sprint_p3, race_results.sprint_p3),
+      race_qualifying_p1 = COALESCE(EXCLUDED.race_qualifying_p1, race_results.race_qualifying_p1),
+      race_p1 = COALESCE(EXCLUDED.race_p1, race_results.race_p1),
+      race_p2 = COALESCE(EXCLUDED.race_p2, race_results.race_p2),
+      race_p3 = COALESCE(EXCLUDED.race_p3, race_results.race_p3),
+      fastest_lap = COALESCE(EXCLUDED.fastest_lap, race_results.fastest_lap),
+      first_dnf = COALESCE(EXCLUDED.first_dnf, race_results.first_dnf)
   `;
 
-  // 2. Fetch all picks for this race (across all leagues)
-  const picks = await db<PickRow[]>`
-    SELECT * FROM picks WHERE race_id = ${data.raceId}
-  `;
+  // 2. Score every pick against the merged saved row (keeps quali/sprint data the cron saved)
+  const [saved] = await db`SELECT * FROM race_results WHERE race_id = ${data.raceId}`;
+  await scoreRacePicks(db, data.raceId, rowToSelections(saved));
 
-  // 3. Fetch all leagues to get their scoring configs
-  const leagues = await db<LeagueRow[]>`
-    SELECT id, scoring_config FROM leagues
-  `;
-  const leagueConfigMap = new Map<string, ScoringConfig>(
-    leagues.map((l) => [l.id, typeof l.scoring_config === "string" ? JSON.parse(l.scoring_config) : l.scoring_config])
-  );
-
-  // 4. Score each pick using its league's scoring config
-  await Promise.all(
-    picks.map((pick) => {
-      let config = leagueConfigMap.get(pick.league_id);
-      if (typeof config === "string") {
-        try {
-          config = JSON.parse(config);
-        } catch {
-          config = null as any;
-        }
-      }
-      const userPick = {
-        sprintQualifyingP1: pick.sprint_qualifying_p1,
-        sprintP1: pick.sprint_p1,
-        sprintP2: pick.sprint_p2,
-        sprintP3: pick.sprint_p3,
-        sprintFastestLap: pick.sprint_fastest_lap,
-        raceQualifyingP1: pick.race_qualifying_p1,
-        raceP1: pick.race_p1,
-        raceP2: pick.race_p2,
-        raceP3: pick.race_p3,
-        fastestLap: pick.fastest_lap,
-        firstDnf: pick.first_dnf,
-      };
-      const points = calculatePoints(userPick, results, config);
-
-      return db`
-        UPDATE picks
-        SET total_points = ${points.score},
-            correct_predictions = ${points.correct},
-            total_predictions = ${points.total}
-        WHERE id = ${pick.id}
-      `;
-    })
-  );
-
-  // 5. Fan out in-app notifications
+  // 3. Mark completed and notify. Only the first submission notifies; later ones are corrections.
   const [race] = await db<{ name: string }[]>`SELECT name FROM races WHERE id = ${data.raceId}`;
   const raceName = race?.name ?? `Race #${data.raceId}`;
-  await createNotificationsForAllPicksInRace(
+  await completeRace(
     db,
     data.raceId,
-    "RESULTS_IN",
     `${raceName} — Results In! 🏁`,
-    "The official results have been submitted. Check your score on the leaderboard.",
-    { raceId: data.raceId }
+    "The official results have been submitted. Check your score on the leaderboard."
   );
-
-  // 6. Mark race as completed
-  await db`
-    UPDATE races SET status = 'COMPLETED' WHERE id = ${data.raceId}
-  `;
 
   // 7. Update Driver Standings
   await fetchAndUpdateDriverStandings(db).catch((err) => console.error("Standings update failed:", err));

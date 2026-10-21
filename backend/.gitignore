@@ -28,3 +28,6 @@ logs
 
 # Bun lockfile (commit bun.lockb instead of this)
 bun.lock
+
+# wrangler local state and build output
+.wrangler
