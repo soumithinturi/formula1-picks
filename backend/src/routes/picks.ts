@@ -285,11 +285,11 @@ export async function broadcastPickSystemMessage(
 ): Promise<void> {
   try {
     const [userRow] = await db`
-      SELECT display_name, contact FROM users 
-      WHERE id = ${userId} 
+      SELECT display_name FROM users
+      WHERE id = ${userId}
       LIMIT 1
     `;
-    const displayName = (userRow as any)?.display_name || (userRow as any)?.contact || "Someone";
+    const displayName = (userRow as any)?.display_name || "Someone";
 
     let leagueIds: string[] = [];
     if (leagueId) {

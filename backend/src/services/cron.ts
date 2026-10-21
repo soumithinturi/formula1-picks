@@ -7,6 +7,18 @@ import { sendPushNotification } from "./pushService.ts";
 
 const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
 
+/**
+ * Driver who retired on the fewest laps, or null if everyone was classified.
+ * Jolpica statuses: "Finished", "+1 Lap", "+2 Laps" (classified); anything else is a retirement.
+ */
+export function findFirstDnf(results: { status: string; laps: string; Driver: { driverId: string } }[]): string | null {
+  const retired = results.filter(
+    (r) => !/^(finished|\+\d+ laps?|disqualified|did not start)$/i.test(r.status.trim())
+  );
+  retired.sort((a, b) => parseInt(a.laps) - parseInt(b.laps));
+  return retired[0]?.Driver.driverId ?? null;
+}
+
 
 
 /**
@@ -98,6 +110,7 @@ export async function checkUpcomingSessionsForNotifications(db: Sql) {
     }
   } catch (err) {
     logger.error({ err, job: "notifications" }, "Failed notification cron");
+    throw err;
   }
 }
 
@@ -177,6 +190,7 @@ export async function fetchQualifyingResults(db: Sql) {
     }
   } catch (err) {
     logger.error({ err, job: "fetchQualifyingResults" }, "Failed Saturday cron (Qualifying/Sprint Fetching)");
+    throw err;
   }
 }
 
@@ -197,6 +211,7 @@ export async function fetchRaceResults(db: Sql) {
       return;
     }
 
+    let failedRaces = 0;
     for (const race of nearbyRaces) {
       try {
         const round = race.id.toString();
@@ -215,19 +230,9 @@ export async function fetchRaceResults(db: Sql) {
         }
 
         // Determine First DNF
-        const retired = resultsData.filter((r: any) => {
-          const status = r.status.toLowerCase();
-          return !status.includes("finished") &&
-            !status.includes("laps") &&
-            !status.includes("disqualified") &&
-            !status.includes("not start");
-        });
-
-        let firstDnf = null;
-        if (retired.length > 0) {
-          const sortedByLaps = retired.sort((a: any, b: any) => parseInt(a.laps) - parseInt(b.laps));
-          firstDnf = sortedByLaps[0].Driver.driverId;
-          logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf} (${sortedByLaps[0].laps} laps)`);
+        const firstDnf = findFirstDnf(resultsData);
+        if (firstDnf) {
+          logger.info({ job: "fetchRaceResults", driver: firstDnf }, `🏁 First DNF identified: ${firstDnf}`);
         }
 
         // Find Fastest Lap
@@ -342,13 +347,17 @@ export async function fetchRaceResults(db: Sql) {
         logger.info({ job: "fetchRaceResults", race: race.name }, `✅ Automated: Successfully processed results and scoring for ${race.name}`);
 
         // 5. Update Driver Standings
-        await fetchAndUpdateDriverStandings(db);
+        // Race is already scored; the daily standings cron retries if this fails.
+        await fetchAndUpdateDriverStandings(db).catch(() => {});
       } catch (raceErr) {
         logger.error({ raceErr, raceId: race.id, raceName: race.name }, `Failed processing race results for ${race.name}`);
+        failedRaces++;
       }
     }
+    if (failedRaces > 0) throw new Error(`${failedRaces} race(s) failed processing`);
   } catch (err) {
     logger.error({ err, job: "fetchRaceResults" }, "Failed Sunday cron (Race Scoring)");
+    throw err;
   }
 }
 
@@ -360,8 +369,7 @@ export async function fetchAndUpdateSchedule(db: Sql) {
     logger.info({ job: "fetchAndUpdateSchedule" }, "Fetching latest season schedule from Ergast API...");
     const res = await fetch(`${JOLPI_API_BASE}/races.json`);
     if (!res.ok) {
-      logger.error({ job: "fetchAndUpdateSchedule", status: res.status }, `Ergast API failed with status ${res.status}`);
-      return;
+      throw new Error(`Ergast API failed with status ${res.status}`);
     }
 
     const data: any = await res.json();
@@ -443,6 +451,7 @@ export async function fetchAndUpdateSchedule(db: Sql) {
     logger.info({ job: "fetchAndUpdateSchedule", count: races.length }, `✅ Successfully updated season schedule.`);
   } catch (err) {
     logger.error({ err, job: "fetchAndUpdateSchedule" }, "Failed to update season schedule");
+    throw err;
   }
 }
 
@@ -454,8 +463,7 @@ export async function fetchAndUpdateDriverStandings(db: Sql) {
     logger.info({ job: "fetchAndUpdateDriverStandings" }, "Fetching latest driver standings from Ergast API...");
     const res = await fetch(`${JOLPI_API_BASE}/driverstandings.json`);
     if (!res.ok) {
-      logger.error({ job: "fetchAndUpdateDriverStandings", status: res.status }, `Ergast API failed with status ${res.status}`);
-      return;
+      throw new Error(`Ergast API failed with status ${res.status}`);
     }
 
     const data: any = await res.json();
@@ -487,5 +495,6 @@ export async function fetchAndUpdateDriverStandings(db: Sql) {
     logger.info({ job: "fetchAndUpdateDriverStandings", count: driverStandings.length }, `✅ Successfully updated driver standings.`);
   } catch (err) {
     logger.error({ err, job: "fetchAndUpdateDriverStandings" }, "Failed to update driver standings");
+    throw err;
   }
 }

@@ -118,7 +118,7 @@ export async function submitResults(c: AppContext) {
   `;
 
   // 7. Update Driver Standings
-  await fetchAndUpdateDriverStandings(db);
+  await fetchAndUpdateDriverStandings(db).catch((err) => console.error("Standings update failed:", err));
 
   return c.json({ message: "Results processed successfully" });
 }

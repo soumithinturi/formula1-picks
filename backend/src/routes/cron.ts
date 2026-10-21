@@ -23,16 +23,14 @@ function withInternalSecret(
   return async (c: AppContext) => {
     const env = c.get("env");
 
-    // Require the secret in production; allow open access in local dev
-    if (env.NODE_ENV === "production") {
-      if (!env.CRON_SECRET) {
-        logger.error({ job: jobName }, "CRON_SECRET is not set — rejecting cron webhook");
-        return c.json({ error: "Cron secret not configured" }, 500);
-      }
-      if (c.req.header("x-cron-secret") !== env.CRON_SECRET) {
-        logger.warn({ job: jobName }, "Cron webhook received with invalid secret");
-        return c.json({ error: "Forbidden" }, 403);
-      }
+    // Always required (fail closed). For local dev, set CRON_SECRET in .dev.vars.
+    if (!env.CRON_SECRET) {
+      logger.error({ job: jobName }, "CRON_SECRET is not set — rejecting cron webhook");
+      return c.json({ error: "Cron secret not configured" }, 500);
+    }
+    if (c.req.header("x-cron-secret") !== env.CRON_SECRET) {
+      logger.warn({ job: jobName }, "Cron webhook received with invalid secret");
+      return c.json({ error: "Forbidden" }, 403);
     }
 
     logger.info({ job: jobName }, `⚡ Cron webhook triggered: ${jobName}`);
