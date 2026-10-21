@@ -39,3 +39,11 @@ describe("CORS", () => {
     expect((await withOrigin(origin)).headers.get("access-control-allow-origin")).toBe(origin);
   });
 });
+
+describe("invite lookup rate limit", () => {
+  test("returns 429 when the limiter says no, before touching the database", async () => {
+    const env = { ...baseEnv, INVITE_LIMITER: { limit: async () => ({ success: false }) } };
+    const res = await call("/api/v1/leagues/invite/ABCD2345", {}, env);
+    expect(res.status).toBe(429);
+  });
+});

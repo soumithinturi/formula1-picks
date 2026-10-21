@@ -146,6 +146,13 @@ export async function previewLeague(c: Context<{ Bindings: Bindings; Variables: 
     return c.json({ error: "Missing invite code" }, 400);
   }
 
+  // No login here, so the caller's IP is the only key available.
+  const ip = c.req.header("cf-connecting-ip") ?? "unknown";
+  const { success } = await c.get("env").INVITE_LIMITER.limit({ key: ip });
+  if (!success) {
+    return c.json({ error: "Too many requests" }, 429);
+  }
+
   try {
     const [league] = await db`
       SELECT id, name, created_by, invite_code, invite_message
