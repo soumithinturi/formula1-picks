@@ -129,7 +129,13 @@ Example:
 npm run test -- src/routes/picks.test.ts
 ```
 
-**DB isolation**: Tests use a real test database (or in-memory fixtures). Ensure your `.dev.vars` has a TEST_DATABASE_URL or similar for CI.
+**DB isolation**: Route tests (`routes/*.test.ts`) are integration tests that insert and delete rows through the real app (`__tests__/setup.ts` signs test JWTs and calls `app.request`). They refuse to run unless `DATABASE_URL` points at a **throwaway database** and `CONFIRM_TEST_DB=1` is set:
+
+```bash
+DATABASE_URL=postgresql://... CONFIRM_TEST_DB=1 bun test
+```
+
+`index.test.ts` and `services/*.test.ts` need no database. Schema changes live in `backend/migrations/` (run by hand in the Supabase SQL editor, oldest first); there is no `0001` baseline yet.
 
 ### Frontend Testing
 

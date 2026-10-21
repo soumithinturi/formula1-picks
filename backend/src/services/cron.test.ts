@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { findFirstDnf } from "./cron.ts";
+import { findFirstDnf, sessionTime } from "./cron.ts";
 
 const r = (driverId: string, status: string, laps: string) => ({ status, laps, Driver: { driverId } });
 
@@ -15,5 +15,13 @@ describe("findFirstDnf", () => {
 
   test("ignores disqualified and did-not-start", () => {
     expect(findFirstDnf([r("a", "Disqualified", "57"), r("b", "Did not start", "0"), r("c", "Finished", "57")])).toBeNull();
+  });
+});
+
+describe("sessionTime", () => {
+  test("joins date and time, defaults to midnight UTC, and passes through missing sessions", () => {
+    expect(sessionTime({ date: "2027-03-15", time: "04:00:00Z" })).toBe("2027-03-15T04:00:00Z");
+    expect(sessionTime({ date: "2027-03-15" })).toBe("2027-03-15T00:00:00Z");
+    expect(sessionTime(undefined)).toBeNull();
   });
 });

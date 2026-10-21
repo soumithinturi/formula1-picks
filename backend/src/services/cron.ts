@@ -4,7 +4,14 @@ import type { RaceRow, PickSelections } from "../types/index.ts";
 import { scoreRacePicks, completeRace, rowToSelections } from "./results.ts";
 import { sendPushNotification } from "./pushService.ts";
 
-const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1/2026";
+// "current" follows Jolpica's latest season, so no yearly edit is needed. Race rows carry their own
+// season and round, and result fetches use those instead.
+const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1";
+
+/** Jolpica session `{ date, time? }` as an ISO timestamp; no time means midnight UTC. */
+export function sessionTime(s?: { date: string; time?: string } | null): string | null {
+  return s ? `${s.date}T${s.time ?? "00:00:00Z"}` : null;
+}
 
 /**
  * Driver who retired on the fewest laps, or null if everyone was classified.
@@ -144,7 +151,7 @@ export async function fetchQualifyingResults(db: Sql) {
     }
 
     for (const race of nearbyRaces) {
-      const round = race.id.toString();
+      const round = `${race.season}/${race.round}`;
 
       // 1. Qualifying — use round-specific endpoint to avoid pagination issues
       const qualRes = await fetch(`${JOLPI_API_BASE}/${round}/qualifying.json`);
@@ -223,7 +230,7 @@ export async function fetchRaceResults(db: Sql) {
     let failedRaces = 0;
     for (const race of nearbyRaces) {
       try {
-        const round = race.id.toString();
+        const round = `${race.season}/${race.round}`;
 
         logger.info({ job: "fetchRaceResults", round }, `Fetching Race results for Round ${round}...`);
         const res = await fetch(`${JOLPI_API_BASE}/${round}/results.json`);
@@ -313,11 +320,12 @@ export async function fetchRaceResults(db: Sql) {
 
 /**
  * Fetches the current season's race schedule and updates the database.
+ * Races are matched on (season, round); `id` is a database sequence.
  */
 export async function fetchAndUpdateSchedule(db: Sql) {
   try {
     logger.info({ job: "fetchAndUpdateSchedule" }, "Fetching latest season schedule from Ergast API...");
-    const res = await fetch(`${JOLPI_API_BASE}/races.json`);
+    const res = await fetch(`${JOLPI_API_BASE}/current/races.json`);
     if (!res.ok) {
       throw new Error(`Ergast API failed with status ${res.status}`);
     }
@@ -330,54 +338,28 @@ export async function fetchAndUpdateSchedule(db: Sql) {
       return;
     }
 
+    const season = parseInt(races[0].season);
+
     for (const r of races) {
-      const raceId = parseInt(r.round);
-      const name = r.raceName;
-      const date = r.date + (r.time ? `T${r.time}` : "T00:00:00Z");
-      const has_sprint = !!r.Sprint;
-
-      const race_quali_date = r.Qualifying
-        ? r.Qualifying.date + (r.Qualifying.time ? `T${r.Qualifying.time}` : "T00:00:00Z")
-        : null;
-
-      const sprint_date = r.Sprint
-        ? r.Sprint.date + (r.Sprint.time ? `T${r.Sprint.time}` : "T00:00:00Z")
-        : null;
-
-      const sprint_quali_date = r.SprintQualifying
-        ? r.SprintQualifying.date + (r.SprintQualifying.time ? `T${r.SprintQualifying.time}` : "T00:00:00Z")
-        : null;
-
-      const fp1_date = r.FirstPractice
-        ? r.FirstPractice.date + (r.FirstPractice.time ? `T${r.FirstPractice.time}` : "T00:00:00Z")
-        : null;
-
-      const fp2_date = r.SecondPractice
-        ? r.SecondPractice.date + (r.SecondPractice.time ? `T${r.SecondPractice.time}` : "T00:00:00Z")
-        : null;
-
-      const fp3_date = r.ThirdPractice
-        ? r.ThirdPractice.date + (r.ThirdPractice.time ? `T${r.ThirdPractice.time}` : "T00:00:00Z")
-        : null;
+      const round = parseInt(r.round);
+      const date = sessionTime(r)!;
+      const sprint_date = sessionTime(r.Sprint);
 
       // sprint_deadline = when the sprint RACE starts (locks sprint podium picks).
       // sprint_quali_date separately locks sprint pole position picks.
-      const sprint_deadline = sprint_date;
-      const race_deadline = date;
-
       await db`
         INSERT INTO races (
-          id, name, date, has_sprint, status,
+          season, round, name, date, has_sprint, status,
           sprint_deadline, race_deadline,
           sprint_date, sprint_quali_date, race_quali_date,
           fp1_date, fp2_date, fp3_date
         ) VALUES (
-          ${raceId}, ${name}, ${date}, ${has_sprint}, 'UPCOMING',
-          ${sprint_deadline}, ${race_deadline},
-          ${sprint_date}, ${sprint_quali_date}, ${race_quali_date},
-          ${fp1_date}, ${fp2_date}, ${fp3_date}
+          ${season}, ${round}, ${r.raceName}, ${date}, ${!!r.Sprint}, 'UPCOMING',
+          ${sprint_date}, ${date},
+          ${sprint_date}, ${sessionTime(r.SprintQualifying)}, ${sessionTime(r.Qualifying)},
+          ${sessionTime(r.FirstPractice)}, ${sessionTime(r.SecondPractice)}, ${sessionTime(r.ThirdPractice)}
         )
-        ON CONFLICT (id) DO UPDATE SET
+        ON CONFLICT (season, round) DO UPDATE SET
           name = EXCLUDED.name,
           date = EXCLUDED.date,
           has_sprint = EXCLUDED.has_sprint,
@@ -394,11 +376,17 @@ export async function fetchAndUpdateSchedule(db: Sql) {
       `;
     }
 
-    // Clean up any extraneous races in case the payload shrunk (e.g., from 24 to 22 rounds)
+    // Drop rounds that left this season's calendar (e.g. 24 -> 22), but never one that already
+    // has picks or results.
     const maxRound = Math.max(...races.map((r: any) => parseInt(r.round)));
-    await db`DELETE FROM races WHERE id > ${maxRound}`;
+    await db`
+      DELETE FROM races r
+      WHERE r.season = ${season} AND r.round > ${maxRound}
+        AND NOT EXISTS (SELECT 1 FROM picks p WHERE p.race_id = r.id)
+        AND NOT EXISTS (SELECT 1 FROM race_results rr WHERE rr.race_id = r.id)
+    `;
 
-    logger.info({ job: "fetchAndUpdateSchedule", count: races.length }, `✅ Successfully updated season schedule.`);
+    logger.info({ job: "fetchAndUpdateSchedule", season, count: races.length }, `✅ Successfully updated season schedule.`);
   } catch (err) {
     logger.error({ err, job: "fetchAndUpdateSchedule" }, "Failed to update season schedule");
     throw err;
@@ -411,7 +399,7 @@ export async function fetchAndUpdateSchedule(db: Sql) {
 export async function fetchAndUpdateDriverStandings(db: Sql) {
   try {
     logger.info({ job: "fetchAndUpdateDriverStandings" }, "Fetching latest driver standings from Ergast API...");
-    const res = await fetch(`${JOLPI_API_BASE}/driverstandings.json`);
+    const res = await fetch(`${JOLPI_API_BASE}/current/driverstandings.json`);
     if (!res.ok) {
       throw new Error(`Ergast API failed with status ${res.status}`);
     }

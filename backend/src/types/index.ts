@@ -170,6 +170,8 @@ export interface UserRow {
 
 export interface RaceRow {
   id: number;
+  season: number;
+  round: number;
   name: string;
   date: string;
   has_sprint: boolean;
