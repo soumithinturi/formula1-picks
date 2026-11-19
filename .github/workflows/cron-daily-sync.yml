@@ -15,6 +15,11 @@ on:
           - schedule
           - standings
 
+# Never let a manual run overlap the scheduled one; both would hit the same upstream API.
+concurrency:
+  group: cron-daily-sync
+  cancel-in-progress: false
+
 jobs:
   schedule-sync:
     name: Sync Season Schedule
@@ -26,20 +31,27 @@ jobs:
     steps:
       - name: POST /api/v1/internal/cron/schedule
         run: |
-          curl -fsS --retry 3 --retry-delay 10 --retry-all-errors -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/schedule" \
+          curl -sS --fail-with-body --max-time 120 --retry 3 --retry-delay 30 --retry-all-errors -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/schedule" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"
 
   standings-sync:
     name: Sync Driver Standings
+    # Run after the schedule job, not alongside it. Both call the same rate-limited F1 API from
+    # the same Worker; firing them together (and retrying in lockstep) is what made one of them
+    # fail at random. always() keeps standings running even if the schedule job failed or was
+    # skipped by the manual "standings" option.
+    needs: schedule-sync
     if: |
-      github.event_name == 'schedule' ||
-      github.event.inputs.job == 'all' ||
-      github.event.inputs.job == 'standings'
+      always() && (
+        github.event_name == 'schedule' ||
+        github.event.inputs.job == 'all' ||
+        github.event.inputs.job == 'standings'
+      )
     runs-on: ubuntu-latest
     steps:
       - name: POST /api/v1/internal/cron/standings
         run: |
-          curl -fsS --retry 3 --retry-delay 10 --retry-all-errors -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/standings" \
+          curl -sS --fail-with-body --max-time 120 --retry 3 --retry-delay 30 --retry-all-errors -X POST "${{ secrets.BACKEND_URL }}/api/v1/internal/cron/standings" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json"
