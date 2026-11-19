@@ -3,10 +3,10 @@ import { logger } from "./logger.ts";
 import type { RaceRow, PickSelections } from "../types/index.ts";
 import { scoreRacePicks, completeRace, rowToSelections } from "./results.ts";
 import { sendPushNotification } from "./pushService.ts";
+import { JOLPI_API_BASE, fetchJolpicaJson } from "./jolpica.ts";
 
 // "current" follows Jolpica's latest season, so no yearly edit is needed. Race rows carry their own
 // season and round, and result fetches use those instead.
-const JOLPI_API_BASE = "https://api.jolpi.ca/ergast/f1";
 
 /** Jolpica session `{ date, time? }` as an ISO timestamp; no time means midnight UTC. */
 export function sessionTime(s?: { date: string; time?: string } | null): string | null {
@@ -325,12 +325,8 @@ export async function fetchRaceResults(db: Sql) {
 export async function fetchAndUpdateSchedule(db: Sql) {
   try {
     logger.info({ job: "fetchAndUpdateSchedule" }, "Fetching latest season schedule from Ergast API...");
-    const res = await fetch(`${JOLPI_API_BASE}/current/races.json`);
-    if (!res.ok) {
-      throw new Error(`Ergast API failed with status ${res.status}`);
-    }
-
-    const data: any = await res.json();
+    // Retries 429/5xx/timeouts with backoff; throws UpstreamError if Jolpica stays down.
+    const data: any = await fetchJolpicaJson("current/races.json");
     const races = data?.MRData?.RaceTable?.Races;
 
     if (!races || races.length === 0) {
@@ -399,12 +395,8 @@ export async function fetchAndUpdateSchedule(db: Sql) {
 export async function fetchAndUpdateDriverStandings(db: Sql) {
   try {
     logger.info({ job: "fetchAndUpdateDriverStandings" }, "Fetching latest driver standings from Ergast API...");
-    const res = await fetch(`${JOLPI_API_BASE}/current/driverstandings.json`);
-    if (!res.ok) {
-      throw new Error(`Ergast API failed with status ${res.status}`);
-    }
-
-    const data: any = await res.json();
+    // Retries 429/5xx/timeouts with backoff; throws UpstreamError if Jolpica stays down.
+    const data: any = await fetchJolpicaJson("current/driverstandings.json");
     const standingsList = data?.MRData?.StandingsTable?.StandingsLists?.[0];
     if (!standingsList) {
       logger.warn({ job: "fetchAndUpdateDriverStandings" }, "⚠️ No standings lists found in payload.");
@@ -417,18 +409,22 @@ export async function fetchAndUpdateDriverStandings(db: Sql) {
       return;
     }
 
-    for (const standing of driverStandings) {
-      const driverId = standing.Driver.driverId;
-      const points = parseFloat(standing.points) || 0;
-      const wins = parseInt(standing.wins) || 0;
-      const rank = parseInt(standing.position) || 999;
+    // One transaction so a dropped connection mid-loop can't leave half the grid on new points
+    // and half on old ones; a retry of the whole job then starts from a consistent table.
+    await db.begin(async (tx) => {
+      for (const standing of driverStandings) {
+        const driverId = standing.Driver.driverId;
+        const points = parseFloat(standing.points) || 0;
+        const wins = parseInt(standing.wins) || 0;
+        const rank = parseInt(standing.position) || 999;
 
-      await db`
-        UPDATE drivers 
-        SET points = ${points}, wins = ${wins}, rank = ${rank}
-        WHERE driver_id = ${driverId}
-      `;
-    }
+        await tx`
+          UPDATE drivers
+          SET points = ${points}, wins = ${wins}, rank = ${rank}
+          WHERE driver_id = ${driverId}
+        `;
+      }
+    });
 
     logger.info({ job: "fetchAndUpdateDriverStandings", count: driverStandings.length }, `✅ Successfully updated driver standings.`);
   } catch (err) {
