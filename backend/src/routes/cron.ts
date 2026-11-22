@@ -9,6 +9,7 @@ import {
   checkUpcomingSessionsForNotifications,
 } from "../services/cron.ts";
 import { logger } from "../services/logger.ts";
+import { UpstreamError } from "../services/jolpica.ts";
 
 type AppContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
@@ -44,6 +45,12 @@ function withInternalSecret(
       return c.json({ ok: true, job: jobName, elapsed });
     } catch (err) {
       logger.error({ err, job: jobName }, `Cron webhook failed: ${jobName}`);
+      // Say whether the F1 data API or our own code failed. The workflow prints this body
+      // (curl --fail-with-body) and Actions logs are public, so it carries only the job name and
+      // the upstream HTTP status, never error text or stack traces.
+      if (err instanceof UpstreamError) {
+        return c.json({ error: "Upstream F1 API unavailable", job: jobName, upstreamStatus: err.status }, 502);
+      }
       return c.json({ error: "Job failed", job: jobName }, 500);
     }
   };
